@@ -22,6 +22,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Supabase secrets
+        run: |
+          test -n "$VITE_SUPABASE_URL"
+          test -n "$SUPABASE_SERVICE_ROLE_KEY"
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
       - name: Crawl and upsert events
         run: npm run crawl:suto
         env:

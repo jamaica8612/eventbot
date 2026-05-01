@@ -82,6 +82,8 @@ VITE_SUPABASE_URL
 SUPABASE_SERVICE_ROLE_KEY
 ```
 
+Secrets가 비어 있으면 자동 크롤링 워크플로는 DB 저장 없이 성공 처리하지 않고 실패합니다.
+
 장점:
 
 - 무료로 시작하기 쉽습니다.
