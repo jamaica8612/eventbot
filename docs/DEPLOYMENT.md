@@ -4,6 +4,25 @@
 
 웹앱은 Vercel에 배포하고, 크롤러는 GitHub Actions에서 Supabase DB로 저장합니다.
 
+## GitHub Pages 배포
+
+Vercel에서 Pro 팀 생성/카드 입력 흐름이 나와서 GitHub Pages 배포를 우선 사용합니다.
+
+GitHub Actions의 `Deploy GitHub Pages` 워크플로가 `main` 브랜치 push마다 앱을 빌드하고 배포합니다.
+
+필요한 GitHub Secrets:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+배포 주소:
+
+```text
+https://jamaica8612.github.io/eventbot/
+```
+
 ## Vercel 배포
 
 1. Vercel에서 `jamaica8612/eventbot` GitHub 저장소를 import합니다.
