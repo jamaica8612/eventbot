@@ -338,7 +338,7 @@ h3 {
   box-shadow: var(--shadow-cta);
 }
 
-.now-preview {
+.now-body {
   display: grid;
   gap: 5px;
   border: 1px solid var(--border);
@@ -347,7 +347,30 @@ h3 {
   padding: 11px 12px;
 }
 
-.now-preview p {
+.now-body summary {
+  display: grid;
+  gap: 6px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.now-body summary::-webkit-details-marker {
+  display: none;
+}
+
+.now-body summary > span {
+  color: var(--warning);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.now-body summary div,
+.now-body-expanded {
+  display: grid;
+  gap: 5px;
+}
+
+.now-body p {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-main);
@@ -356,6 +379,21 @@ h3 {
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
+}
+
+.now-body[open] summary div {
+  display: none;
+}
+
+.now-body-expanded {
+  border-top: 1px solid var(--border);
+  margin-top: 8px;
+  padding-top: 8px;
+}
+
+.now-body-expanded p {
+  display: block;
+  overflow: visible;
 }
 
 .quick-actions {

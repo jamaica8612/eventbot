@@ -519,7 +519,7 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
 }
 
 function NowEventCard({ event, onStatusChange }) {
-  const previewLines = buildPreviewLines(event, []).slice(0, 2);
+  const userContentLines = buildUserContentLines(event);
 
   return (
     <article className="event-card now-card">
@@ -536,11 +536,21 @@ function NowEventCard({ event, onStatusChange }) {
         {event.prizeText ? <span>{event.prizeText}</span> : null}
       </div>
 
-      <div className="now-preview" aria-label="크롤링 본문 요약">
-        {previewLines.map((line) => (
-          <p key={line}>{line}</p>
-        ))}
-      </div>
+      <details className="now-body">
+        <summary>
+          <span>본문</span>
+          <div>
+            {userContentLines.slice(0, 3).map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+          </div>
+        </summary>
+        <div className="now-body-expanded">
+          {userContentLines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      </details>
 
       <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
         {event.applyUrl || event.url ? (
@@ -715,6 +725,49 @@ function buildPreviewLines(event, facts) {
     facts.length > 0 ? facts.join(' · ') : event.memo,
     '상세 조건은 참여하기에서 확인합니다.',
   ];
+}
+
+function buildUserContentLines(event) {
+  const raw = event.raw ?? {};
+  const possibleLineSets = [
+    event.originalLines,
+    raw.originalLines,
+    raw.contentLines,
+    raw.bodyLines,
+  ];
+
+  for (const lines of possibleLineSets) {
+    if (Array.isArray(lines) && lines.length > 0) {
+      return normalizeContentLines(lines, event);
+    }
+  }
+
+  const possibleText = [
+    event.originalText,
+    raw.originalText,
+    raw.contentText,
+    raw.bodyText,
+    raw.detailText,
+  ].find((value) => typeof value === 'string' && value.trim());
+
+  if (possibleText) {
+    return normalizeContentLines(possibleText.split(/\n+/), event);
+  }
+
+  return ['아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.'];
+}
+
+function normalizeContentLines(lines, event) {
+  const title = String(event.originalTitle ?? event.title ?? '').trim();
+  const normalized = lines
+    .map((line) => String(line).replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .filter((line) => line !== title)
+    .filter((line, index, currentLines) => currentLines.indexOf(line) === index);
+
+  return normalized.length > 0
+    ? normalized.slice(0, 24)
+    : ['아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.'];
 }
 
 function parsePrizeAmount(value) {

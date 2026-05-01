@@ -94,6 +94,7 @@ function toAppEvent(row) {
     memo: row.memo,
     url: row.url,
     crawledFrom: row.source_name,
+    raw,
     originalLines: raw.originalLines,
     originalText: raw.originalText,
   };

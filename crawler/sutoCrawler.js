@@ -10,7 +10,7 @@ const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
 
 async function main() {
   const html = await fetchHtml(SOURCE_URL);
-  const events = parseSutoHotEvents(html);
+  const events = await hydrateEventDetails(parseSutoHotEvents(html));
   const payload = {
     source: SOURCE_NAME,
     sourceUrl: SOURCE_URL,
@@ -64,6 +64,45 @@ function parseSutoHotEvents(html) {
   return anchorMatches
     .map((match) => parseEventAnchor(match[1], match[2]))
     .filter((event) => event && shouldKeepEvent(event));
+}
+
+async function hydrateEventDetails(events) {
+  const hydratedEvents = [];
+
+  for (const event of events) {
+    const detail = await fetchEventDetail(event.originalUrl);
+    hydratedEvents.push({
+      ...event,
+      originalText: detail?.text ?? event.originalText ?? '',
+      originalLines: detail?.lines ?? event.originalLines ?? [],
+      detailCrawlStatus: detail?.status ?? 'blocked',
+    });
+  }
+
+  return hydratedEvents;
+}
+
+async function fetchEventDetail(url) {
+  try {
+    const html = await fetchHtml(url);
+    const lines = extractDetailLines(html);
+
+    if (lines.length === 0) {
+      return { status: 'empty', text: '', lines: [] };
+    }
+
+    return {
+      status: 'ok',
+      text: lines.join('\n'),
+      lines,
+    };
+  } catch (error) {
+    return {
+      status: error.message.includes('Cloudflare') ? 'blocked' : 'failed',
+      text: '',
+      lines: [],
+    };
+  }
 }
 
 function parseEventAnchor(href, innerHtml) {
@@ -142,6 +181,56 @@ function extractNumberByClass(html, className) {
 
 function cleanText(value) {
   return decodeHtml(value.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim());
+}
+
+function extractDetailLines(html) {
+  const candidates = [
+    extractHtmlByClass(html, 'view-content'),
+    extractHtmlByClass(html, 'view_content'),
+    extractHtmlByClass(html, 'bo_v_con'),
+    extractHtmlById(html, 'bo_v_con'),
+    extractHtmlByClass(html, 'event_view'),
+    extractHtmlByTag(html, 'article'),
+  ].filter(Boolean);
+
+  const sourceHtml = candidates[0] ?? '';
+  return htmlToTextLines(sourceHtml)
+    .filter((line) => !/^목록|^이전글|^다음글|^댓글|^로그인/.test(line))
+    .slice(0, 24);
+}
+
+function extractHtmlByClass(html, className) {
+  const match = html.match(
+    new RegExp(`<([a-z0-9]+)\\b[^>]*class=["'][^"']*${className}[^"']*["'][^>]*>([\\s\\S]*?)<\\/\\1>`, 'i'),
+  );
+  return match?.[2] ?? '';
+}
+
+function extractHtmlById(html, id) {
+  const match = html.match(
+    new RegExp(`<([a-z0-9]+)\\b[^>]*id=["']${id}["'][^>]*>([\\s\\S]*?)<\\/\\1>`, 'i'),
+  );
+  return match?.[2] ?? '';
+}
+
+function extractHtmlByTag(html, tagName) {
+  const match = html.match(new RegExp(`<${tagName}\\b[^>]*>([\\s\\S]*?)<\\/${tagName}>`, 'i'));
+  return match?.[1] ?? '';
+}
+
+function htmlToTextLines(html) {
+  return decodeHtml(
+    html
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<br\s*\/?>/gi, '\n')
+      .replace(/<\/(p|div|li|tr|h[1-6])>/gi, '\n')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/\r/g, '\n'),
+  )
+    .split(/\n+/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
 }
 
 function decodeHtml(value) {
