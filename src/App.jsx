@@ -79,9 +79,7 @@ function App() {
         return;
       }
 
-      setEvents((currentEvents) =>
-        mergeEvents(applyStoredStatuses(remoteEvents), currentEvents),
-      );
+      setEvents((currentEvents) => mergeEvents(remoteEvents, currentEvents));
     });
 
     return () => {
@@ -302,7 +300,8 @@ async function loadRemoteEvents() {
     }
   }
 
-  return loadCrawledEvents();
+  const crawledEvents = await loadCrawledEvents();
+  return applyStoredStatuses(crawledEvents);
 }
 
 function buildStatusPatch(event, status, changedAt) {
