@@ -79,7 +79,7 @@ function App() {
         return;
       }
 
-      setEvents((currentEvents) => mergeEvents(remoteEvents, currentEvents));
+      setEvents(remoteEvents);
     });
 
     return () => {
@@ -348,12 +348,6 @@ function matchesFilter(event, filter) {
   if (filter === 'lost') return event.resultStatus === 'lost';
 
   return event.status === filter;
-}
-
-function mergeEvents(incomingEvents, currentEvents) {
-  const currentIds = new Set(currentEvents.map((event) => event.id));
-  const newEvents = incomingEvents.filter((event) => !currentIds.has(event.id));
-  return [...newEvents, ...currentEvents];
 }
 
 function SummaryItem({ active, label, value, onClick }) {
