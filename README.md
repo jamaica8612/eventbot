@@ -53,6 +53,12 @@ npm run dev
 npm run build
 ```
 
+Supabase 연결 확인:
+
+```bash
+npm run verify:supabase
+```
+
 슈퍼투데이 이벤트 수집:
 
 ```bash

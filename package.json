@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "crawl:suto": "node crawler/sutoCrawler.js"
+    "crawl:suto": "node crawler/sutoCrawler.js",
+    "verify:supabase": "node scripts/verifySupabase.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
