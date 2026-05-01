@@ -23,6 +23,12 @@
 | `rank` | integer | 수집 목록 안에서의 순위 |
 | `bookmark_count` | integer | 슈퍼투데이 저장/북마크 수 |
 | `due_text` | text | 마감 표시 텍스트 |
+| `click_score` | integer | 현장 딸깍 가능성 점수, 0~100 |
+| `action_type` | text | `now`, `home`, `skip` |
+| `estimated_seconds` | integer | 예상 처리 시간(초) |
+| `decision_reason` | text | 규칙 기반 판단 이유 |
+| `prize_text` | text | 보상/상품 표시 텍스트 |
+| `deadline_text` | text | 앱에 보여줄 마감 문구 |
 | `effort` | text | `quick`, `home`, `hard` |
 | `status` | text | `ready`, `later`, `done`, `skipped` |
 | `result_status` | text | `unknown`, `won`, `lost` |
@@ -80,6 +86,12 @@ source_site + source_event_id
 | `rank` | `rank` |
 | `bookmarkCount` | `bookmark_count` |
 | `due` | `due_text` |
+| `clickScore` | `click_score` |
+| `actionType` | `action_type` |
+| `estimatedSeconds` | `estimated_seconds` |
+| `decisionReason` | `decision_reason` |
+| `prizeText` | `prize_text` |
+| `deadlineText` | `deadline_text` |
 | `effort` | `effort` |
 | `effortLabel` | UI 표시값, DB 필수 아님 |
 | `status` | `status` |

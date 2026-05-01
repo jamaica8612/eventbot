@@ -23,10 +23,32 @@ export async function upsertEvents(events) {
     .upsert(rows, { onConflict: 'source_site,source_event_id' });
 
   if (error) {
+    if (isMissingDecisionColumnError(error)) {
+      const legacyRows = events.map(toLegacyEventRow);
+      const { error: legacyError } = await supabase
+        .from('events')
+        .upsert(legacyRows, { onConflict: 'source_site,source_event_id' });
+
+      if (legacyError) {
+        throw new Error(`Supabase legacy upsert failed: ${legacyError.message}`);
+      }
+
+      return legacyRows.length;
+    }
+
     throw new Error(`Supabase upsert failed: ${error.message}`);
   }
 
   return rows.length;
+}
+
+function isMissingDecisionColumnError(error) {
+  return (
+    error?.code === 'PGRST204' ||
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|schema cache|column/i.test(
+      error?.message ?? '',
+    )
+  );
 }
 
 function getSupabaseUrl() {
@@ -70,9 +92,29 @@ function toEventRow(event) {
     rank: event.rank,
     bookmark_count: event.bookmarkCount,
     due_text: event.due ?? '상세 확인 필요',
+    click_score: event.clickScore,
+    action_type: event.actionType,
+    estimated_seconds: event.estimatedSeconds,
+    decision_reason: event.decisionReason ?? '',
+    prize_text: event.prizeText ?? '',
+    deadline_text: event.deadlineText ?? event.due ?? '상세 확인 필요',
     effort: event.effort ?? 'quick',
     memo: event.memo ?? '',
     raw: event,
     last_seen_at: new Date().toISOString(),
   };
+}
+
+function toLegacyEventRow(event) {
+  const {
+    click_score,
+    action_type,
+    estimated_seconds,
+    decision_reason,
+    prize_text,
+    deadline_text,
+    ...row
+  } = toEventRow(event);
+
+  return row;
 }

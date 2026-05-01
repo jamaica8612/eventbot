@@ -1,17 +1,12 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
 
 const SOURCE_NAME = '슈퍼투데이';
 const SOURCE_URL =
   'https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=80&hot_cnt=50&skin_dir=mo_simple';
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
-
-const effortLabels = {
-  quick: '현장 딸각',
-  home: '집에서 처리',
-  hard: '복잡함',
-};
 
 async function main() {
   const html = await fetchHtml(SOURCE_URL);
@@ -79,11 +74,18 @@ function parseEventAnchor(href, innerHtml) {
 
   const platform = extractImageTitle(innerHtml) || '이벤트';
   const eventId = href.match(/\/cpevent\/(\d+)/)?.[1] ?? slugify(href);
-  const effort = inferEffort(title, platform);
   const originalUrl = normalizeUrl(href);
   const applyUrl = buildApplyUrl(eventId);
   const rank = extractNumberByClass(innerHtml, 'rank_num');
   const bookmarkCount = extractNumberByClass(innerHtml, 'save_cnt');
+  const due = '상세 확인 필요';
+  const decision = analyzeEventByRules({
+    title,
+    platform,
+    bookmarkCount,
+    rank,
+    dueText: due,
+  });
 
   return {
     id: `suto-${eventId}`,
@@ -95,11 +97,17 @@ function parseEventAnchor(href, innerHtml) {
     platform,
     rank,
     bookmarkCount,
-    due: '상세 확인 필요',
-    effort,
-    effortLabel: effortLabels[effort],
+    due,
+    deadlineText: decision.deadlineText,
+    clickScore: decision.clickScore,
+    actionType: decision.actionType,
+    estimatedSeconds: decision.estimatedSeconds,
+    decisionReason: decision.decisionReason,
+    prizeText: decision.prizeText,
+    effort: decision.effort,
+    effortLabel: decision.effortLabel,
     status: 'ready',
-    memo: '슈퍼투데이에서 불러온 이벤트입니다. 원문 링크에서 참여 조건과 마감을 확인하세요.',
+    memo: decision.decisionReason,
     url: originalUrl,
     crawledFrom: SOURCE_NAME,
   };
@@ -145,22 +153,9 @@ function decodeHtml(value) {
     .replaceAll('&#39;', "'");
 }
 
-function inferEffort(title, platform) {
-  const text = `${title} ${platform}`;
-  if (/댓글|유튜브|인스타|팔로우|공유|리그램|친구|태그/.test(text)) {
-    return 'home';
-  }
-
-  if (/설문|조사|서포터즈|공모|아이디어|후기|리뷰/.test(text)) {
-    return 'hard';
-  }
-
-  return 'quick';
-}
-
 function shouldKeepEvent(event) {
   const text = `${event.title} ${event.platform}`;
-  return event.platform !== '인스타그램 이벤트' && !/출석|출첵|체크인/.test(text);
+  return event.platform !== '인스타그램 이벤트';
 }
 
 function normalizeUrl(href) {

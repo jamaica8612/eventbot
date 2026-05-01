@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -51,6 +52,19 @@ export async function updateSupabaseEventState(eventId, patch) {
 
 function toAppEvent(row) {
   const raw = row.raw && typeof row.raw === 'object' ? row.raw : {};
+  const decision = getFallbackDecision({
+    ...raw,
+    clickScore: row.click_score ?? raw.clickScore,
+    actionType: row.action_type ?? raw.actionType,
+    estimatedSeconds: row.estimated_seconds ?? raw.estimatedSeconds,
+    decisionReason: row.decision_reason ?? raw.decisionReason ?? row.memo,
+    prizeText: row.prize_text ?? raw.prizeText,
+    deadlineText: row.deadline_text ?? raw.deadlineText ?? row.due_text,
+    due: row.due_text,
+    effort: row.effort,
+    effortLabel: raw.effortLabel ?? effortLabels[row.effort],
+    memo: row.memo,
+  });
 
   return {
     id: row.id,
@@ -62,9 +76,15 @@ function toAppEvent(row) {
     platform: row.platform,
     rank: row.rank,
     bookmarkCount: row.bookmark_count,
-    due: row.due_text,
-    effort: row.effort,
-    effortLabel: effortLabels[row.effort] ?? '현장 딸각',
+    due: decision.deadlineText,
+    deadlineText: decision.deadlineText,
+    clickScore: decision.clickScore,
+    actionType: decision.actionType,
+    estimatedSeconds: decision.estimatedSeconds,
+    decisionReason: decision.decisionReason,
+    prizeText: decision.prizeText,
+    effort: decision.effort,
+    effortLabel: decision.effortLabel,
     status: row.status,
     resultStatus: row.result_status,
     participatedAt: row.participated_at,

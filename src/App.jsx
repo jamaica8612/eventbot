@@ -12,6 +12,7 @@ import {
   loadSupabaseEvents,
   updateSupabaseEventState,
 } from './storage/supabaseEventStorage.js';
+import { getFallbackDecision } from '../crawler/eventDecision/ruleDecision.js';
 
 const statusLabels = {
   ready: '대기',
@@ -39,33 +40,24 @@ const statusActions = [
 ];
 
 const primaryFilters = [
-  { value: 'allReady', label: '전체', countKey: 'allReady' },
-  { value: 'quick', label: '현장', countKey: 'quick' },
-  { value: 'later', label: '나중', countKey: 'later' },
+  { value: 'now', label: '지금', countKey: 'now' },
+  { value: 'home', label: '집에서', countKey: 'home' },
+  { value: 'done', label: '완료', countKey: 'done' },
   { value: 'resultUnknown', label: '결과', countKey: 'resultUnknown' },
   { value: 'won', label: '당첨', countKey: 'won' },
 ];
 
-const secondaryFilters = [
-  { value: 'done', label: '참여함', countKey: 'done' },
-  { value: 'lost', label: '미당첨', countKey: 'lost' },
-  { value: 'skipped', label: '제외', countKey: 'skipped' },
-];
-
 const filterTitles = {
-  allReady: '아직 판단할 이벤트',
-  quick: '현장에서 바로 딸각',
-  later: '집에서 볼 이벤트',
-  done: '참여한 이벤트',
+  now: '지금 바로 딸깍',
+  home: '집에서 처리할 이벤트',
+  done: '참여완료한 이벤트',
   resultUnknown: '결과 확인할 이벤트',
   won: '당첨 관리',
-  lost: '미당첨',
-  skipped: '제외한 이벤트',
 };
 
 function App() {
   const [events, setEvents] = useState([]);
-  const [filter, setFilter] = useState('allReady');
+  const [filter, setFilter] = useState('now');
   const [isLoading, setIsLoading] = useState(true);
   const [syncError, setSyncError] = useState('');
 
@@ -77,7 +69,8 @@ function App() {
         return;
       }
 
-      setEvents(remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents));
+      const nextEvents = remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents);
+      setEvents(nextEvents.map(enrichEvent));
       setIsLoading(false);
     });
 
@@ -91,8 +84,13 @@ function App() {
       events.reduce(
         (acc, event) => {
           if (event.status === 'ready') acc.allReady += 1;
-          if (event.status === 'ready' && event.effort === 'quick') acc.quick += 1;
-          if (event.status === 'later') acc.later += 1;
+          if (event.status === 'ready' && event.actionType === 'now') acc.now += 1;
+          if (
+            event.status === 'later' ||
+            (event.status === 'ready' && event.actionType === 'home')
+          ) {
+            acc.home += 1;
+          }
           if (event.status === 'done') acc.done += 1;
           if (event.status === 'done' && event.resultStatus === 'unknown') {
             acc.resultUnknown += 1;
@@ -104,8 +102,8 @@ function App() {
         },
         {
           allReady: 0,
-          quick: 0,
-          later: 0,
+          now: 0,
+          home: 0,
           done: 0,
           resultUnknown: 0,
           won: 0,
@@ -215,24 +213,24 @@ function App() {
         <section className="app-hero" aria-labelledby="page-title">
           <div>
             <p className="app-kicker">EVENT CLICK</p>
-            <h1 id="page-title">이벤트 딸각</h1>
+            <h1 id="page-title">지금 딸깍</h1>
             <p className="overview-copy">
-              지금 할 것만 빠르게 보고, 나머지는 집에서 관리합니다.
+              한 손으로 보고 바로 누를 것만 남깁니다.
             </p>
           </div>
 
           <div className="summary-grid" aria-label="핵심 현황">
             <SummaryItem
-              active={filter === 'allReady'}
-              label="판단 대기"
-              value={counts.allReady}
-              onClick={() => setFilter('allReady')}
+              active={filter === 'now'}
+              label="지금"
+              value={counts.now}
+              onClick={() => setFilter('now')}
             />
             <SummaryItem
-              active={filter === 'quick'}
-              label="현장 딸각"
-              value={counts.quick}
-              onClick={() => setFilter('quick')}
+              active={filter === 'home'}
+              label="집에서"
+              value={counts.home}
+              onClick={() => setFilter('home')}
             />
             <SummaryItem
               active={filter === 'resultUnknown'}
@@ -260,13 +258,6 @@ function App() {
 
           {syncError ? <p className="sync-error">{syncError}</p> : null}
 
-          <FilterChips
-            counts={counts}
-            filters={secondaryFilters}
-            selectedFilter={filter}
-            onSelect={setFilter}
-          />
-
           {filter === 'won' ? (
             <WinningLedger
               events={visibleEvents}
@@ -280,6 +271,7 @@ function App() {
                   <EventCard
                     key={event.id}
                     event={event}
+                    filter={filter}
                     onResultChange={updateResult}
                     onStatusChange={updateStatus}
                   />
@@ -360,15 +352,24 @@ function applyStatusChange(event, status, changedAt) {
 }
 
 function matchesFilter(event, filter) {
-  if (filter === 'allReady') return event.status === 'ready';
-  if (filter === 'quick') return event.status === 'ready' && event.effort === 'quick';
+  if (filter === 'now') return event.status === 'ready' && event.actionType === 'now';
+  if (filter === 'home') {
+    return event.status === 'later' || (event.status === 'ready' && event.actionType === 'home');
+  }
+  if (filter === 'done') return event.status === 'done';
   if (filter === 'resultUnknown') {
     return event.status === 'done' && event.resultStatus === 'unknown';
   }
   if (filter === 'won') return event.resultStatus === 'won';
-  if (filter === 'lost') return event.resultStatus === 'lost';
 
   return event.status === filter;
+}
+
+function enrichEvent(event) {
+  return {
+    ...event,
+    ...getFallbackDecision(event),
+  };
 }
 
 function SummaryItem({ active, label, value, onClick }) {
@@ -381,24 +382,6 @@ function SummaryItem({ active, label, value, onClick }) {
       <span>{label}</span>
       <strong>{value}</strong>
     </button>
-  );
-}
-
-function FilterChips({ counts, filters, selectedFilter, onSelect }) {
-  return (
-    <div className="filter-chips" aria-label="보조 분류">
-      {filters.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          className={selectedFilter === item.value ? 'is-active' : ''}
-          onClick={() => onSelect(item.value)}
-        >
-          <span>{item.label}</span>
-          <strong>{counts[item.countKey]}</strong>
-        </button>
-      ))}
-    </div>
   );
 }
 
@@ -497,7 +480,102 @@ function WinningRow({ event, onMetaChange }) {
   );
 }
 
-function EventCard({ event, onResultChange, onStatusChange }) {
+function EventCard({ event, filter, onResultChange, onStatusChange }) {
+  if (filter === 'now') {
+    return <NowEventCard event={event} onStatusChange={onStatusChange} />;
+  }
+
+  if (filter === 'home') {
+    return <HomeEventCard event={event} onStatusChange={onStatusChange} />;
+  }
+
+  return (
+    <CompletedEventCard
+      event={event}
+      onResultChange={onResultChange}
+      onStatusChange={onStatusChange}
+    />
+  );
+}
+
+function NowEventCard({ event, onStatusChange }) {
+  return (
+    <article className="event-card now-card">
+      <div className="score-row">
+        <span>{event.platform}</span>
+        <strong>{event.clickScore}점</strong>
+      </div>
+
+      <h3>{event.title}</h3>
+
+      <div className="quick-meta">
+        <span>{event.deadlineText}</span>
+        <span>{formatSeconds(event.estimatedSeconds)}</span>
+        {event.prizeText ? <span>{event.prizeText}</span> : null}
+      </div>
+
+      {event.applyUrl || event.url ? (
+        <a className="apply-link primary-apply" href={event.applyUrl ?? event.url} target="_self">
+          참여하기
+        </a>
+      ) : null}
+
+      <div className="quick-actions" aria-label={`${event.title} 빠른 처리`}>
+        <button type="button" onClick={() => onStatusChange(event.id, 'later')}>
+          집에서 하기
+        </button>
+        <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
+          제외
+        </button>
+        <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
+          참여완료
+        </button>
+      </div>
+
+      <details className="compact-details">
+        <summary>자세히</summary>
+        <EventSourceSummary event={event} />
+      </details>
+    </article>
+  );
+}
+
+function HomeEventCard({ event, onStatusChange }) {
+  return (
+    <article className="event-card home-card">
+      <div className="card-topline">
+        <span className={`tag tag-${event.effort}`}>{event.effortLabel}</span>
+        <span className="status">{event.clickScore}점</span>
+      </div>
+
+      <h3>{event.title}</h3>
+      <p className="decision-reason">{event.decisionReason}</p>
+      <EventSourceSummary event={event} />
+
+      <div className="meta-row">
+        <span>{event.platform}</span>
+        <span>{event.deadlineText}</span>
+      </div>
+
+      {event.applyUrl || event.url ? (
+        <a className="apply-link" href={event.applyUrl ?? event.url} target="_self">
+          참여하기
+        </a>
+      ) : null}
+
+      <div className="quick-actions" aria-label={`${event.title} 집 처리`}>
+        <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
+          제외
+        </button>
+        <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
+          참여완료
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function CompletedEventCard({ event, onResultChange, onStatusChange }) {
   const resultStatus = event.resultStatus ?? 'unknown';
 
   return (
@@ -510,6 +588,7 @@ function EventCard({ event, onResultChange, onStatusChange }) {
       </div>
 
       <h3>{event.title}</h3>
+      <p className="decision-reason">{event.decisionReason}</p>
       <EventSourceSummary event={event} />
 
       {event.status === 'done' ? (
@@ -625,6 +704,14 @@ function formatCompactWon(value) {
   }
 
   return `${value.toLocaleString('ko-KR')}`;
+}
+
+function formatSeconds(value) {
+  if (value < 60) {
+    return `${value}초`;
+  }
+
+  return `${Math.round(value / 60)}분`;
 }
 
 function formatDate(value) {

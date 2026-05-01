@@ -12,6 +12,12 @@ create table if not exists public.events (
   rank integer,
   bookmark_count integer,
   due_text text not null default 'check_detail',
+  click_score integer,
+  action_type text,
+  estimated_seconds integer,
+  decision_reason text,
+  prize_text text,
+  deadline_text text,
   effort text not null default 'quick',
   status text not null default 'ready',
   result_status text not null default 'unknown',
@@ -26,6 +32,8 @@ create table if not exists public.events (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
   constraint events_source_unique unique (source_site, source_event_id),
+  constraint events_click_score_check check (click_score is null or (click_score >= 0 and click_score <= 100)),
+  constraint events_action_type_check check (action_type is null or action_type in ('now', 'home', 'skip')),
   constraint events_effort_check check (effort in ('quick', 'home', 'hard')),
   constraint events_status_check check (status in ('ready', 'later', 'done', 'skipped')),
   constraint events_result_status_check check (result_status in ('unknown', 'won', 'lost')),
@@ -40,6 +48,12 @@ create index if not exists events_effort_idx on public.events (effort);
 alter table public.events add column if not exists apply_url text;
 alter table public.events add column if not exists prize_amount integer;
 alter table public.events add column if not exists receipt_status text not null default 'unclaimed';
+alter table public.events add column if not exists click_score integer;
+alter table public.events add column if not exists action_type text;
+alter table public.events add column if not exists estimated_seconds integer;
+alter table public.events add column if not exists decision_reason text;
+alter table public.events add column if not exists prize_text text;
+alter table public.events add column if not exists deadline_text text;
 
 create or replace function public.set_updated_at()
 returns trigger
