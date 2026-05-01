@@ -60,6 +60,16 @@ function App() {
   const [filter, setFilter] = useState('now');
   const [isLoading, setIsLoading] = useState(true);
   const [syncError, setSyncError] = useState('');
+  const [theme, setTheme] = useState(() => {
+    const storedTheme = window.localStorage.getItem('eventbotTheme');
+    return storedTheme === 'light' ? 'light' : 'dark';
+  });
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+    document.body.dataset.theme = theme;
+    window.localStorage.setItem('eventbotTheme', theme);
+  }, [theme]);
 
   useEffect(() => {
     let isMounted = true;
@@ -211,12 +221,22 @@ function App() {
     <>
       <main className="app-shell">
         <section className="app-hero" aria-labelledby="page-title">
-          <div>
-            <p className="app-kicker">EVENT CLICK</p>
-            <h1 id="page-title">지금 딸깍</h1>
-            <p className="overview-copy">
-              한 손으로 보고 바로 누를 것만 남깁니다.
-            </p>
+          <div className="hero-top">
+            <div className="hero-copy">
+              <p className="app-kicker">EVENT CLICK</p>
+              <h1 id="page-title">지금 딸깍</h1>
+              <p className="overview-copy">
+                한 손으로 보고 바로 누를 것만 남깁니다.
+              </p>
+            </div>
+            <button
+              type="button"
+              className="theme-switch"
+              aria-label="테마 변경"
+              onClick={() => setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))}
+            >
+              {theme === 'dark' ? '다크' : '라이트'}
+            </button>
           </div>
 
           <div className="summary-grid" aria-label="핵심 현황">
