@@ -519,6 +519,8 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
 }
 
 function NowEventCard({ event, onStatusChange }) {
+  const previewLines = buildPreviewLines(event, []).slice(0, 2);
+
   return (
     <article className="event-card now-card">
       <div className="score-row">
@@ -534,13 +536,18 @@ function NowEventCard({ event, onStatusChange }) {
         {event.prizeText ? <span>{event.prizeText}</span> : null}
       </div>
 
-      {event.applyUrl || event.url ? (
-        <a className="apply-link primary-apply" href={event.applyUrl ?? event.url} target="_self">
-          참여하기
-        </a>
-      ) : null}
+      <div className="now-preview" aria-label="크롤링 본문 요약">
+        {previewLines.map((line) => (
+          <p key={line}>{line}</p>
+        ))}
+      </div>
 
-      <div className="quick-actions" aria-label={`${event.title} 빠른 처리`}>
+      <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
+        {event.applyUrl || event.url ? (
+          <a className="apply-link action-apply" href={event.applyUrl ?? event.url} target="_self">
+            참여하기
+          </a>
+        ) : null}
         <button type="button" onClick={() => onStatusChange(event.id, 'later')}>
           집에서 하기
         </button>

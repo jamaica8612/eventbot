@@ -338,19 +338,51 @@ h3 {
   box-shadow: var(--shadow-cta);
 }
 
+.now-preview {
+  display: grid;
+  gap: 5px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--soft-panel);
+  padding: 11px 12px;
+}
+
+.now-preview p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .quick-actions {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
 }
 
-.quick-actions button {
+.now-actions {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.quick-actions button,
+.quick-actions .apply-link {
   min-width: 0;
   min-height: 44px;
   padding: 0 4px;
-  color: var(--text-main);
   font-size: 0.84rem;
   line-height: 1.15;
+}
+
+.quick-actions button {
+  color: var(--text-main);
+}
+
+.action-apply {
+  box-shadow: var(--shadow-cta);
 }
 
 .compact-details {
