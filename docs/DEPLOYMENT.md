@@ -2,7 +2,7 @@
 
 ## 목표
 
-웹앱은 Vercel에 배포하고, 크롤러는 GitHub Actions에서 Supabase DB로 저장합니다.
+웹앱은 GitHub Pages에 배포하고, 크롤러는 GitHub Actions에서 Supabase DB로 저장합니다.
 
 ## GitHub Pages 배포
 
