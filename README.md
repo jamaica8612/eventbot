@@ -88,3 +88,4 @@ npm.cmd run crawl:suto
 5. `docs/EVENT_SCHEMA.md`
 6. `docs/SUPABASE_PLAN.md`
 7. `docs/CRAWLING_SCHEDULE.md`
+8. `docs/DEPLOYMENT.md`
