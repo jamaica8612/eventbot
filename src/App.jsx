@@ -265,6 +265,13 @@ function App() {
               onClick={() => setFilter('won')}
             />
           </div>
+
+          <DesktopNav
+            counts={counts}
+            filters={primaryFilters}
+            selectedFilter={filter}
+            onSelect={setFilter}
+          />
         </section>
 
         <section className="work-panel" aria-label="이벤트 관리">
@@ -408,6 +415,24 @@ function SummaryItem({ active, label, value, onClick }) {
 function BottomNav({ counts, filters, selectedFilter, onSelect }) {
   return (
     <nav className="bottom-nav" aria-label="주요 분류">
+      {filters.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          className={selectedFilter === item.value ? 'is-active' : ''}
+          onClick={() => onSelect(item.value)}
+        >
+          <span>{item.label}</span>
+          <strong>{counts[item.countKey]}</strong>
+        </button>
+      ))}
+    </nav>
+  );
+}
+
+function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
+  return (
+    <nav className="desktop-nav" aria-label="PC 주요 분류">
       {filters.map((item) => (
         <button
           key={item.value}

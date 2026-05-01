@@ -209,6 +209,10 @@ h3 {
   gap: 14px;
 }
 
+.desktop-nav {
+  display: none;
+}
+
 .toolbar {
   display: flex;
   gap: 12px;
@@ -846,5 +850,157 @@ h3 {
   .amount-field span,
   .receipt-field span {
     display: none;
+  }
+}
+
+@media (min-width: 980px) {
+  body {
+    min-width: 980px;
+  }
+
+  h1 {
+    font-size: 2.2rem;
+  }
+
+  h2 {
+    font-size: 1.42rem;
+  }
+
+  h3 {
+    font-size: 1.04rem;
+  }
+
+  .app-shell {
+    display: grid;
+    grid-template-columns: 320px minmax(0, 1fr);
+    gap: 28px;
+    width: min(1180px, calc(100% - 48px));
+    min-height: 100vh;
+    padding: 40px 0 44px;
+  }
+
+  .app-hero {
+    position: sticky;
+    top: 32px;
+    align-self: start;
+    gap: 18px;
+    margin-bottom: 0;
+  }
+
+  .hero-top,
+  .summary-grid,
+  .desktop-nav {
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+  }
+
+  .hero-top {
+    padding: 18px;
+  }
+
+  .summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+    padding: 10px;
+  }
+
+  .summary-item {
+    min-height: 76px;
+    box-shadow: none;
+  }
+
+  .summary-item strong {
+    font-size: 1.38rem;
+  }
+
+  .desktop-nav {
+    display: grid;
+    gap: 6px;
+    padding: 10px;
+  }
+
+  .desktop-nav button {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 12px;
+    align-items: center;
+    min-height: 48px;
+    border-color: transparent;
+    border-radius: 14px;
+    background: transparent;
+    color: var(--text-muted);
+    padding: 0 12px;
+    text-align: left;
+  }
+
+  .desktop-nav button.is-active {
+    border-color: var(--accent-border);
+    background: var(--wanted-blue-soft);
+    color: var(--warning);
+  }
+
+  .desktop-nav span {
+    overflow: hidden;
+    font-size: 0.92rem;
+    font-weight: 900;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .desktop-nav strong {
+    color: inherit;
+    font-size: 1rem;
+    line-height: 1;
+  }
+
+  .work-panel {
+    min-width: 0;
+    gap: 16px;
+  }
+
+  .toolbar {
+    min-height: 94px;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    background: var(--surface);
+    box-shadow: var(--shadow-card);
+    padding: 18px 20px;
+  }
+
+  .list-count {
+    min-height: 36px;
+    padding: 0 13px;
+  }
+
+  .event-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
+  }
+
+  .event-card {
+    min-width: 0;
+  }
+
+  .now-actions {
+    grid-template-columns: repeat(4, minmax(72px, 1fr));
+  }
+
+  .bottom-nav {
+    display: none;
+  }
+
+  .winning-ledger {
+    gap: 14px;
+  }
+
+  .ledger-summary {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .ledger-table {
+    border-radius: 18px;
   }
 }
