@@ -64,12 +64,22 @@ npm run crawl:suto
 
 ### 2. GitHub Actions 스케줄
 
-나중에 추천:
+현재 설정:
 
 ```text
 하루 3회 자동 실행
 크롤러 실행
 DB에 upsert
+```
+
+`.github/workflows/crawl-suto.yml`에 UTC `00:00`, `06:00`, `12:00` 스케줄을 추가했습니다.
+한국 시간 기준으로는 `09:00`, `15:00`, `21:00`입니다.
+
+필요한 GitHub Secrets:
+
+```text
+VITE_SUPABASE_URL
+SUPABASE_SERVICE_ROLE_KEY
 ```
 
 장점:
@@ -94,8 +104,8 @@ DB에 upsert
 
 ## 현재 결정
 
-- 지금은 `npm run crawl:suto` 수동 실행으로 크롤러 품질을 확인합니다.
-- Supabase 연결 후 GitHub Actions 하루 3회 자동 실행으로 전환합니다.
+- Supabase Secrets가 없으면 `npm run crawl:suto` 수동 실행으로 JSON 하네스에 저장합니다.
+- Supabase Secrets가 있으면 GitHub Actions 하루 3회 자동 실행으로 DB에 저장합니다.
 - 자동 실행 전까지는 JSON을 임시 하네스로 유지합니다.
 
 ## 다음 작업
