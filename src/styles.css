@@ -182,6 +182,16 @@ h3 {
   scrollbar-width: none;
 }
 
+.sync-error {
+  border: 1px solid rgba(240, 68, 82, 0.24);
+  border-radius: 8px;
+  background: #fff1f2;
+  color: var(--danger);
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
 .filter-chips::-webkit-scrollbar {
   display: none;
 }

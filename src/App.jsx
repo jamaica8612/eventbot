@@ -67,6 +67,7 @@ function App() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('allReady');
   const [isLoading, setIsLoading] = useState(true);
+  const [syncError, setSyncError] = useState('');
 
   useEffect(() => {
     let isMounted = true;
@@ -132,9 +133,10 @@ function App() {
     const changedAt = new Date().toISOString();
     const currentEvent = events.find((event) => event.id === eventId);
     saveEventStatus(eventId, status);
-    updateSupabaseEventState(
+    persistEventState(
       eventId,
       buildStatusPatch(currentEvent, status, changedAt),
+      setSyncError,
     );
 
     setEvents((currentEvents) =>
@@ -149,13 +151,17 @@ function App() {
     const currentEvent = events.find((event) => event.id === eventId);
     const participatedAt = currentEvent?.participatedAt ?? changedAt;
     saveEventResult(eventId, resultStatus);
-    updateSupabaseEventState(eventId, {
-      status: 'done',
-      resultStatus,
-      participatedAt,
-      resultCheckedAt: changedAt,
-      receiptStatus: currentEvent?.receiptStatus ?? 'unclaimed',
-    });
+    persistEventState(
+      eventId,
+      {
+        status: 'done',
+        resultStatus,
+        participatedAt,
+        resultCheckedAt: changedAt,
+        receiptStatus: currentEvent?.receiptStatus ?? 'unclaimed',
+      },
+      setSyncError,
+    );
 
     setEvents((currentEvents) =>
       currentEvents.map((event) =>
@@ -175,11 +181,15 @@ function App() {
 
   const updateWinningMeta = (eventId, meta) => {
     saveWinningMeta(eventId, meta);
-    updateSupabaseEventState(eventId, {
-      status: 'done',
-      resultStatus: 'won',
-      ...meta,
-    });
+    persistEventState(
+      eventId,
+      {
+        status: 'done',
+        resultStatus: 'won',
+        ...meta,
+      },
+      setSyncError,
+    );
 
     setEvents((currentEvents) =>
       currentEvents.map((event) =>
@@ -248,6 +258,8 @@ function App() {
             <span className="list-count">{visibleEvents.length}개</span>
           </div>
 
+          {syncError ? <p className="sync-error">{syncError}</p> : null}
+
           <FilterChips
             counts={counts}
             filters={secondaryFilters}
@@ -302,6 +314,15 @@ async function loadRemoteEvents() {
 
   const crawledEvents = await loadCrawledEvents();
   return applyStoredStatuses(crawledEvents);
+}
+
+function persistEventState(eventId, patch, onError) {
+  onError('');
+  updateSupabaseEventState(eventId, patch)
+    .then(() => onError(''))
+    .catch(() => {
+      onError('저장에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 눌러주세요.');
+    });
 }
 
 function buildStatusPatch(event, status, changedAt) {

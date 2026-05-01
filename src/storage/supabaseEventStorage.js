@@ -43,7 +43,10 @@ export async function updateSupabaseEventState(eventId, patch) {
     return;
   }
 
-  await supabase.from('events').update(rowPatch).eq('id', eventId);
+  const { error } = await supabase.from('events').update(rowPatch).eq('id', eventId);
+  if (error) {
+    throw new Error(error.message);
+  }
 }
 
 function toAppEvent(row) {
