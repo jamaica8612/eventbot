@@ -63,23 +63,21 @@ const filterTitles = {
   skipped: '제외한 이벤트',
 };
 
-function getInitialEvents() {
-  return applyStoredStatuses(initialEvents);
-}
-
 function App() {
-  const [events, setEvents] = useState(getInitialEvents);
+  const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('allReady');
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     let isMounted = true;
 
     loadRemoteEvents().then((remoteEvents) => {
-      if (!isMounted || remoteEvents.length === 0) {
+      if (!isMounted) {
         return;
       }
 
-      setEvents(remoteEvents);
+      setEvents(remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents));
+      setIsLoading(false);
     });
 
     return () => {
@@ -275,7 +273,9 @@ function App() {
                   />
                 ))
               ) : (
-                <p className="empty-message">지금 볼 이벤트가 없습니다.</p>
+                <p className="empty-message">
+                  {isLoading ? '이벤트를 불러오는 중입니다.' : '지금 볼 이벤트가 없습니다.'}
+                </p>
               )}
             </div>
           )}
