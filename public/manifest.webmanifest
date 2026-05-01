@@ -1,0 +1,17 @@
+{
+  "name": "이벤트 딸각",
+  "short_name": "딸각",
+  "description": "짧게 확인하고 처리하는 이벤트 관리 앱",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f7f8fa",
+  "theme_color": "#3366ff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
