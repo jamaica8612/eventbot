@@ -4,7 +4,7 @@ import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
 
 const SOURCE_NAME = '슈퍼투데이';
 const SOURCE_URL =
-  'https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=40&hot_cnt=10&skin_dir=mo_simple';
+  'https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=80&hot_cnt=50&skin_dir=mo_simple';
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
 
 const effortLabels = {
