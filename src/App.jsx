@@ -3,6 +3,7 @@ import { initialEvents } from './data/events.js';
 import { loadCrawledEvents } from './storage/crawledEventStorage.js';
 import {
   applyStoredStatuses,
+  saveEventAnnouncement,
   saveEventResult,
   saveEventStatus,
   saveWinningMeta,
@@ -43,7 +44,7 @@ const primaryFilters = [
   { value: 'now', label: '지금', countKey: 'now' },
   { value: 'home', label: '집에서', countKey: 'home' },
   { value: 'done', label: '완료', countKey: 'done' },
-  { value: 'resultUnknown', label: '결과', countKey: 'resultUnknown' },
+  { value: 'todayAnnouncement', label: '오늘발표', countKey: 'todayAnnouncement' },
   { value: 'won', label: '당첨', countKey: 'won' },
 ];
 
@@ -51,7 +52,7 @@ const filterTitles = {
   now: '지금 바로 딸깍',
   home: '집에서 처리할 이벤트',
   done: '참여완료한 이벤트',
-  resultUnknown: '결과 확인할 이벤트',
+  todayAnnouncement: '오늘 당첨자 발표',
   won: '당첨 관리',
 };
 
@@ -110,6 +111,7 @@ function App() {
           if (event.status === 'done' && event.resultStatus === 'unknown') {
             acc.resultUnknown += 1;
           }
+          if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
           if (event.resultStatus === 'won') acc.won += 1;
           if (event.resultStatus === 'lost') acc.lost += 1;
           if (event.status === 'skipped') acc.skipped += 1;
@@ -121,6 +123,7 @@ function App() {
           home: 0,
           done: 0,
           resultUnknown: 0,
+          todayAnnouncement: 0,
           won: 0,
           lost: 0,
           skipped: 0,
@@ -140,11 +143,17 @@ function App() {
   );
 
   const visibleEvents = useMemo(
-    () =>
-      platformFilter === 'all'
-        ? filteredByTabEvents
-        : filteredByTabEvents.filter((event) => event.platform === platformFilter),
-    [filteredByTabEvents, platformFilter],
+    () => {
+      const platformEvents =
+        platformFilter === 'all'
+          ? filteredByTabEvents
+          : filteredByTabEvents.filter((event) => event.platform === platformFilter);
+
+      return filter === 'todayAnnouncement'
+        ? sortTodayAnnouncements(platformEvents)
+        : platformEvents;
+    },
+    [filter, filteredByTabEvents, platformFilter],
   );
 
   const winningTotal = useMemo(
@@ -199,6 +208,36 @@ function App() {
               participatedAt: event.participatedAt ?? participatedAt,
               resultCheckedAt: changedAt,
               receiptStatus: event.receiptStatus ?? 'unclaimed',
+            }
+          : event,
+      ),
+    );
+  };
+
+  const updateAnnouncement = (eventId, meta) => {
+    const currentEvent = events.find((event) => event.id === eventId);
+    const participatedAt = currentEvent?.participatedAt ?? new Date().toISOString();
+    saveEventAnnouncement(eventId, meta);
+    persistEventState(
+      eventId,
+      {
+        status: 'done',
+        resultStatus: currentEvent?.resultStatus ?? 'unknown',
+        participatedAt,
+        ...meta,
+      },
+      setSyncError,
+    );
+
+    setEvents((currentEvents) =>
+      currentEvents.map((event) =>
+        event.id === eventId
+          ? {
+              ...event,
+              status: 'done',
+              resultStatus: event.resultStatus ?? 'unknown',
+              participatedAt: event.participatedAt ?? participatedAt,
+              ...meta,
             }
           : event,
       ),
@@ -275,10 +314,10 @@ function App() {
               onClick={() => setFilter('home')}
             />
             <SummaryItem
-              active={filter === 'resultUnknown'}
-              label="결과 확인"
-              value={counts.resultUnknown}
-              onClick={() => setFilter('resultUnknown')}
+              active={filter === 'todayAnnouncement'}
+              label="오늘발표"
+              value={counts.todayAnnouncement}
+              onClick={() => setFilter('todayAnnouncement')}
             />
             <SummaryItem
               active={filter === 'won'}
@@ -344,6 +383,7 @@ function App() {
                     event={event}
                     filter={filter}
                     onResultChange={updateResult}
+                    onAnnouncementChange={updateAnnouncement}
                     onStatusChange={updateStatus}
                   />
                 ))
@@ -428,12 +468,19 @@ function matchesFilter(event, filter) {
     return event.status === 'later' || (event.status === 'ready' && event.actionType === 'home');
   }
   if (filter === 'done') return event.status === 'done';
-  if (filter === 'resultUnknown') {
-    return event.status === 'done' && event.resultStatus === 'unknown';
-  }
+  if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
 
   return event.status === filter;
+}
+
+function matchesTodayAnnouncement(event) {
+  if (event.status !== 'done' || event.resultStatus !== 'unknown') {
+    return false;
+  }
+
+  const announcement = getAnnouncementStatus(event);
+  return announcement.state !== 'future';
 }
 
 function buildPlatformOptions(events) {
@@ -510,10 +557,154 @@ function getWinningDateValue(event) {
 }
 
 function enrichEvent(event) {
+  const announcement = getFallbackAnnouncement(event);
+
   return {
     ...event,
     ...getFallbackDecision(event),
+    resultAnnouncementDate: event.resultAnnouncementDate ?? announcement.date,
+    resultAnnouncementText: event.resultAnnouncementText ?? announcement.text,
   };
+}
+
+function sortTodayAnnouncements(events) {
+  const priority = {
+    overdue: 0,
+    today: 1,
+    unknown: 2,
+    future: 3,
+  };
+
+  return [...events].sort((first, second) => {
+    const firstStatus = getAnnouncementStatus(first);
+    const secondStatus = getAnnouncementStatus(second);
+    const statusDiff = priority[firstStatus.state] - priority[secondStatus.state];
+
+    if (statusDiff !== 0) {
+      return statusDiff;
+    }
+
+    return getAnnouncementTime(first) - getAnnouncementTime(second);
+  });
+}
+
+function getAnnouncementStatus(event) {
+  const date = parseLocalDate(event.resultAnnouncementDate);
+  if (!date) {
+    return { state: 'unknown', label: event.resultAnnouncementText || '발표일 미정' };
+  }
+
+  const today = getLocalToday();
+  const diffDays = Math.round((date.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) {
+    return { state: 'overdue', label: `${Math.abs(diffDays)}일 지남` };
+  }
+
+  if (diffDays === 0) {
+    return { state: 'today', label: '오늘 발표' };
+  }
+
+  return { state: 'future', label: `${formatDate(date.toISOString())} 발표` };
+}
+
+function getAnnouncementTime(event) {
+  const date = parseLocalDate(event.resultAnnouncementDate);
+  return date ? date.getTime() : Number.MAX_SAFE_INTEGER;
+}
+
+function getFallbackAnnouncement(event) {
+  const text = buildAnnouncementSourceText(event);
+  const announcementLine = text
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .find((line) => /당첨자?\s*발표|발표\s*일|결과\s*발표|당첨\s*확인/i.test(line));
+
+  if (!announcementLine) {
+    return { date: '', text: '' };
+  }
+
+  return {
+    date: extractAnnouncementDate(announcementLine),
+    text: announcementLine.slice(0, 80),
+  };
+}
+
+function buildAnnouncementSourceText(event) {
+  const raw = event.raw ?? {};
+  const parts = [
+    event.title,
+    event.deadlineText,
+    event.due,
+    event.memo,
+    event.originalText,
+    raw.originalText,
+    raw.contentText,
+    raw.bodyText,
+    Array.isArray(event.originalLines) ? event.originalLines.join('\n') : '',
+    Array.isArray(raw.originalLines) ? raw.originalLines.join('\n') : '',
+  ];
+
+  return parts.filter((part) => typeof part === 'string' && part.trim()).join('\n');
+}
+
+function extractAnnouncementDate(text) {
+  const today = getLocalToday();
+  const year = today.getFullYear();
+  const normalizedText = text.replace(/\s+/g, ' ');
+  const fullDateMatch = normalizedText.match(/(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/);
+
+  if (fullDateMatch) {
+    return formatInputDate(Number(fullDateMatch[1]), Number(fullDateMatch[2]), Number(fullDateMatch[3]));
+  }
+
+  const monthDayMatch = normalizedText.match(/(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*(?:일)?/);
+  if (monthDayMatch) {
+    return formatInputDate(year, Number(monthDayMatch[1]), Number(monthDayMatch[2]));
+  }
+
+  return '';
+}
+
+function parseLocalDate(value) {
+  if (!value || typeof value !== 'string') {
+    return null;
+  }
+
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (match) {
+    return new Date(Number(match[1]), Number(match[2]) - 1, Number(match[3]));
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? null : date;
+}
+
+function getLocalToday() {
+  const now = new Date();
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate());
+}
+
+function formatInputDate(year, month, day) {
+  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
+    return '';
+  }
+
+  const date = new Date(year, month - 1, day);
+  if (
+    Number.isNaN(date.getTime()) ||
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return '';
+  }
+
+  return [
+    String(year).padStart(4, '0'),
+    String(month).padStart(2, '0'),
+    String(day).padStart(2, '0'),
+  ].join('-');
 }
 
 function SummaryItem({ active, label, value, onClick }) {
@@ -698,7 +889,7 @@ function WinningRow({ event, onMetaChange }) {
   );
 }
 
-function EventCard({ event, filter, onResultChange, onStatusChange }) {
+function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   if (filter === 'now') {
     return <NowEventCard event={event} onStatusChange={onStatusChange} />;
   }
@@ -710,7 +901,9 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
   return (
     <CompletedEventCard
       event={event}
+      filter={filter}
       onResultChange={onResultChange}
+      onAnnouncementChange={onAnnouncementChange}
       onStatusChange={onStatusChange}
     />
   );
@@ -869,8 +1062,10 @@ function HomeEventCard({ event, onStatusChange }) {
   );
 }
 
-function CompletedEventCard({ event, onResultChange, onStatusChange }) {
+function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   const resultStatus = event.resultStatus ?? 'unknown';
+  const showAnnouncementPanel =
+    filter === 'todayAnnouncement' && event.status === 'done' && resultStatus === 'unknown';
 
   return (
     <article className="event-card">
@@ -889,6 +1084,10 @@ function CompletedEventCard({ event, onResultChange, onStatusChange }) {
         <div className={`result-badge result-${resultStatus}`}>
           {resultLabels[resultStatus]}
         </div>
+      ) : null}
+
+      {showAnnouncementPanel ? (
+        <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
       ) : null}
 
       {event.applyUrl || event.url ? (
@@ -932,6 +1131,43 @@ function CompletedEventCard({ event, onResultChange, onStatusChange }) {
         </div>
       ) : null}
     </article>
+  );
+}
+
+function AnnouncementPanel({ event, onAnnouncementChange }) {
+  const announcement = getAnnouncementStatus(event);
+
+  return (
+    <section className={`announcement-panel announcement-${announcement.state}`}>
+      <div>
+        <span>발표관리</span>
+        <strong>{announcement.label}</strong>
+      </div>
+      <label>
+        <span>발표일</span>
+        <input
+          type="date"
+          value={event.resultAnnouncementDate ?? ''}
+          onChange={(changeEvent) =>
+            onAnnouncementChange(event.id, {
+              resultAnnouncementDate: changeEvent.target.value,
+            })
+          }
+        />
+      </label>
+      <label>
+        <span>메모</span>
+        <input
+          placeholder="예: 공지사항 확인, 문자 발표"
+          value={event.resultAnnouncementText ?? ''}
+          onChange={(changeEvent) =>
+            onAnnouncementChange(event.id, {
+              resultAnnouncementText: changeEvent.target.value,
+            })
+          }
+        />
+      </label>
+    </section>
   );
 }
 

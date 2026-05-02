@@ -15,12 +15,38 @@ export function applyStoredStatuses(events) {
       resultStatus: savedState?.resultStatus ?? event.resultStatus ?? 'unknown',
       participatedAt: savedState?.participatedAt ?? event.participatedAt ?? null,
       resultCheckedAt: savedState?.resultCheckedAt ?? event.resultCheckedAt ?? null,
+      resultAnnouncementDate:
+        savedState?.resultAnnouncementDate ?? event.resultAnnouncementDate ?? '',
+      resultAnnouncementText:
+        savedState?.resultAnnouncementText ?? event.resultAnnouncementText ?? '',
       prizeTitle: savedState?.prizeTitle ?? event.prizeTitle ?? event.prizeText ?? '',
       prizeAmount: savedState?.prizeAmount ?? event.prizeAmount ?? '',
       receiptStatus: savedState?.receiptStatus ?? event.receiptStatus ?? 'unclaimed',
       winningMemo: savedState?.winningMemo ?? event.winningMemo ?? '',
     };
   });
+}
+
+export function saveEventAnnouncement(eventId, meta) {
+  const stateMap = readStateMap();
+  const currentState = stateMap[eventId] ?? {};
+  const nextState = {
+    ...currentState,
+    status: 'done',
+    resultStatus: currentState.resultStatus ?? 'unknown',
+    participatedAt: currentState.participatedAt ?? new Date().toISOString(),
+  };
+
+  if (typeof meta.resultAnnouncementDate === 'string') {
+    nextState.resultAnnouncementDate = meta.resultAnnouncementDate;
+  }
+
+  if (typeof meta.resultAnnouncementText === 'string') {
+    nextState.resultAnnouncementText = meta.resultAnnouncementText;
+  }
+
+  stateMap[eventId] = nextState;
+  writeStateMap(stateMap);
 }
 
 export function saveEventStatus(eventId, status) {
@@ -126,6 +152,8 @@ function normalizeSavedState(value) {
       resultStatus: 'unknown',
       participatedAt: null,
       resultCheckedAt: null,
+      resultAnnouncementDate: '',
+      resultAnnouncementText: '',
       prizeTitle: '',
       prizeAmount: '',
       receiptStatus: 'unclaimed',
@@ -146,6 +174,10 @@ function normalizeSavedState(value) {
       typeof value.participatedAt === 'string' ? value.participatedAt : null,
     resultCheckedAt:
       typeof value.resultCheckedAt === 'string' ? value.resultCheckedAt : null,
+    resultAnnouncementDate:
+      typeof value.resultAnnouncementDate === 'string' ? value.resultAnnouncementDate : '',
+    resultAnnouncementText:
+      typeof value.resultAnnouncementText === 'string' ? value.resultAnnouncementText : '',
     prizeTitle: typeof value.prizeTitle === 'string' ? value.prizeTitle : '',
     prizeAmount: typeof value.prizeAmount === 'string' ? value.prizeAmount : '',
     receiptStatus: validReceiptStatuses.has(value.receiptStatus)

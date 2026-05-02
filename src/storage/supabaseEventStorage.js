@@ -50,6 +50,8 @@ export async function updateSupabaseEventState(eventId, patch) {
       const legacyPatch = { ...rowPatch };
       delete legacyPatch.prize_title;
       delete legacyPatch.winning_memo;
+      delete legacyPatch.result_announcement_date;
+      delete legacyPatch.result_announcement_text;
 
       const { error: legacyError } = await supabase
         .from('events')
@@ -68,7 +70,7 @@ export async function updateSupabaseEventState(eventId, patch) {
 function isMissingWinningColumnError(error) {
   return (
     error?.code === 'PGRST204' ||
-    /prize_title|winning_memo|schema cache|column/i.test(error?.message ?? '')
+    /prize_title|winning_memo|result_announcement|schema cache|column/i.test(error?.message ?? '')
   );
 }
 
@@ -111,6 +113,10 @@ function toAppEvent(row) {
     resultStatus: row.result_status,
     participatedAt: row.participated_at,
     resultCheckedAt: row.result_checked_at,
+    resultAnnouncementDate:
+      row.result_announcement_date ?? raw.resultAnnouncementDate ?? '',
+    resultAnnouncementText:
+      row.result_announcement_text ?? raw.resultAnnouncementText ?? '',
     prizeTitle: row.prize_title ?? raw.prizeTitle ?? decision.prizeText ?? '',
     prizeAmount: row.prize_amount == null ? '' : String(row.prize_amount),
     receiptStatus: row.receipt_status ?? 'unclaimed',
@@ -131,6 +137,12 @@ function toStateRowPatch(patch) {
   if (patch.resultStatus) rowPatch.result_status = patch.resultStatus;
   if ('participatedAt' in patch) rowPatch.participated_at = patch.participatedAt;
   if ('resultCheckedAt' in patch) rowPatch.result_checked_at = patch.resultCheckedAt;
+  if ('resultAnnouncementDate' in patch) {
+    rowPatch.result_announcement_date = patch.resultAnnouncementDate || null;
+  }
+  if ('resultAnnouncementText' in patch) {
+    rowPatch.result_announcement_text = patch.resultAnnouncementText;
+  }
   if ('receiptStatus' in patch) rowPatch.receipt_status = patch.receiptStatus;
   if ('prizeTitle' in patch) rowPatch.prize_title = patch.prizeTitle;
   if ('winningMemo' in patch) rowPatch.winning_memo = patch.winningMemo;

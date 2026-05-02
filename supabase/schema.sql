@@ -23,6 +23,8 @@ create table if not exists public.events (
   result_status text not null default 'unknown',
   participated_at timestamptz,
   result_checked_at timestamptz,
+  result_announcement_date date,
+  result_announcement_text text,
   prize_title text,
   prize_amount integer,
   receipt_status text not null default 'unclaimed',
@@ -52,6 +54,8 @@ alter table public.events add column if not exists prize_title text;
 alter table public.events add column if not exists prize_amount integer;
 alter table public.events add column if not exists receipt_status text not null default 'unclaimed';
 alter table public.events add column if not exists winning_memo text;
+alter table public.events add column if not exists result_announcement_date date;
+alter table public.events add column if not exists result_announcement_text text;
 alter table public.events add column if not exists click_score integer;
 alter table public.events add column if not exists action_type text;
 alter table public.events add column if not exists estimated_seconds integer;

@@ -34,6 +34,8 @@
 | `result_status` | text | `unknown`, `won`, `lost` |
 | `participated_at` | timestamptz | 참여 처리한 시간 |
 | `result_checked_at` | timestamptz | 당첨/미당첨 결과를 확인한 시간 |
+| `result_announcement_date` | date | 당첨자 발표 예정일 |
+| `result_announcement_text` | text | 발표 확인 방식/메모 |
 | `prize_title` | text | 사용자가 정리한 당첨 상품명 |
 | `prize_amount` | integer | 사용자가 입력한 당첨 추정 금액 |
 | `receipt_status` | text | `unclaimed`, `requested`, `received` |
@@ -102,6 +104,8 @@ source_site + source_event_id
 | `resultStatus` | `result_status` |
 | `participatedAt` | `participated_at` |
 | `resultCheckedAt` | `result_checked_at` |
+| `resultAnnouncementDate` | `result_announcement_date` |
+| `resultAnnouncementText` | `result_announcement_text` |
 | `prizeTitle` | `prize_title` |
 | `prizeAmount` | `prize_amount` |
 | `receiptStatus` | `receipt_status` |
