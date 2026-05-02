@@ -49,6 +49,8 @@ const primaryFilters = [
   { value: 'won', label: '당첨', countKey: 'won' },
 ];
 
+const manageFilters = new Set(['done', 'todayAnnouncement', 'won']);
+
 const filterTitles = {
   now: '지금 바로 딸깍',
   home: '집에서 처리할 이벤트',
@@ -283,9 +285,11 @@ function App() {
     );
   };
 
+  const isManageMode = manageFilters.has(filter);
+
   return (
     <>
-      <main className="app-shell">
+      <main className={`app-shell ${isManageMode ? 'manage-mode' : 'click-mode'}`}>
         <section className="app-hero" aria-labelledby="page-title">
           <div className="hero-top">
             <div className="hero-copy">
@@ -332,6 +336,10 @@ function App() {
             />
           </div>
 
+          {isManageMode ? (
+            <ManageMetrics events={visibleEvents} totalAmount={winningTotal} />
+          ) : null}
+
           <DesktopNav
             counts={counts}
             filters={primaryFilters}
@@ -344,7 +352,7 @@ function App() {
           <div className="toolbar">
             <div>
               <p className="section-label">현재 보기</p>
-              <h2>{filterTitles[filter]}</h2>
+              <h2>{getFilterTitle(filter)}</h2>
             </div>
             <span className="list-count">{visibleEvents.length}개</span>
           </div>
@@ -378,6 +386,19 @@ function App() {
               events={visibleEvents}
               totalAmount={winningTotal}
               onMetaChange={updateWinningMeta}
+            />
+          ) : filter === 'done' ? (
+            <CompletedManagementList
+              events={visibleEvents}
+              isLoading={isLoading}
+              onResultChange={updateResult}
+            />
+          ) : filter === 'todayAnnouncement' ? (
+            <ResultManagementList
+              events={visibleEvents}
+              isLoading={isLoading}
+              onAnnouncementChange={updateAnnouncement}
+              onResultChange={updateResult}
             />
           ) : (
             <div className="event-list">
@@ -666,6 +687,39 @@ function SummaryItem({ active, label, value, onClick }) {
   );
 }
 
+function ManageMetrics({ events, totalAmount }) {
+  const unreceivedCount = events.filter((event) => event.receiptStatus !== 'received').length;
+
+  return (
+    <div className="manage-metrics" aria-label="관리 요약">
+      <div>
+        <span>총</span>
+        <strong>{events.length}건</strong>
+      </div>
+      <div>
+        <span>미수령</span>
+        <strong>{unreceivedCount}건</strong>
+      </div>
+      <div>
+        <span>총 금액</span>
+        <strong>{formatWon(totalAmount)}</strong>
+      </div>
+    </div>
+  );
+}
+
+function getFilterLabel(item) {
+  if (item.value === 'todayAnnouncement') return '결과';
+  return item.label;
+}
+
+function getFilterTitle(filter) {
+  if (filter === 'todayAnnouncement') return '결과 확인';
+  if (filter === 'done') return '참여완료 관리';
+  if (filter === 'won') return '당첨 장부';
+  return filterTitles[filter];
+}
+
 function BottomNav({ counts, filters, selectedFilter, onSelect }) {
   return (
     <nav className="bottom-nav" aria-label="주요 분류">
@@ -676,7 +730,7 @@ function BottomNav({ counts, filters, selectedFilter, onSelect }) {
           className={selectedFilter === item.value ? 'is-active' : ''}
           onClick={() => onSelect(item.value)}
         >
-          <span>{item.label}</span>
+          <span>{getFilterLabel(item)}</span>
           <strong>{counts[item.countKey]}</strong>
         </button>
       ))}
@@ -694,11 +748,151 @@ function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
           className={selectedFilter === item.value ? 'is-active' : ''}
           onClick={() => onSelect(item.value)}
         >
-          <span>{item.label}</span>
+          <span>{getFilterLabel(item)}</span>
           <strong>{counts[item.countKey]}</strong>
         </button>
       ))}
     </nav>
+  );
+}
+
+function CompletedManagementList({ events, isLoading, onResultChange }) {
+  if (events.length === 0) {
+    return (
+      <p className="empty-message">
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '완료된 이벤트가 없습니다.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="manage-list completed-list" role="table" aria-label="완료 이벤트 관리">
+      <div className="manage-head completed-head" role="row">
+        <span>참여일</span>
+        <span>이벤트</span>
+        <span>플랫폼</span>
+        <span>발표일</span>
+        <span>결과</span>
+        <span>처리</span>
+        <span>링크</span>
+      </div>
+      {events.map((event) => (
+        <CompletedListItem
+          key={event.id}
+          event={event}
+          onResultChange={onResultChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function CompletedListItem({ event, onResultChange }) {
+  const resultStatus = event.resultStatus ?? 'unknown';
+
+  return (
+    <article className="manage-row completed-row" role="row">
+      <time>{formatDate(event.participatedAt)}</time>
+      <strong>{event.title}</strong>
+      <span>{event.platform}</span>
+      <span>{formatAnnouncementDate(event)}</span>
+      <span className={`result-badge result-${resultStatus}`}>
+        {resultLabels[resultStatus]}
+      </span>
+      <div className="manage-result-actions">
+        <button
+          type="button"
+          className={resultStatus === 'won' ? 'is-won' : ''}
+          onClick={() => onResultChange(event.id, 'won')}
+        >
+          당첨
+        </button>
+        <button
+          type="button"
+          className={resultStatus === 'lost' ? 'is-lost' : ''}
+          onClick={() => onResultChange(event.id, 'lost')}
+        >
+          미당첨
+        </button>
+      </div>
+      {event.originalUrl || event.url ? (
+        <ApplyLink className="manage-link" url={event.originalUrl ?? event.url} label="다시보기" />
+      ) : (
+        <span>-</span>
+      )}
+    </article>
+  );
+}
+
+function ResultManagementList({ events, isLoading, onAnnouncementChange, onResultChange }) {
+  if (events.length === 0) {
+    return (
+      <p className="empty-message">
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '확인할 결과가 없습니다.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="manage-list result-list" role="table" aria-label="결과 확인 관리">
+      <div className="manage-head result-head" role="row">
+        <span>상태</span>
+        <span>이벤트</span>
+        <span>상품</span>
+        <span>결과 처리</span>
+        <span>수정</span>
+      </div>
+      {events.map((event) => (
+        <ResultListItem
+          key={event.id}
+          event={event}
+          onAnnouncementChange={onAnnouncementChange}
+          onResultChange={onResultChange}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const resultStatus = event.resultStatus ?? 'unknown';
+
+  return (
+    <article className="manage-row result-manage-row" role="row">
+      <span className={`announcement-state announcement-state-${getAnnouncementStatus(event).state}`}>
+        {getAnnouncementStatus(event).label}
+      </span>
+      <strong>{event.title}</strong>
+      <span>{getPrizeDisplay(event)}</span>
+      <div className="manage-result-actions">
+        <button
+          type="button"
+          className={resultStatus === 'won' ? 'is-won' : ''}
+          onClick={() => onResultChange(event.id, 'won')}
+        >
+          당첨
+        </button>
+        <button
+          type="button"
+          className={resultStatus === 'lost' ? 'is-lost' : ''}
+          onClick={() => onResultChange(event.id, 'lost')}
+        >
+          미당첨
+        </button>
+      </div>
+      <button type="button" className="manage-edit-button" onClick={() => setIsEditing((value) => !value)}>
+        수정
+      </button>
+      {event.originalUrl || event.url ? (
+        <ApplyLink className="manage-link" url={event.originalUrl ?? event.url} label="발표 확인" />
+      ) : null}
+      {isEditing ? (
+        <div className="manage-edit-panel">
+          <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -755,7 +949,7 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
                 </div>
                 <div className="ledger-table" role="table" aria-label={`${group.label} 당첨 관리 목록`}>
                   {group.events.map((event) => (
-                    <WinningRow key={event.id} event={event} onMetaChange={onMetaChange} />
+                    <WinningLedgerRow key={event.id} event={event} onMetaChange={onMetaChange} />
                   ))}
                 </div>
               </section>
@@ -764,7 +958,7 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
         ) : (
           <div className="ledger-table" role="table" aria-label="당첨 관리 목록">
             {sortedEvents.map((event) => (
-              <WinningRow key={event.id} event={event} onMetaChange={onMetaChange} />
+              <WinningLedgerRow key={event.id} event={event} onMetaChange={onMetaChange} />
             ))}
           </div>
         )
@@ -772,6 +966,81 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
         <p className="empty-message">아직 당첨으로 표시한 이벤트가 없습니다.</p>
       )}
     </div>
+  );
+}
+
+function WinningLedgerRow({ event, onMetaChange }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const prizeTitle = event.prizeTitle || getPrizeDisplay(event);
+  const displayPrize = prizeTitle === 'ê²½í’ˆ ì •ë³´ ë¯¸ìˆ˜ì§‘' ? '' : prizeTitle;
+
+  return (
+    <article className="ledger-row">
+      <div className="ledger-title-block">
+        <time>{formatDate(getWinningDateValue(event))}</time>
+        <div className="ledger-title">
+          <strong>{event.title}</strong>
+          <span>{event.source}</span>
+        </div>
+      </div>
+      <span className="ledger-prize">{displayPrize || event.title}</span>
+      <span className="ledger-amount">{formatWon(parsePrizeAmount(event.prizeAmount))}</span>
+      <span className="ledger-receipt">{receiptLabels[event.receiptStatus ?? 'unclaimed']}</span>
+      <span className="ledger-memo">{event.winningMemo || '-'}</span>
+      <button type="button" className="manage-edit-button" onClick={() => setIsEditing((value) => !value)}>
+        수정
+      </button>
+      {isEditing ? (
+        <div className="ledger-edit-panel">
+          <label className="prize-title-field">
+            <span>상품명</span>
+            <input
+              placeholder="예: 스타벅스 아메리카노"
+              value={displayPrize}
+              onChange={(changeEvent) =>
+                onMetaChange(event.id, { prizeTitle: changeEvent.target.value })
+              }
+            />
+          </label>
+          <label className="amount-field">
+            <span>금액</span>
+            <input
+              inputMode="numeric"
+              placeholder="0"
+              value={event.prizeAmount ?? ''}
+              onChange={(changeEvent) =>
+                onMetaChange(event.id, { prizeAmount: changeEvent.target.value })
+              }
+            />
+          </label>
+          <label className="receipt-field">
+            <span>상태</span>
+            <select
+              value={event.receiptStatus ?? 'unclaimed'}
+              onChange={(changeEvent) =>
+                onMetaChange(event.id, { receiptStatus: changeEvent.target.value })
+              }
+            >
+              {Object.entries(receiptLabels).map(([value, label]) => (
+                <option key={value} value={value}>
+                  {label}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="winning-memo-field">
+            <span>메모</span>
+            <input
+              placeholder="수령 조건, 문의번호, 계정 등"
+              value={event.winningMemo ?? ''}
+              onChange={(changeEvent) =>
+                onMetaChange(event.id, { winningMemo: changeEvent.target.value })
+              }
+            />
+          </label>
+        </div>
+      ) : null}
+    </article>
   );
 }
 
@@ -1303,6 +1572,10 @@ function formatDate(value) {
     month: '2-digit',
     day: '2-digit',
   }).format(date);
+}
+
+function formatAnnouncementDate(event) {
+  return event.resultAnnouncementDate ? formatDate(event.resultAnnouncementDate) : '-';
 }
 
 export default App;
