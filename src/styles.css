@@ -342,7 +342,7 @@ h3 {
   box-shadow: var(--shadow-cta);
 }
 
-.now-body {
+.event-body-toggle {
   display: grid;
   gap: 5px;
   border: 1px solid var(--border);
@@ -352,18 +352,18 @@ h3 {
   cursor: pointer;
 }
 
-.now-body:focus-visible {
+.event-body-toggle:focus-visible {
   border-color: var(--wanted-blue);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
-.now-body-preview,
-.now-body-expanded {
+.event-body-preview,
+.event-body-expanded {
   display: grid;
   gap: 5px;
 }
 
-.now-body p {
+.event-body-toggle p {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-main);
@@ -374,16 +374,16 @@ h3 {
   -webkit-line-clamp: 2;
 }
 
-.now-body-expanded {
+.event-body-expanded {
   cursor: pointer;
 }
 
-.now-body-expanded p {
+.event-body-expanded p {
   display: block;
   overflow: visible;
 }
 
-.now-body-facts {
+.event-body-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
@@ -392,8 +392,8 @@ h3 {
   padding-top: 8px;
 }
 
-.now-body-facts span,
-.now-body-facts a {
+.event-body-facts span,
+.event-body-facts a {
   display: inline-flex;
   align-items: center;
   min-height: 28px;
@@ -406,7 +406,7 @@ h3 {
   text-decoration: none;
 }
 
-.now-body-facts a {
+.event-body-facts a {
   border: 1px solid var(--accent-border);
   color: var(--warning);
 }
@@ -419,6 +419,10 @@ h3 {
 
 .now-actions {
   grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.home-actions {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 .quick-actions button,

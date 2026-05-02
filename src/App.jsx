@@ -546,7 +546,6 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
 function NowEventCard({ event, onStatusChange }) {
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
-  const [isBodyOpen, setIsBodyOpen] = useState(false);
 
   return (
     <article className="event-card now-card">
@@ -557,47 +556,7 @@ function NowEventCard({ event, onStatusChange }) {
 
       <h3>{event.title}</h3>
 
-      <div
-        className={`now-body${isBodyOpen ? ' is-open' : ''}`}
-        role="button"
-        tabIndex={0}
-        onClick={() => setIsBodyOpen((current) => !current)}
-        onKeyDown={(keyEvent) => {
-          if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
-            keyEvent.preventDefault();
-            setIsBodyOpen((current) => !current);
-          }
-        }}
-      >
-        {isBodyOpen ? (
-          <div className="now-body-expanded">
-            {userContentLines.map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-            <div className="now-body-facts" aria-label="원문 보조 정보">
-              {sourceFacts.map((fact) => (
-                <span key={fact}>{fact}</span>
-              ))}
-              {event.originalUrl || event.url ? (
-                <a
-                  href={event.originalUrl ?? event.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  onClick={(clickEvent) => clickEvent.stopPropagation()}
-                >
-                  원문 열기
-                </a>
-              ) : null}
-            </div>
-          </div>
-        ) : (
-          <div className="now-body-preview">
-            {userContentLines.slice(0, 3).map((line) => (
-              <p key={line}>{line}</p>
-            ))}
-          </div>
-        )}
-      </div>
+      <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
       <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
         {event.applyUrl || event.url ? (
@@ -615,6 +574,54 @@ function NowEventCard({ event, onStatusChange }) {
       </div>
 
     </article>
+  );
+}
+
+function EventBodyToggle({ event, lines, facts }) {
+  const [isBodyOpen, setIsBodyOpen] = useState(false);
+
+  return (
+    <div
+      className={`event-body-toggle${isBodyOpen ? ' is-open' : ''}`}
+      role="button"
+      tabIndex={0}
+      onClick={() => setIsBodyOpen((current) => !current)}
+      onKeyDown={(keyEvent) => {
+        if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+          keyEvent.preventDefault();
+          setIsBodyOpen((current) => !current);
+        }
+      }}
+    >
+      {isBodyOpen ? (
+        <div className="event-body-expanded">
+          {lines.map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+          <div className="event-body-facts" aria-label="원문 보조 정보">
+            {facts.map((fact) => (
+              <span key={fact}>{fact}</span>
+            ))}
+            {event.originalUrl || event.url ? (
+              <a
+                href={event.originalUrl ?? event.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(clickEvent) => clickEvent.stopPropagation()}
+              >
+                원문 열기
+              </a>
+            ) : null}
+          </div>
+        </div>
+      ) : (
+        <div className="event-body-preview">
+          {lines.slice(0, 3).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 
@@ -660,27 +667,24 @@ function shouldPreferSamsungBrowser() {
 }
 
 function HomeEventCard({ event, onStatusChange }) {
+  const userContentLines = buildUserContentLines(event);
+  const sourceFacts = buildSourceFacts(event);
+
   return (
     <article className="event-card home-card">
-      <div className="card-topline">
-        <span className={`tag tag-${event.effort}`}>{event.effortLabel}</span>
-        <span className="status">{event.clickScore}점</span>
+      <div className="score-row">
+        <span>{event.platform}</span>
+        <strong>{event.clickScore}점</strong>
       </div>
 
       <h3>{event.title}</h3>
       <p className="decision-reason">{event.decisionReason}</p>
-      <EventSourceSummary event={event} />
+      <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
-      <div className="meta-row">
-        <span>{event.platform}</span>
-        <span>{event.deadlineText}</span>
-      </div>
-
-      {event.applyUrl || event.url ? (
-        <ApplyLink className="apply-link" url={event.applyUrl ?? event.url} />
-      ) : null}
-
-      <div className="quick-actions" aria-label={`${event.title} 집 처리`}>
+      <div className="quick-actions home-actions" aria-label={`${event.title} 집 처리`}>
+        {event.applyUrl || event.url ? (
+          <ApplyLink className="apply-link action-apply" url={event.applyUrl ?? event.url} />
+        ) : null}
         <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
           제외
         </button>
