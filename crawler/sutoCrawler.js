@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { analyzeAnnouncementByRules } from './eventDecision/announcementDecision.js';
 import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
 
@@ -71,10 +72,29 @@ async function hydrateEventDetails(events) {
 
   for (const event of events) {
     const detail = await fetchEventDetail(event.originalUrl);
+    const lines = detail?.lines ?? event.originalLines ?? [];
+    const text = detail?.text ?? event.originalText ?? '';
+    const decision = analyzeEventByRules({
+      ...event,
+      dueText: event.due,
+      bodyText: text,
+      originalText: text,
+      originalLines: lines,
+    });
+    const announcement = analyzeAnnouncementByRules({
+      ...event,
+      ...decision,
+      bodyText: text,
+      originalText: text,
+      originalLines: lines,
+    });
+
     hydratedEvents.push({
       ...event,
-      originalText: detail?.text ?? event.originalText ?? '',
-      originalLines: detail?.lines ?? event.originalLines ?? [],
+      ...decision,
+      ...announcement,
+      originalText: text,
+      originalLines: lines,
       detailCrawlStatus: detail?.status ?? 'blocked',
     });
   }

@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { analyzeAnnouncementByRules } from './eventDecision/announcementDecision.js';
 import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 
 const CHROME_PATHS = [
@@ -109,6 +110,15 @@ async function saveBodyResult(supabase, event, result) {
     originalText: result.text,
     originalLines: result.lines,
   });
+  const announcement = analyzeAnnouncementByRules({
+    title: event.title,
+    platform: event.platform,
+    dueText: event.due_text,
+    bodyText: result.text,
+    originalText: result.text,
+    originalLines: result.lines,
+    prizeText: decision.prizeText,
+  });
   const nextRaw = {
     ...raw,
     originalText: result.text,
@@ -117,6 +127,7 @@ async function saveBodyResult(supabase, event, result) {
     detailCrawlMessage: result.message,
     detailCrawledAt: new Date().toISOString(),
     ...decision,
+    ...announcement,
   };
 
   const rowPatch = {
@@ -127,6 +138,8 @@ async function saveBodyResult(supabase, event, result) {
     decision_reason: decision.decisionReason,
     prize_text: decision.prizeText,
     deadline_text: decision.deadlineText,
+    result_announcement_date: announcement.resultAnnouncementDate || null,
+    result_announcement_text: announcement.resultAnnouncementText,
     effort: decision.effort,
     memo: decision.decisionReason,
   };
@@ -154,7 +167,7 @@ async function saveBodyResult(supabase, event, result) {
 function isMissingDecisionColumnError(error) {
   return (
     error?.code === 'PGRST204' ||
-    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|schema cache|column/i.test(
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|result_announcement|schema cache|column/i.test(
       error?.message ?? '',
     )
   );

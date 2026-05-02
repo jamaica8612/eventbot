@@ -297,6 +297,10 @@ h3 {
   border-color: var(--accent-border);
 }
 
+.announcement-card {
+  border-color: var(--accent-border);
+}
+
 .score-row {
   display: flex;
   align-items: center;
@@ -626,6 +630,27 @@ h3 {
   border-color: var(--border-strong);
   background: var(--border-strong);
   color: #ffffff;
+}
+
+.prize-panel {
+  display: grid;
+  gap: 4px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface-raised);
+  padding: 12px;
+}
+
+.prize-panel span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.prize-panel strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+  line-height: 1.35;
 }
 
 .announcement-panel {

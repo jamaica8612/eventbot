@@ -45,7 +45,7 @@ export async function upsertEvents(events) {
 function isMissingDecisionColumnError(error) {
   return (
     error?.code === 'PGRST204' ||
-    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|schema cache|column/i.test(
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|result_announcement|schema cache|column/i.test(
       error?.message ?? '',
     )
   );
@@ -98,6 +98,8 @@ function toEventRow(event) {
     decision_reason: event.decisionReason ?? '',
     prize_text: event.prizeText ?? '',
     deadline_text: event.deadlineText ?? event.due ?? '상세 확인 필요',
+    result_announcement_date: event.resultAnnouncementDate || null,
+    result_announcement_text: event.resultAnnouncementText ?? '',
     effort: event.effort ?? 'quick',
     memo: event.memo ?? '',
     raw: event,
@@ -113,6 +115,8 @@ function toLegacyEventRow(event) {
     decision_reason,
     prize_text,
     deadline_text,
+    result_announcement_date,
+    result_announcement_text,
     ...row
   } = toEventRow(event);
 

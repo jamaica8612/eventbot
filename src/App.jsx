@@ -13,6 +13,7 @@ import {
   loadSupabaseEvents,
   updateSupabaseEventState,
 } from './storage/supabaseEventStorage.js';
+import { analyzeAnnouncementByRules } from '../crawler/eventDecision/announcementDecision.js';
 import { getFallbackDecision } from '../crawler/eventDecision/ruleDecision.js';
 
 const statusLabels = {
@@ -562,8 +563,8 @@ function enrichEvent(event) {
   return {
     ...event,
     ...getFallbackDecision(event),
-    resultAnnouncementDate: event.resultAnnouncementDate ?? announcement.date,
-    resultAnnouncementText: event.resultAnnouncementText ?? announcement.text,
+    resultAnnouncementDate: event.resultAnnouncementDate || announcement.date,
+    resultAnnouncementText: event.resultAnnouncementText || announcement.text,
   };
 }
 
@@ -614,56 +615,19 @@ function getAnnouncementTime(event) {
 }
 
 function getFallbackAnnouncement(event) {
-  const text = buildAnnouncementSourceText(event);
-  const announcementLine = text
-    .split(/\n+/)
-    .map((line) => line.trim())
-    .find((line) => /당첨자?\s*발표|발표\s*일|결과\s*발표|당첨\s*확인/i.test(line));
+  const raw = event.raw ?? {};
 
-  if (!announcementLine) {
-    return { date: '', text: '' };
-  }
+  const announcement = analyzeAnnouncementByRules({
+    ...event,
+    originalText: event.originalText ?? raw.originalText ?? raw.contentText ?? raw.bodyText,
+    originalLines: event.originalLines ?? raw.originalLines,
+    bodyLines: raw.bodyLines,
+  });
 
   return {
-    date: extractAnnouncementDate(announcementLine),
-    text: announcementLine.slice(0, 80),
+    date: announcement.resultAnnouncementDate,
+    text: announcement.resultAnnouncementText,
   };
-}
-
-function buildAnnouncementSourceText(event) {
-  const raw = event.raw ?? {};
-  const parts = [
-    event.title,
-    event.deadlineText,
-    event.due,
-    event.memo,
-    event.originalText,
-    raw.originalText,
-    raw.contentText,
-    raw.bodyText,
-    Array.isArray(event.originalLines) ? event.originalLines.join('\n') : '',
-    Array.isArray(raw.originalLines) ? raw.originalLines.join('\n') : '',
-  ];
-
-  return parts.filter((part) => typeof part === 'string' && part.trim()).join('\n');
-}
-
-function extractAnnouncementDate(text) {
-  const today = getLocalToday();
-  const year = today.getFullYear();
-  const normalizedText = text.replace(/\s+/g, ' ');
-  const fullDateMatch = normalizedText.match(/(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/);
-
-  if (fullDateMatch) {
-    return formatInputDate(Number(fullDateMatch[1]), Number(fullDateMatch[2]), Number(fullDateMatch[3]));
-  }
-
-  const monthDayMatch = normalizedText.match(/(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*(?:일)?/);
-  if (monthDayMatch) {
-    return formatInputDate(year, Number(monthDayMatch[1]), Number(monthDayMatch[2]));
-  }
-
-  return '';
 }
 
 function parseLocalDate(value) {
@@ -683,28 +647,6 @@ function parseLocalDate(value) {
 function getLocalToday() {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-}
-
-function formatInputDate(year, month, day) {
-  if (!Number.isFinite(year) || !Number.isFinite(month) || !Number.isFinite(day)) {
-    return '';
-  }
-
-  const date = new Date(year, month - 1, day);
-  if (
-    Number.isNaN(date.getTime()) ||
-    date.getFullYear() !== year ||
-    date.getMonth() !== month - 1 ||
-    date.getDate() !== day
-  ) {
-    return '';
-  }
-
-  return [
-    String(year).padStart(4, '0'),
-    String(month).padStart(2, '0'),
-    String(day).padStart(2, '0'),
-  ].join('-');
 }
 
 function SummaryItem({ active, label, value, onClick }) {
@@ -898,6 +840,16 @@ function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStat
     return <HomeEventCard event={event} onStatusChange={onStatusChange} />;
   }
 
+  if (filter === 'todayAnnouncement') {
+    return (
+      <TodayAnnouncementCard
+        event={event}
+        onAnnouncementChange={onAnnouncementChange}
+        onResultChange={onResultChange}
+      />
+    );
+  }
+
   return (
     <CompletedEventCard
       event={event}
@@ -991,7 +943,7 @@ function EventBodyToggle({ event, lines, facts }) {
   );
 }
 
-function ApplyLink({ className, url }) {
+function ApplyLink({ className, url, label = '참여하기' }) {
   const href = buildSamsungBrowserHref(url);
   const isIntent = href.startsWith('intent://');
 
@@ -1002,7 +954,7 @@ function ApplyLink({ className, url }) {
       target={isIntent ? '_self' : '_blank'}
       rel={isIntent ? undefined : 'noopener noreferrer'}
     >
-      참여하기
+      {label}
     </a>
   );
 }
@@ -1056,6 +1008,54 @@ function HomeEventCard({ event, onStatusChange }) {
         </button>
         <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
           참여완료
+        </button>
+      </div>
+    </article>
+  );
+}
+
+function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) {
+  const resultStatus = event.resultStatus ?? 'unknown';
+  const prize = getPrizeDisplay(event);
+
+  return (
+    <article className="event-card announcement-card">
+      <div className="score-row">
+        <span>{event.platform}</span>
+        <strong>{getAnnouncementStatus(event).label}</strong>
+      </div>
+
+      <h3>{event.title}</h3>
+
+      <div className="prize-panel">
+        <span>경품</span>
+        <strong>{prize}</strong>
+      </div>
+
+      <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
+
+      {event.originalUrl || event.url ? (
+        <ApplyLink
+          className="apply-link"
+          url={event.originalUrl ?? event.url}
+          label="발표 확인"
+        />
+      ) : null}
+
+      <div className="result-row" aria-label={`${event.title} 발표 결과 변경`}>
+        <button
+          type="button"
+          className={resultStatus === 'won' ? 'is-won' : ''}
+          onClick={() => onResultChange(event.id, 'won')}
+        >
+          당첨
+        </button>
+        <button
+          type="button"
+          className={resultStatus === 'lost' ? 'is-lost' : ''}
+          onClick={() => onResultChange(event.id, 'lost')}
+        >
+          미당첨
         </button>
       </div>
     </article>
@@ -1201,6 +1201,25 @@ function buildSourceFacts(event) {
     Number.isFinite(event.bookmarkCount) ? `저장 ${event.bookmarkCount}` : null,
     Number.isFinite(event.rank) ? `목록 ${event.rank}위` : null,
   ].filter(Boolean);
+}
+
+function getPrizeDisplay(event) {
+  const raw = event.raw ?? {};
+  const announcementPrize = analyzeAnnouncementByRules({
+    ...event,
+    prizeText: event.prizeText ?? raw.prizeText,
+    originalText: event.originalText ?? raw.originalText ?? raw.contentText ?? raw.bodyText,
+    originalLines: event.originalLines ?? raw.originalLines,
+    bodyLines: raw.bodyLines,
+  }).prizeText;
+
+  return (
+    event.prizeTitle ||
+    event.prizeText ||
+    raw.prizeText ||
+    announcementPrize ||
+    '경품 정보 미수집'
+  );
 }
 
 function buildPreviewLines(event, facts) {
