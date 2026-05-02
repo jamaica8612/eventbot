@@ -545,6 +545,7 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
 
 function NowEventCard({ event, onStatusChange }) {
   const userContentLines = buildUserContentLines(event);
+  const sourceFacts = buildSourceFacts(event);
 
   return (
     <article className="event-card now-card">
@@ -574,6 +575,16 @@ function NowEventCard({ event, onStatusChange }) {
           {userContentLines.map((line) => (
             <p key={line}>{line}</p>
           ))}
+          <div className="now-body-facts" aria-label="원문 보조 정보">
+            {sourceFacts.map((fact) => (
+              <span key={fact}>{fact}</span>
+            ))}
+            {event.originalUrl || event.url ? (
+              <a href={event.originalUrl ?? event.url} target="_self">
+                원문 열기
+              </a>
+            ) : null}
+          </div>
         </div>
       </details>
 
@@ -594,10 +605,6 @@ function NowEventCard({ event, onStatusChange }) {
         </button>
       </div>
 
-      <details className="compact-details">
-        <summary>자세히</summary>
-        <EventSourceSummary event={event} />
-      </details>
     </article>
   );
 }
@@ -706,11 +713,7 @@ function CompletedEventCard({ event, onResultChange, onStatusChange }) {
 }
 
 function EventSourceSummary({ event }) {
-  const facts = [
-    event.platform,
-    Number.isFinite(event.bookmarkCount) ? `저장 ${event.bookmarkCount}` : null,
-    Number.isFinite(event.rank) ? `목록 ${event.rank}위` : null,
-  ].filter(Boolean);
+  const facts = buildSourceFacts(event);
   const previewLines = buildPreviewLines(event, facts);
 
   return (
@@ -731,6 +734,14 @@ function EventSourceSummary({ event }) {
       </div>
     </details>
   );
+}
+
+function buildSourceFacts(event) {
+  return [
+    event.platform,
+    Number.isFinite(event.bookmarkCount) ? `저장 ${event.bookmarkCount}` : null,
+    Number.isFinite(event.rank) ? `목록 ${event.rank}위` : null,
+  ].filter(Boolean);
 }
 
 function buildPreviewLines(event, facts) {
