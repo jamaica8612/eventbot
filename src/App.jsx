@@ -546,6 +546,7 @@ function EventCard({ event, filter, onResultChange, onStatusChange }) {
 function NowEventCard({ event, onStatusChange }) {
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
+  const [isBodyOpen, setIsBodyOpen] = useState(false);
 
   return (
     <article className="event-card now-card">
@@ -556,30 +557,47 @@ function NowEventCard({ event, onStatusChange }) {
 
       <h3>{event.title}</h3>
 
-      <details className="now-body">
-        <summary>
-          <div>
+      <div
+        className={`now-body${isBodyOpen ? ' is-open' : ''}`}
+        role="button"
+        tabIndex={0}
+        onClick={() => setIsBodyOpen((current) => !current)}
+        onKeyDown={(keyEvent) => {
+          if (keyEvent.key === 'Enter' || keyEvent.key === ' ') {
+            keyEvent.preventDefault();
+            setIsBodyOpen((current) => !current);
+          }
+        }}
+      >
+        {isBodyOpen ? (
+          <div className="now-body-expanded">
+            {userContentLines.map((line) => (
+              <p key={line}>{line}</p>
+            ))}
+            <div className="now-body-facts" aria-label="원문 보조 정보">
+              {sourceFacts.map((fact) => (
+                <span key={fact}>{fact}</span>
+              ))}
+              {event.originalUrl || event.url ? (
+                <a
+                  href={event.originalUrl ?? event.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(clickEvent) => clickEvent.stopPropagation()}
+                >
+                  원문 열기
+                </a>
+              ) : null}
+            </div>
+          </div>
+        ) : (
+          <div className="now-body-preview">
             {userContentLines.slice(0, 3).map((line) => (
               <p key={line}>{line}</p>
             ))}
           </div>
-        </summary>
-        <div className="now-body-expanded">
-          {userContentLines.map((line) => (
-            <p key={line}>{line}</p>
-          ))}
-          <div className="now-body-facts" aria-label="원문 보조 정보">
-            {sourceFacts.map((fact) => (
-              <span key={fact}>{fact}</span>
-            ))}
-            {event.originalUrl || event.url ? (
-              <a href={event.originalUrl ?? event.url} target="_blank" rel="noopener noreferrer">
-                원문 열기
-              </a>
-            ) : null}
-          </div>
-        </div>
-      </details>
+        )}
+      </div>
 
       <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
         {event.applyUrl || event.url ? (

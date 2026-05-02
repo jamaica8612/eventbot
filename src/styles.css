@@ -349,20 +349,15 @@ h3 {
   border-radius: 14px;
   background: var(--soft-panel);
   padding: 11px 12px;
-}
-
-.now-body summary {
-  display: grid;
-  gap: 6px;
   cursor: pointer;
-  list-style: none;
 }
 
-.now-body summary::-webkit-details-marker {
-  display: none;
+.now-body:focus-visible {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
 }
 
-.now-body summary div,
+.now-body-preview,
 .now-body-expanded {
   display: grid;
   gap: 5px;
@@ -379,14 +374,8 @@ h3 {
   -webkit-line-clamp: 2;
 }
 
-.now-body[open] summary div {
-  display: none;
-}
-
 .now-body-expanded {
-  border-top: 1px solid var(--border);
-  margin-top: 8px;
-  padding-top: 8px;
+  cursor: pointer;
 }
 
 .now-body-expanded p {
