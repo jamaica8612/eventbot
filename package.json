@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "crawl:suto": "node crawler/sutoCrawler.js",
+    "crawl:suto:body": "node crawler/sutoBrowserCrawler.js",
     "verify:supabase": "node scripts/verifySupabase.js"
   },
   "dependencies": {
