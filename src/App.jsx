@@ -944,44 +944,16 @@ function EventBodyToggle({ event, lines, facts }) {
 }
 
 function ApplyLink({ className, url, label = '참여하기' }) {
-  const href = buildSamsungBrowserHref(url);
-  const isIntent = href.startsWith('intent://');
-
   return (
     <a
       className={className}
-      href={href}
-      target={isIntent ? '_self' : '_blank'}
-      rel={isIntent ? undefined : 'noopener noreferrer'}
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
     >
       {label}
     </a>
   );
-}
-
-function buildSamsungBrowserHref(url) {
-  if (!shouldPreferSamsungBrowser()) {
-    return url;
-  }
-
-  try {
-    const parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) {
-      return url;
-    }
-
-    const scheme = parsedUrl.protocol.replace(':', '');
-    const hostAndPath = `${parsedUrl.host}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
-    const fallbackUrl = encodeURIComponent(parsedUrl.toString());
-
-    return `intent://${hostAndPath}#Intent;scheme=${scheme};package=com.sec.android.app.sbrowser;S.browser_fallback_url=${fallbackUrl};end`;
-  } catch {
-    return url;
-  }
-}
-
-function shouldPreferSamsungBrowser() {
-  return typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
 }
 
 function HomeEventCard({ event, onStatusChange }) {
