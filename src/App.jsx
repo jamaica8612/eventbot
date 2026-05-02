@@ -1044,6 +1044,7 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
   const resultStatus = event.resultStatus ?? 'unknown';
   const showAnnouncementPanel =
     filter === 'todayAnnouncement' && event.status === 'done' && resultStatus === 'unknown';
+  const showCompletionActions = filter !== 'done';
 
   return (
     <article className="event-card">
@@ -1068,7 +1069,7 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
         <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
       ) : null}
 
-      {event.applyUrl || event.url ? (
+      {showCompletionActions && (event.applyUrl || event.url) ? (
         <ApplyLink className="apply-link" url={event.applyUrl ?? event.url} />
       ) : null}
 
@@ -1077,18 +1078,20 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
         <span>{event.due}</span>
       </div>
 
-      <div className="action-row" aria-label={`${event.title} 상태 변경`}>
-        {statusActions.map((action) => (
-          <button
-            key={action.value}
-            type="button"
-            className={event.status === action.value ? 'is-selected' : ''}
-            onClick={() => onStatusChange(event.id, action.value)}
-          >
-            {action.label}
-          </button>
-        ))}
-      </div>
+      {showCompletionActions ? (
+        <div className="action-row" aria-label={`${event.title} 상태 변경`}>
+          {statusActions.map((action) => (
+            <button
+              key={action.value}
+              type="button"
+              className={event.status === action.value ? 'is-selected' : ''}
+              onClick={() => onStatusChange(event.id, action.value)}
+            >
+              {action.label}
+            </button>
+          ))}
+        </div>
+      ) : null}
 
       {event.status === 'done' ? (
         <div className="result-row" aria-label={`${event.title} 참여 결과 변경`}>
