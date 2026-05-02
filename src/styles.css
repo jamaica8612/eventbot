@@ -362,12 +362,6 @@ h3 {
   display: none;
 }
 
-.now-body summary > span {
-  color: var(--warning);
-  font-size: 0.76rem;
-  font-weight: 900;
-}
-
 .now-body summary div,
 .now-body-expanded {
   display: grid;

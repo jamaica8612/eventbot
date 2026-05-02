@@ -556,15 +556,8 @@ function NowEventCard({ event, onStatusChange }) {
 
       <h3>{event.title}</h3>
 
-      <div className="quick-meta">
-        <span>{event.deadlineText}</span>
-        <span>{formatSeconds(event.estimatedSeconds)}</span>
-        {event.prizeText ? <span>{event.prizeText}</span> : null}
-      </div>
-
       <details className="now-body">
         <summary>
-          <span>본문</span>
           <div>
             {userContentLines.slice(0, 3).map((line) => (
               <p key={line}>{line}</p>
