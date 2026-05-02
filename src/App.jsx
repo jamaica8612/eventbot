@@ -58,6 +58,7 @@ const filterTitles = {
 function App() {
   const [events, setEvents] = useState([]);
   const [filter, setFilter] = useState('now');
+  const [platformFilter, setPlatformFilter] = useState('all');
   const [isLoading, setIsLoading] = useState(true);
   const [syncError, setSyncError] = useState('');
   const [theme, setTheme] = useState(() => {
@@ -88,6 +89,10 @@ function App() {
       isMounted = false;
     };
   }, []);
+
+  useEffect(() => {
+    setPlatformFilter('all');
+  }, [filter]);
 
   const counts = useMemo(
     () =>
@@ -124,9 +129,22 @@ function App() {
     [events],
   );
 
-  const visibleEvents = useMemo(
+  const filteredByTabEvents = useMemo(
     () => events.filter((event) => matchesFilter(event, filter)),
     [events, filter],
+  );
+
+  const platformOptions = useMemo(
+    () => buildPlatformOptions(filteredByTabEvents),
+    [filteredByTabEvents],
+  );
+
+  const visibleEvents = useMemo(
+    () =>
+      platformFilter === 'all'
+        ? filteredByTabEvents
+        : filteredByTabEvents.filter((event) => event.platform === platformFilter),
+    [filteredByTabEvents, platformFilter],
   );
 
   const winningTotal = useMemo(
@@ -285,6 +303,28 @@ function App() {
 
           {syncError ? <p className="sync-error">{syncError}</p> : null}
 
+          {filter !== 'won' && platformOptions.length > 1 ? (
+            <div className="filter-chips" aria-label="이벤트 종류별 보기">
+              <button
+                type="button"
+                className={platformFilter === 'all' ? 'is-active' : ''}
+                onClick={() => setPlatformFilter('all')}
+              >
+                전체 <strong>{filteredByTabEvents.length}</strong>
+              </button>
+              {platformOptions.map((option) => (
+                <button
+                  key={option.platform}
+                  type="button"
+                  className={platformFilter === option.platform ? 'is-active' : ''}
+                  onClick={() => setPlatformFilter(option.platform)}
+                >
+                  {option.platform} <strong>{option.count}</strong>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
           {filter === 'won' ? (
             <WinningLedger
               events={visibleEvents}
@@ -390,6 +430,18 @@ function matchesFilter(event, filter) {
   if (filter === 'won') return event.resultStatus === 'won';
 
   return event.status === filter;
+}
+
+function buildPlatformOptions(events) {
+  const counts = events.reduce((acc, event) => {
+    const platform = event.platform || '기타 이벤트';
+    acc.set(platform, (acc.get(platform) ?? 0) + 1);
+    return acc;
+  }, new Map());
+
+  return [...counts.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort((first, second) => second.count - first.count || first.platform.localeCompare(second.platform, 'ko-KR'));
 }
 
 function enrichEvent(event) {
