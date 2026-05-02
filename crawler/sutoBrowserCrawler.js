@@ -17,6 +17,7 @@ const PROFILE_DIR = path.join(process.cwd(), '.crawler-chrome-profile');
 const BODY_LIMIT = Number(process.env.SUTO_BODY_LIMIT ?? 12);
 const NAVIGATION_WAIT_MS = Number(process.env.SUTO_BODY_WAIT_MS ?? 7000);
 const SHOULD_REDECIDE_ALL = process.env.SUTO_REDECIDE_ALL === '1';
+const SHOULD_FORCE_BODY_CRAWL = process.env.SUTO_FORCE_BODY_CRAWL === '1';
 
 async function main() {
   loadLocalEnv();
@@ -80,12 +81,17 @@ async function loadBodyTargets(supabase) {
 }
 
 function getExistingBodyResult(event) {
+  if (SHOULD_FORCE_BODY_CRAWL) {
+    return null;
+  }
+
   if (!SHOULD_REDECIDE_ALL) {
     return null;
   }
 
   const raw = event.raw && typeof event.raw === 'object' ? event.raw : {};
   const lines = normalizeLines(raw.originalLines ?? []);
+  const fullLines = normalizeLines(raw.pageLines ?? [], 120);
   if (lines.length === 0) {
     return null;
   }
@@ -95,6 +101,8 @@ function getExistingBodyResult(event) {
     message: raw.detailCrawlMessage ?? 'Recalculated from existing crawled body.',
     text: lines.join('\n'),
     lines,
+    fullText: fullLines.join('\n'),
+    fullLines,
   };
 }
 
@@ -115,8 +123,8 @@ async function saveBodyResult(supabase, event, result) {
     platform: event.platform,
     dueText: event.due_text,
     bodyText: result.text,
-    originalText: result.text,
-    originalLines: result.lines,
+    originalText: [result.text, result.fullText].filter(Boolean).join('\n'),
+    originalLines: [...result.lines, ...(result.fullLines ?? [])],
     prizeText: decision.prizeText,
   });
   const nextRaw = {
@@ -126,6 +134,8 @@ async function saveBodyResult(supabase, event, result) {
     detailCrawlStatus: result.status,
     detailCrawlMessage: result.message,
     detailCrawledAt: new Date().toISOString(),
+    pageText: result.fullText ?? '',
+    pageLines: result.fullLines ?? [],
     ...decision,
     ...announcement,
   };
@@ -199,6 +209,8 @@ async function crawlBody(url) {
       message: value.message ?? '',
       text: isBlocked ? '' : lines.join('\n'),
       lines: isBlocked ? [] : lines,
+      fullText: isBlocked ? '' : normalizeLines(value.fullLines ?? [], 120).join('\n'),
+      fullLines: isBlocked ? [] : normalizeLines(value.fullLines ?? [], 120),
     };
   } finally {
     await client.close();
@@ -224,6 +236,7 @@ function extractPageBody() {
   ];
   const node = selectors.map((selector) => document.querySelector(selector)).find(Boolean);
   const text = (node ?? document.body).innerText ?? '';
+  const fullText = document.body.innerText ?? '';
 
   return {
     blocked,
@@ -232,16 +245,20 @@ function extractPageBody() {
       .split(/\n+/)
       .map((line) => line.replace(/\s+/g, ' ').trim())
       .filter(Boolean),
+    fullLines: fullText
+      .split(/\n+/)
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean),
   };
 }
 
-function normalizeLines(lines) {
+function normalizeLines(lines, limit = 32) {
   return lines
     .map((line) => String(line).replace(/\s+/g, ' ').trim())
     .filter(Boolean)
     .filter((line) => !/^(목록|이전글|다음글|댓글|로그인|회원가입)$/.test(line))
     .filter((line, index, allLines) => allLines.indexOf(line) === index)
-    .slice(0, 32);
+    .slice(0, limit);
 }
 
 async function openDebugPage(url) {

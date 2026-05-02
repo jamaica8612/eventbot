@@ -186,7 +186,9 @@ function App() {
     const changedAt = new Date().toISOString();
     const currentEvent = events.find((event) => event.id === eventId);
     const participatedAt = currentEvent?.participatedAt ?? changedAt;
-    saveEventResult(eventId, resultStatus);
+    const prizeTitle =
+      resultStatus === 'won' ? currentEvent?.prizeTitle || getPrizeDisplay(currentEvent) : undefined;
+    saveEventResult(eventId, resultStatus, { prizeTitle });
     persistEventState(
       eventId,
       {
@@ -195,6 +197,7 @@ function App() {
         participatedAt,
         resultCheckedAt: changedAt,
         receiptStatus: currentEvent?.receiptStatus ?? 'unclaimed',
+        ...(prizeTitle ? { prizeTitle } : {}),
       },
       setSyncError,
     );
@@ -209,6 +212,7 @@ function App() {
               participatedAt: event.participatedAt ?? participatedAt,
               resultCheckedAt: changedAt,
               receiptStatus: event.receiptStatus ?? 'unclaimed',
+              prizeTitle: prizeTitle ?? event.prizeTitle,
             }
           : event,
       ),
@@ -772,6 +776,8 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
 }
 
 function WinningRow({ event, onMetaChange }) {
+  const prizeTitle = event.prizeTitle || getPrizeDisplay(event);
+
   return (
     <article className="ledger-row">
       <div className="ledger-title-block">
@@ -785,7 +791,7 @@ function WinningRow({ event, onMetaChange }) {
         <span>상품명</span>
         <input
           placeholder="예: 스타벅스 아메리카노"
-          value={event.prizeTitle ?? ''}
+          value={prizeTitle === '경품 정보 미수집' ? '' : prizeTitle}
           onChange={(changeEvent) =>
             onMetaChange(event.id, { prizeTitle: changeEvent.target.value })
           }

@@ -75,7 +75,7 @@ export function saveEventStatus(eventId, status) {
   writeStateMap(stateMap);
 }
 
-export function saveEventResult(eventId, resultStatus) {
+export function saveEventResult(eventId, resultStatus, meta = {}) {
   if (!validResultStatuses.has(resultStatus)) {
     return;
   }
@@ -89,6 +89,10 @@ export function saveEventResult(eventId, resultStatus) {
     participatedAt: currentState.participatedAt ?? new Date().toISOString(),
     resultCheckedAt: new Date().toISOString(),
     receiptStatus: currentState.receiptStatus ?? 'unclaimed',
+    prizeTitle:
+      typeof meta.prizeTitle === 'string' && meta.prizeTitle
+        ? meta.prizeTitle
+        : currentState.prizeTitle ?? '',
   };
   writeStateMap(stateMap);
 }
