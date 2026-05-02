@@ -3,6 +3,7 @@ import { mkdir } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
+import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 
 const CHROME_PATHS = [
   'C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe',
@@ -14,6 +15,7 @@ const DEBUG_PORT = Number(process.env.SUTO_BROWSER_PORT ?? 9223);
 const PROFILE_DIR = path.join(process.cwd(), '.crawler-chrome-profile');
 const BODY_LIMIT = Number(process.env.SUTO_BODY_LIMIT ?? 12);
 const NAVIGATION_WAIT_MS = Number(process.env.SUTO_BODY_WAIT_MS ?? 7000);
+const SHOULD_REDECIDE_ALL = process.env.SUTO_REDECIDE_ALL === '1';
 
 async function main() {
   loadLocalEnv();
@@ -42,7 +44,7 @@ async function main() {
     await waitForChrome();
 
     for (const event of events) {
-      const result = await crawlBody(event.url);
+      const result = getExistingBodyResult(event) ?? (await crawlBody(event.url));
       await saveBodyResult(supabase, event, result);
       console.log(
         `${result.status.padEnd(9)} ${String(result.lines.length).padStart(2)} lines · ${event.title}`,
@@ -56,7 +58,7 @@ async function main() {
 async function loadBodyTargets(supabase) {
   const { data, error } = await supabase
     .from('events')
-    .select('id,title,url,raw,last_seen_at')
+    .select('id,title,url,platform,rank,bookmark_count,due_text,raw,last_seen_at')
     .order('last_seen_at', { ascending: false })
     .limit(80);
 
@@ -66,14 +68,47 @@ async function loadBodyTargets(supabase) {
 
   return data
     .filter((event) => {
+      if (SHOULD_REDECIDE_ALL) {
+        return true;
+      }
+
       const raw = event.raw && typeof event.raw === 'object' ? event.raw : {};
       return !Array.isArray(raw.originalLines) || raw.originalLines.length === 0;
     })
     .slice(0, BODY_LIMIT);
 }
 
+function getExistingBodyResult(event) {
+  if (!SHOULD_REDECIDE_ALL) {
+    return null;
+  }
+
+  const raw = event.raw && typeof event.raw === 'object' ? event.raw : {};
+  const lines = normalizeLines(raw.originalLines ?? []);
+  if (lines.length === 0) {
+    return null;
+  }
+
+  return {
+    status: raw.detailCrawlStatus === 'ok' ? 'ok' : 'cached',
+    message: raw.detailCrawlMessage ?? 'Recalculated from existing crawled body.',
+    text: lines.join('\n'),
+    lines,
+  };
+}
+
 async function saveBodyResult(supabase, event, result) {
   const raw = event.raw && typeof event.raw === 'object' ? event.raw : {};
+  const decision = analyzeEventByRules({
+    title: event.title,
+    platform: event.platform,
+    bookmarkCount: event.bookmark_count,
+    rank: event.rank,
+    dueText: event.due_text,
+    bodyText: result.text,
+    originalText: result.text,
+    originalLines: result.lines,
+  });
   const nextRaw = {
     ...raw,
     originalText: result.text,
@@ -81,16 +116,48 @@ async function saveBodyResult(supabase, event, result) {
     detailCrawlStatus: result.status,
     detailCrawlMessage: result.message,
     detailCrawledAt: new Date().toISOString(),
+    ...decision,
   };
 
-  const { error } = await supabase
-    .from('events')
-    .update({ raw: nextRaw })
-    .eq('id', event.id);
+  const rowPatch = {
+    raw: nextRaw,
+    click_score: decision.clickScore,
+    action_type: decision.actionType,
+    estimated_seconds: decision.estimatedSeconds,
+    decision_reason: decision.decisionReason,
+    prize_text: decision.prizeText,
+    deadline_text: decision.deadlineText,
+    effort: decision.effort,
+    memo: decision.decisionReason,
+  };
+
+  const { error } = await supabase.from('events').update(rowPatch).eq('id', event.id);
 
   if (error) {
+    if (isMissingDecisionColumnError(error)) {
+      const { error: rawOnlyError } = await supabase
+        .from('events')
+        .update({ raw: nextRaw, effort: decision.effort, memo: decision.decisionReason })
+        .eq('id', event.id);
+
+      if (!rawOnlyError) {
+        return;
+      }
+
+      throw new Error(`Failed to save body for ${event.title}: ${rawOnlyError.message}`);
+    }
+
     throw new Error(`Failed to save body for ${event.title}: ${error.message}`);
   }
+}
+
+function isMissingDecisionColumnError(error) {
+  return (
+    error?.code === 'PGRST204' ||
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|schema cache|column/i.test(
+      error?.message ?? '',
+    )
+  );
 }
 
 async function crawlBody(url) {

@@ -580,7 +580,7 @@ function NowEventCard({ event, onStatusChange }) {
               <span key={fact}>{fact}</span>
             ))}
             {event.originalUrl || event.url ? (
-              <a href={event.originalUrl ?? event.url} target="_self">
+              <a href={event.originalUrl ?? event.url} target="_blank" rel="noopener noreferrer">
                 원문 열기
               </a>
             ) : null}
@@ -590,7 +590,7 @@ function NowEventCard({ event, onStatusChange }) {
 
       <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
         {event.applyUrl || event.url ? (
-          <a className="apply-link action-apply" href={event.applyUrl ?? event.url} target="_self">
+          <a className="apply-link action-apply" href={event.applyUrl ?? event.url} target="_blank" rel="noopener noreferrer">
             참여하기
           </a>
         ) : null}
@@ -627,7 +627,7 @@ function HomeEventCard({ event, onStatusChange }) {
       </div>
 
       {event.applyUrl || event.url ? (
-        <a className="apply-link" href={event.applyUrl ?? event.url} target="_self">
+        <a className="apply-link" href={event.applyUrl ?? event.url} target="_blank" rel="noopener noreferrer">
           참여하기
         </a>
       ) : null}
@@ -667,7 +667,7 @@ function CompletedEventCard({ event, onResultChange, onStatusChange }) {
       ) : null}
 
       {event.applyUrl || event.url ? (
-        <a className="apply-link" href={event.applyUrl ?? event.url} target="_self">
+        <a className="apply-link" href={event.applyUrl ?? event.url} target="_blank" rel="noopener noreferrer">
           참여하기
         </a>
       ) : null}

@@ -11,28 +11,28 @@ const effortLabelByActionType = {
 };
 
 const positiveRules = [
-  { words: ['클릭', '응모', '간단', '퀴즈', '출석', '출첵'], score: 30, reason: '짧게 처리 가능' },
-  { words: ['홈페이지 이벤트'], score: 20, reason: '홈페이지 이벤트' },
-  { words: ['앱 이벤트'], score: 15, reason: '앱 이벤트' },
+  { words: ['클릭', '응모', '간단', '퀴즈', '출석', '출첵'], score: 30, reason: '빠른 참여 키워드' },
+  { words: ['홈페이지 이벤트', '공식 홈페이지'], score: 20, reason: '홈페이지 이벤트' },
+  { words: ['앱 이벤트', '앱에서'], score: 15, reason: '앱 이벤트' },
   { words: ['오늘 마감', '금일 마감', '마감임박'], score: 25, reason: '마감 임박' },
   { words: ['내일 마감'], score: 15, reason: '내일 마감' },
   {
-    words: ['스타벅스', '커피', '상품권', '네이버페이', '포인트', '치킨', '편의점'],
+    words: ['스타벅스', '커피', '상품권', '네이버페이', '포인트', '치킨', '편의점', '쿠폰', '기프티콘'],
     score: 10,
-    reason: '쓸만한 보상',
+    reason: '보상 키워드',
   },
 ];
 
 const negativeRules = [
-  { words: ['유튜브'], score: -15, reason: '유튜브 확인 필요' },
-  { words: ['댓글'], score: -25, reason: '댓글 작성 필요' },
-  { words: ['정성 댓글'], score: -40, reason: '정성 댓글 필요' },
+  { words: ['유튜브', '영상 시청', '구독'], score: -15, reason: '영상 확인 필요' },
+  { words: ['정성 댓글', '센스 있는 이유', '이유까지 댓글'], score: -40, reason: '정성 댓글 필요' },
+  { words: ['댓글', '댓글을 남겨', '댓글 이벤트'], score: -25, reason: '댓글 작성 필요' },
   { words: ['인스타그램', '인스타'], score: -25, reason: '인스타그램 처리 필요' },
   { words: ['팔로우'], score: -15, reason: '팔로우 필요' },
   { words: ['친구태그', '친구 태그', '태그', '리그램', '공유'], score: -30, reason: 'SNS 공유/태그 필요' },
-  { words: ['설문', '조사'], score: -45, reason: '설문 처리 필요' },
-  { words: ['공모', '아이디어', '후기', '리뷰'], score: -50, reason: '긴 작성 필요' },
-  { words: ['회원가입'], score: -40, reason: '회원가입 필요' },
+  { words: ['설문', '조사', '만족도', '수요조사', '인식조사'], score: -45, reason: '설문 처리 필요' },
+  { words: ['공모', '아이디어', '후기', '리뷰', '국민심사'], score: -50, reason: '글 작성/검토 필요' },
+  { words: ['회원가입', '가입'], score: -40, reason: '회원가입 필요' },
 ];
 
 export function analyzeEventByRules(eventInput) {
@@ -55,8 +55,18 @@ export function analyzeEventByRules(eventInput) {
   };
 }
 
-export function calculateClickScore({ title = '', platform = '', bookmarkCount, rank, dueText = '' }) {
-  const text = `${title} ${platform} ${dueText}`;
+export function calculateClickScore({
+  title = '',
+  platform = '',
+  bookmarkCount,
+  rank,
+  dueText = '',
+  deadlineText = '',
+  bodyText = '',
+  originalText = '',
+  originalLines = [],
+}) {
+  const text = buildDecisionText({ title, platform, dueText, deadlineText, bodyText, originalText, originalLines });
   let score = 50;
 
   for (const rule of [...positiveRules, ...negativeRules]) {
@@ -82,12 +92,12 @@ export function inferActionType(score) {
   return 'skip';
 }
 
-export function estimateSeconds({ title = '', platform = '', score }) {
-  const text = `${title} ${platform}`;
-  if (/설문|조사|공모|아이디어|후기|리뷰|회원가입/.test(text)) {
+export function estimateSeconds({ title = '', platform = '', bodyText = '', originalText = '', originalLines = [], score }) {
+  const text = buildDecisionText({ title, platform, bodyText, originalText, originalLines });
+  if (/설문|조사|공모|아이디어|후기|리뷰|회원가입|국민심사/.test(text)) {
     return 300;
   }
-  if (/유튜브|댓글|인스타|팔로우|공유|리그램|태그/.test(text)) {
+  if (/유튜브|영상 시청|댓글|인스타|팔로우|공유|리그램|태그/.test(text)) {
     return 180;
   }
   if (score >= 85) return 20;
@@ -97,7 +107,7 @@ export function estimateSeconds({ title = '', platform = '', score }) {
 }
 
 export function buildDecisionReason(input, score, actionType) {
-  const text = `${input.title ?? ''} ${input.platform ?? ''} ${input.dueText ?? ''}`;
+  const text = buildDecisionText(input);
   const matchedReasons = [...positiveRules, ...negativeRules]
     .filter((rule) => includesAny(text, rule.words))
     .map((rule) => rule.reason);
@@ -134,11 +144,32 @@ export function getFallbackDecision(event) {
   };
 }
 
-function extractPrizeText({ title = '', prizeText = '' }) {
+function buildDecisionText({
+  title = '',
+  platform = '',
+  dueText = '',
+  deadlineText = '',
+  bodyText = '',
+  originalText = '',
+  originalLines = [],
+} = {}) {
+  return [
+    title,
+    platform,
+    dueText,
+    deadlineText,
+    bodyText,
+    originalText,
+    Array.isArray(originalLines) ? originalLines.join(' ') : '',
+  ].join(' ');
+}
+
+function extractPrizeText({ title = '', bodyText = '', originalText = '', originalLines = [], prizeText = '' }) {
   if (prizeText) return prizeText;
 
-  const match = title.match(/(스타벅스|커피|상품권|네이버페이|포인트|치킨|편의점|쿠폰|기프티콘)[^,\]]*/);
-  return match ? match[0].trim() : '';
+  const text = buildDecisionText({ title, bodyText, originalText, originalLines });
+  const match = text.match(/(스타벅스|커피|상품권|네이버페이|포인트|치킨|편의점|쿠폰|기프티콘)[^,\]\n]*/);
+  return match ? match[0].trim().slice(0, 32) : '';
 }
 
 function includesAny(text, words) {
