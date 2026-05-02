@@ -672,6 +672,55 @@ h3 {
   line-height: 1.1;
 }
 
+.ledger-view-toggle {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.ledger-view-toggle button {
+  min-height: 42px;
+  border-radius: 999px;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.ledger-view-toggle button.is-active {
+  border-color: var(--wanted-blue);
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+}
+
+.ledger-month-list {
+  display: grid;
+  gap: 12px;
+}
+
+.ledger-month-group {
+  display: grid;
+  gap: 8px;
+}
+
+.ledger-month-head {
+  display: grid;
+  gap: 3px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  padding: 12px;
+}
+
+.ledger-month-head strong {
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.ledger-month-head span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .ledger-table {
   display: grid;
   gap: 8px;
@@ -690,7 +739,12 @@ h3 {
   padding: 13px;
 }
 
-.ledger-row time {
+.ledger-title-block {
+  display: grid;
+  gap: 6px;
+}
+
+.ledger-title-block time {
   color: var(--wanted-blue);
   font-size: 0.8rem;
   font-weight: 900;
@@ -713,8 +767,10 @@ h3 {
   font-weight: 700;
 }
 
+.prize-title-field,
 .amount-field,
-.receipt-field {
+.receipt-field,
+.winning-memo-field {
   display: grid;
   gap: 5px;
   color: var(--text-muted);
@@ -722,8 +778,10 @@ h3 {
   font-weight: 900;
 }
 
+.prize-title-field input,
 .amount-field input,
-.receipt-field select {
+.receipt-field select,
+.winning-memo-field input {
   width: 100%;
   min-height: 44px;
   border: 1px solid var(--border-strong);
@@ -734,8 +792,10 @@ h3 {
   font-weight: 900;
 }
 
+.prize-title-field input:focus,
 .amount-field input:focus,
-.receipt-field select:focus {
+.receipt-field select:focus,
+.winning-memo-field input:focus {
   border-color: var(--wanted-blue);
   outline: 2px solid var(--wanted-blue-soft);
 }
@@ -814,45 +874,13 @@ h3 {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
   }
 
-  .ledger-table {
-    overflow: hidden;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--surface);
-    gap: 0;
-  }
-
-  .ledger-head,
   .ledger-row {
-    display: grid;
-    grid-template-columns: 76px minmax(0, 1.6fr) 120px 130px;
-    gap: 12px;
-    align-items: center;
+    grid-template-columns: minmax(0, 1.4fr) minmax(150px, 0.8fr) 120px 130px;
+    align-items: start;
   }
 
-  .ledger-head {
-    min-height: 42px;
-    border-bottom: 1px solid var(--border);
-    color: var(--text-muted);
-    font-size: 0.78rem;
-    font-weight: 900;
-    padding: 0 14px;
-  }
-
-  .ledger-row {
-    border: 0;
-    border-radius: 0;
-    border-bottom: 1px solid var(--border);
-    box-shadow: none;
-  }
-
-  .ledger-row:last-child {
-    border-bottom: 0;
-  }
-
-  .amount-field span,
-  .receipt-field span {
-    display: none;
+  .winning-memo-field {
+    grid-column: 1 / -1;
   }
 }
 

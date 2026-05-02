@@ -15,8 +15,10 @@ export function applyStoredStatuses(events) {
       resultStatus: savedState?.resultStatus ?? event.resultStatus ?? 'unknown',
       participatedAt: savedState?.participatedAt ?? event.participatedAt ?? null,
       resultCheckedAt: savedState?.resultCheckedAt ?? event.resultCheckedAt ?? null,
+      prizeTitle: savedState?.prizeTitle ?? event.prizeTitle ?? event.prizeText ?? '',
       prizeAmount: savedState?.prizeAmount ?? event.prizeAmount ?? '',
       receiptStatus: savedState?.receiptStatus ?? event.receiptStatus ?? 'unclaimed',
+      winningMemo: savedState?.winningMemo ?? event.winningMemo ?? '',
     };
   });
 }
@@ -78,6 +80,14 @@ export function saveWinningMeta(eventId, meta) {
     nextState.prizeAmount = meta.prizeAmount.replace(/[^\d]/g, '');
   }
 
+  if (typeof meta.prizeTitle === 'string') {
+    nextState.prizeTitle = meta.prizeTitle;
+  }
+
+  if (typeof meta.winningMemo === 'string') {
+    nextState.winningMemo = meta.winningMemo;
+  }
+
   if (validReceiptStatuses.has(meta.receiptStatus)) {
     nextState.receiptStatus = meta.receiptStatus;
   }
@@ -116,8 +126,10 @@ function normalizeSavedState(value) {
       resultStatus: 'unknown',
       participatedAt: null,
       resultCheckedAt: null,
+      prizeTitle: '',
       prizeAmount: '',
       receiptStatus: 'unclaimed',
+      winningMemo: '',
     };
   }
 
@@ -134,10 +146,12 @@ function normalizeSavedState(value) {
       typeof value.participatedAt === 'string' ? value.participatedAt : null,
     resultCheckedAt:
       typeof value.resultCheckedAt === 'string' ? value.resultCheckedAt : null,
+    prizeTitle: typeof value.prizeTitle === 'string' ? value.prizeTitle : '',
     prizeAmount: typeof value.prizeAmount === 'string' ? value.prizeAmount : '',
     receiptStatus: validReceiptStatuses.has(value.receiptStatus)
       ? value.receiptStatus
       : 'unclaimed',
+    winningMemo: typeof value.winningMemo === 'string' ? value.winningMemo : '',
   };
 }
 

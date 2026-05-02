@@ -225,10 +225,14 @@ function App() {
               status: 'done',
               resultStatus: 'won',
               ...meta,
+              prizeTitle:
+                typeof meta.prizeTitle === 'string' ? meta.prizeTitle : event.prizeTitle,
               prizeAmount:
                 typeof meta.prizeAmount === 'string'
                   ? meta.prizeAmount.replace(/[^\d]/g, '')
                   : event.prizeAmount,
+              winningMemo:
+                typeof meta.winningMemo === 'string' ? meta.winningMemo : event.winningMemo,
             }
           : event,
       ),
@@ -444,6 +448,67 @@ function buildPlatformOptions(events) {
     .sort((first, second) => second.count - first.count || first.platform.localeCompare(second.platform, 'ko-KR'));
 }
 
+function sortWinningEvents(events) {
+  return [...events].sort(
+    (first, second) => getWinningTime(second) - getWinningTime(first),
+  );
+}
+
+function buildWinningMonthGroups(events) {
+  const groups = events.reduce((acc, event) => {
+    const groupKey = getWinningMonthKey(event);
+    const currentGroup =
+      acc.get(groupKey.key) ??
+      {
+        ...groupKey,
+        events: [],
+        totalAmount: 0,
+        unreceivedCount: 0,
+      };
+
+    currentGroup.events.push(event);
+    currentGroup.totalAmount += parsePrizeAmount(event.prizeAmount);
+    if (event.receiptStatus !== 'received') {
+      currentGroup.unreceivedCount += 1;
+    }
+    acc.set(groupKey.key, currentGroup);
+    return acc;
+  }, new Map());
+
+  return [...groups.values()];
+}
+
+function getWinningMonthKey(event) {
+  const value = getWinningDateValue(event);
+  if (!value) {
+    return { key: 'unknown', label: '날짜 미확인' };
+  }
+
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return { key: 'unknown', label: '날짜 미확인' };
+  }
+
+  return {
+    key: `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`,
+    label: `${date.getFullYear()}년 ${date.getMonth() + 1}월`,
+  };
+}
+
+function getWinningTime(event) {
+  const value = getWinningDateValue(event);
+  if (!value) {
+    return 0;
+  }
+
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getWinningDateValue(event) {
+  return event.resultCheckedAt ?? event.participatedAt ?? null;
+}
+
 function enrichEvent(event) {
   return {
     ...event,
@@ -501,11 +566,16 @@ function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
 }
 
 function WinningLedger({ events, totalAmount, onMetaChange }) {
+  const [ledgerView, setLedgerView] = useState('latest');
+  const sortedEvents = useMemo(() => sortWinningEvents(events), [events]);
+  const monthlyGroups = useMemo(() => buildWinningMonthGroups(sortedEvents), [sortedEvents]);
+  const unreceivedCount = events.filter((event) => event.receiptStatus !== 'received').length;
+
   return (
     <div className="winning-ledger">
       <div className="ledger-summary">
         <div>
-          <span>당첨</span>
+          <span>총 당첨</span>
           <strong>{events.length}</strong>
         </div>
         <div>
@@ -513,25 +583,54 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
           <strong>{formatWon(totalAmount)}</strong>
         </div>
         <div>
-          <span>수령완료</span>
-          <strong>
-            {events.filter((event) => event.receiptStatus === 'received').length}
-          </strong>
+          <span>미수령</span>
+          <strong>{unreceivedCount}</strong>
         </div>
       </div>
 
+      <div className="ledger-view-toggle" aria-label="당첨 장부 보기 전환">
+        <button
+          type="button"
+          className={ledgerView === 'latest' ? 'is-active' : ''}
+          onClick={() => setLedgerView('latest')}
+        >
+          최신순
+        </button>
+        <button
+          type="button"
+          className={ledgerView === 'monthly' ? 'is-active' : ''}
+          onClick={() => setLedgerView('monthly')}
+        >
+          월별
+        </button>
+      </div>
+
       {events.length > 0 ? (
-        <div className="ledger-table" role="table" aria-label="당첨 관리 목록">
-          <div className="ledger-head" role="row">
-            <span>날짜</span>
-            <span>당첨내역</span>
-            <span>금액</span>
-            <span>상태</span>
+        ledgerView === 'monthly' ? (
+          <div className="ledger-month-list">
+            {monthlyGroups.map((group) => (
+              <section className="ledger-month-group" key={group.key}>
+                <div className="ledger-month-head">
+                  <strong>{group.label}</strong>
+                  <span>
+                    {group.events.length}건 · {formatWon(group.totalAmount)} · 미수령 {group.unreceivedCount}
+                  </span>
+                </div>
+                <div className="ledger-table" role="table" aria-label={`${group.label} 당첨 관리 목록`}>
+                  {group.events.map((event) => (
+                    <WinningRow key={event.id} event={event} onMetaChange={onMetaChange} />
+                  ))}
+                </div>
+              </section>
+            ))}
           </div>
-          {events.map((event) => (
-            <WinningRow key={event.id} event={event} onMetaChange={onMetaChange} />
-          ))}
-        </div>
+        ) : (
+          <div className="ledger-table" role="table" aria-label="당첨 관리 목록">
+            {sortedEvents.map((event) => (
+              <WinningRow key={event.id} event={event} onMetaChange={onMetaChange} />
+            ))}
+          </div>
+        )
       ) : (
         <p className="empty-message">아직 당첨으로 표시한 이벤트가 없습니다.</p>
       )}
@@ -542,11 +641,23 @@ function WinningLedger({ events, totalAmount, onMetaChange }) {
 function WinningRow({ event, onMetaChange }) {
   return (
     <article className="ledger-row">
-      <time>{formatDate(event.resultCheckedAt ?? event.participatedAt)}</time>
-      <div className="ledger-title">
-        <strong>{event.title}</strong>
-        <span>{event.source}</span>
+      <div className="ledger-title-block">
+        <time>{formatDate(getWinningDateValue(event))}</time>
+        <div className="ledger-title">
+          <strong>{event.title}</strong>
+          <span>{event.source}</span>
+        </div>
       </div>
+      <label className="prize-title-field">
+        <span>상품명</span>
+        <input
+          placeholder="예: 스타벅스 아메리카노"
+          value={event.prizeTitle ?? ''}
+          onChange={(changeEvent) =>
+            onMetaChange(event.id, { prizeTitle: changeEvent.target.value })
+          }
+        />
+      </label>
       <label className="amount-field">
         <span>금액</span>
         <input
@@ -572,6 +683,16 @@ function WinningRow({ event, onMetaChange }) {
             </option>
           ))}
         </select>
+      </label>
+      <label className="winning-memo-field">
+        <span>메모</span>
+        <input
+          placeholder="수령 조건, 문의번호, 계정 등"
+          value={event.winningMemo ?? ''}
+          onChange={(changeEvent) =>
+            onMetaChange(event.id, { winningMemo: changeEvent.target.value })
+          }
+        />
       </label>
     </article>
   );

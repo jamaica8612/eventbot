@@ -34,6 +34,10 @@
 | `result_status` | text | `unknown`, `won`, `lost` |
 | `participated_at` | timestamptz | 참여 처리한 시간 |
 | `result_checked_at` | timestamptz | 당첨/미당첨 결과를 확인한 시간 |
+| `prize_title` | text | 사용자가 정리한 당첨 상품명 |
+| `prize_amount` | integer | 사용자가 입력한 당첨 추정 금액 |
+| `receipt_status` | text | `unclaimed`, `requested`, `received` |
+| `winning_memo` | text | 당첨 수령 조건, 문의번호, 계정 등 메모 |
 | `memo` | text | 앱에서 보여줄 짧은 메모 |
 | `first_seen_at` | timestamptz | 처음 수집된 시간 |
 | `last_seen_at` | timestamptz | 마지막으로 다시 발견된 시간 |
@@ -98,6 +102,10 @@ source_site + source_event_id
 | `resultStatus` | `result_status` |
 | `participatedAt` | `participated_at` |
 | `resultCheckedAt` | `result_checked_at` |
+| `prizeTitle` | `prize_title` |
+| `prizeAmount` | `prize_amount` |
+| `receiptStatus` | `receipt_status` |
+| `winningMemo` | `winning_memo` |
 | `memo` | `memo` |
 | `url` | `url` |
 | `crawledFrom` | `source_name` |

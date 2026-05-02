@@ -23,8 +23,10 @@ create table if not exists public.events (
   result_status text not null default 'unknown',
   participated_at timestamptz,
   result_checked_at timestamptz,
+  prize_title text,
   prize_amount integer,
   receipt_status text not null default 'unclaimed',
+  winning_memo text,
   memo text not null default '',
   raw jsonb not null default '{}'::jsonb,
   first_seen_at timestamptz not null default now(),
@@ -46,8 +48,10 @@ create index if not exists events_last_seen_at_idx on public.events (last_seen_a
 create index if not exists events_effort_idx on public.events (effort);
 
 alter table public.events add column if not exists apply_url text;
+alter table public.events add column if not exists prize_title text;
 alter table public.events add column if not exists prize_amount integer;
 alter table public.events add column if not exists receipt_status text not null default 'unclaimed';
+alter table public.events add column if not exists winning_memo text;
 alter table public.events add column if not exists click_score integer;
 alter table public.events add column if not exists action_type text;
 alter table public.events add column if not exists estimated_seconds integer;

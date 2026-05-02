@@ -46,8 +46,30 @@ export async function updateSupabaseEventState(eventId, patch) {
 
   const { error } = await supabase.from('events').update(rowPatch).eq('id', eventId);
   if (error) {
+    if (isMissingWinningColumnError(error)) {
+      const legacyPatch = { ...rowPatch };
+      delete legacyPatch.prize_title;
+      delete legacyPatch.winning_memo;
+
+      const { error: legacyError } = await supabase
+        .from('events')
+        .update(legacyPatch)
+        .eq('id', eventId);
+
+      if (!legacyError) {
+        return;
+      }
+    }
+
     throw new Error(error.message);
   }
+}
+
+function isMissingWinningColumnError(error) {
+  return (
+    error?.code === 'PGRST204' ||
+    /prize_title|winning_memo|schema cache|column/i.test(error?.message ?? '')
+  );
 }
 
 function toAppEvent(row) {
@@ -89,8 +111,10 @@ function toAppEvent(row) {
     resultStatus: row.result_status,
     participatedAt: row.participated_at,
     resultCheckedAt: row.result_checked_at,
-    prizeAmount: row.prize_amount ? String(row.prize_amount) : '',
-    receiptStatus: row.receipt_status,
+    prizeTitle: row.prize_title ?? raw.prizeTitle ?? decision.prizeText ?? '',
+    prizeAmount: row.prize_amount == null ? '' : String(row.prize_amount),
+    receiptStatus: row.receipt_status ?? 'unclaimed',
+    winningMemo: row.winning_memo ?? raw.winningMemo ?? '',
     memo: row.memo,
     url: row.url,
     crawledFrom: row.source_name,
@@ -108,6 +132,8 @@ function toStateRowPatch(patch) {
   if ('participatedAt' in patch) rowPatch.participated_at = patch.participatedAt;
   if ('resultCheckedAt' in patch) rowPatch.result_checked_at = patch.resultCheckedAt;
   if ('receiptStatus' in patch) rowPatch.receipt_status = patch.receiptStatus;
+  if ('prizeTitle' in patch) rowPatch.prize_title = patch.prizeTitle;
+  if ('winningMemo' in patch) rowPatch.winning_memo = patch.winningMemo;
   if ('prizeAmount' in patch) {
     const parsedAmount = Number.parseInt(String(patch.prizeAmount).replace(/[^\d]/g, ''), 10);
     rowPatch.prize_amount = Number.isFinite(parsedAmount) ? parsedAmount : null;
