@@ -33,13 +33,16 @@ export function CompletedManagementList({ events, isLoading, onResultChange }) {
 
 function CompletedListItem({ event, onResultChange }) {
   const resultStatus = event.resultStatus ?? 'unknown';
+  const announcement = formatAnnouncementDate(event);
 
   return (
     <article className="manage-row completed-row" role="row">
-      <time>{formatDate(event.participatedAt)}</time>
-      <strong>{event.title}</strong>
-      <span>{event.platform}</span>
-      <span>{formatAnnouncementDate(event)}</span>
+      <header className="manage-row-meta">
+        <time>{formatDate(event.participatedAt)}</time>
+        <span>{event.platform}</span>
+        {announcement !== '-' ? <span>발표 {announcement}</span> : null}
+      </header>
+      <strong className="manage-row-title">{event.title}</strong>
       <span className={`result-badge result-${resultStatus}`}>{resultLabels[resultStatus]}</span>
       <div className="manage-result-actions">
         <button
@@ -59,9 +62,7 @@ function CompletedListItem({ event, onResultChange }) {
       </div>
       {event.originalUrl || event.url ? (
         <ApplyLink className="manage-link" url={event.originalUrl ?? event.url} label="다시보기" />
-      ) : (
-        <span>-</span>
-      )}
+      ) : null}
     </article>
   );
 }
@@ -103,11 +104,16 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
 
   return (
     <article className="manage-row result-manage-row" role="row">
-      <span className={`announcement-state announcement-state-${announcement.state}`}>
-        {announcement.label}
-      </span>
-      <strong>{event.title}</strong>
-      <span>{getPrizeDisplay(event)}</span>
+      <header className="manage-row-meta">
+        <span className={`announcement-state announcement-state-${announcement.state}`}>
+          {announcement.label}
+        </span>
+        <span>{event.platform}</span>
+      </header>
+      <strong className="manage-row-title">{event.title}</strong>
+      <p className="manage-row-prize">
+        <span>경품</span> {getPrizeDisplay(event)}
+      </p>
       <div className="manage-result-actions">
         <button
           type="button"
@@ -124,20 +130,22 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
           미당첨
         </button>
       </div>
-      <button
-        type="button"
-        className="manage-edit-button"
-        onClick={() => setIsEditing((value) => !value)}
-      >
-        수정
-      </button>
-      {event.originalUrl || event.url ? (
-        <ApplyLink
-          className="manage-link"
-          url={event.originalUrl ?? event.url}
-          label="발표 확인"
-        />
-      ) : null}
+      <div className="manage-row-side">
+        {event.originalUrl || event.url ? (
+          <ApplyLink
+            className="manage-link"
+            url={event.originalUrl ?? event.url}
+            label="발표 확인"
+          />
+        ) : null}
+        <button
+          type="button"
+          className="manage-edit-button"
+          onClick={() => setIsEditing((value) => !value)}
+        >
+          수정
+        </button>
+      </div>
       {isEditing ? (
         <div className="manage-edit-panel">
           <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />

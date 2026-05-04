@@ -983,6 +983,49 @@ h3 {
   font-weight: 800;
 }
 
+.manage-row-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 10px;
+  align-items: center;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.manage-row-meta time {
+  color: var(--wanted-blue);
+  font-weight: 900;
+}
+
+.manage-row-title {
+  color: var(--text-strong);
+  font-size: 1rem;
+  line-height: 1.35;
+}
+
+.manage-row-prize {
+  margin: 0;
+  color: var(--text-main);
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.manage-row-prize span {
+  margin-right: 6px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.manage-row-side {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
 .manage-result-actions {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1058,14 +1101,24 @@ h3 {
   display: block;
 }
 
-.ledger-memo {
-  display: none;
-}
 
-.ledger-row .ledger-title-block time,
-.ledger-row .ledger-title span {
-  display: none;
+/* 카드 내부에 라벨이 없으면 한눈에 의미가 안 보이므로 ::before로 라벨을 붙인다. */
+.ledger-prize::before,
+.ledger-amount::before,
+.ledger-receipt::before,
+.ledger-memo::before {
+  display: inline-block;
+  margin-right: 6px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
+.ledger-prize::before { content: '상품'; }
+.ledger-amount::before { content: '금액'; }
+.ledger-receipt::before { content: '상태'; }
+.ledger-memo::before { content: '메모'; }
 
 .bottom-nav {
   position: fixed;
@@ -1115,6 +1168,25 @@ h3 {
   line-height: 1;
 }
 
+/* 카드 내부 그리드: 라벨된 셀들이 2칸씩 묶이고 수정 버튼이 우하단으로. */
+.ledger-row {
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-areas:
+    "title title"
+    "prize amount"
+    "receipt memo"
+    ".       edit";
+  align-items: start;
+}
+
+.ledger-title-block { grid-area: title; }
+.ledger-prize { grid-area: prize; }
+.ledger-amount { grid-area: amount; text-align: right; }
+.ledger-receipt { grid-area: receipt; }
+.ledger-memo { grid-area: memo; text-align: right; }
+.ledger-row > .manage-edit-button { grid-area: edit; justify-self: end; }
+.ledger-edit-panel { grid-column: 1 / -1; }
+
 @media (min-width: 760px) {
   .app-shell {
     padding: 30px 24px 112px;
@@ -1139,11 +1211,6 @@ h3 {
     border-top: 1px solid var(--border);
     border-radius: 0;
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
-  }
-
-  .ledger-row {
-    grid-template-columns: minmax(0, 1.4fr) minmax(150px, 0.8fr) 120px 130px;
-    align-items: start;
   }
 
   .winning-memo-field {
@@ -1309,57 +1376,22 @@ h3 {
     gap: 14px;
   }
 
+  /* manage-mode 목록도 PC에서 2열 카드 그리드로 보여 빈 공간을 줄인다.
+     이전 가짜 테이블 레이아웃은 좁고 한 줄짜리 박스가 만들어져 가독성이 나빴다. */
   .manage-mode .event-list,
-  .manage-mode .manage-list {
+  .manage-mode .manage-list,
+  .manage-mode .ledger-table {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 14px;
+  }
+
+  /* 단, 월별 그룹 안의 .ledger-table은 그룹 박스 안에서 단일 열로 유지한다(시각적 위계). */
+  .manage-mode .ledger-month-group .ledger-table {
     grid-template-columns: 1fr;
   }
 
-  .manage-head {
-    display: grid;
-    gap: 10px;
-    align-items: center;
-    border: 1px solid var(--border);
-    border-radius: 14px;
-    background: var(--surface-raised);
-    color: var(--text-muted);
-    padding: 10px 12px;
-    font-size: 0.78rem;
-    font-weight: 900;
-  }
-
-  .completed-head,
-  .completed-row {
-    grid-template-columns: 82px minmax(220px, 1.7fr) 120px 90px 112px 152px 90px;
-  }
-
-  .result-head,
-  .result-manage-row {
-    grid-template-columns: 130px minmax(260px, 1.6fr) minmax(180px, 1fr) 152px 76px;
-  }
-
-  .manage-row {
-    align-items: center;
-    box-shadow: none;
-  }
-
-  .result-manage-row .manage-link,
-  .result-manage-row .manage-edit-panel {
-    grid-column: 2 / -1;
-  }
-
-  .ledger-row {
-    grid-template-columns: 1.4fr 1fr 110px 120px 1fr 72px;
-    align-items: center;
-  }
-
-  .ledger-row .ledger-title-block time,
-  .ledger-row .ledger-title span,
-  .ledger-memo {
-    display: block;
-  }
-
   .ledger-edit-panel {
-    grid-column: 1 / -1;
     grid-template-columns: minmax(180px, 1fr) 120px 140px minmax(220px, 1fr);
   }
 
