@@ -384,6 +384,39 @@ h3 {
   cursor: pointer;
 }
 
+.event-body-empty {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  justify-content: space-between;
+  border: 1px dashed var(--border-strong);
+  border-radius: 14px;
+  background: var(--soft-panel);
+  padding: 11px 12px;
+}
+
+.event-body-empty p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+}
+
+.event-body-original {
+  display: inline-flex;
+  align-items: center;
+  min-height: 36px;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+  padding: 0 12px;
+  font-size: 0.84rem;
+  font-weight: 900;
+  text-decoration: none;
+}
+
 .event-body-toggle:focus-visible {
   border-color: var(--wanted-blue);
   outline: 2px solid var(--wanted-blue-soft);

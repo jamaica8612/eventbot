@@ -2,10 +2,16 @@ import { analyzeAnnouncementByRules } from '../../crawler/eventDecision/announce
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
 import { getLocalToday, parseLocalDate, parsePrizeAmount, formatDate } from './format.js';
 
-const FALLBACK_BODY_LINE =
+export const FALLBACK_BODY_LINE =
   '아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.';
 
 export const PRIZE_FALLBACK = '경품 정보 미수집';
+
+export function hasCrawledBody(event) {
+  // EventBodyToggle/카드가 "원문에서 확인" 단순 안내로 분기할 때 사용한다.
+  const lines = buildUserContentLines(event);
+  return !(lines.length === 1 && lines[0] === FALLBACK_BODY_LINE);
+}
 
 export function enrichEvent(event) {
   const announcement = getFallbackAnnouncement(event);

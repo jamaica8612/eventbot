@@ -6,6 +6,7 @@ import {
   buildPreviewLines,
   getAnnouncementStatus,
   getPrizeDisplay,
+  hasCrawledBody,
 } from '../utils/eventModel.js';
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
@@ -81,6 +82,27 @@ export function AnnouncementPanel({ event, onAnnouncementChange }) {
 
 function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
+  const originalHref = event.originalUrl ?? event.url;
+
+  // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
+  // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
+  if (!hasCrawledBody(event)) {
+    return (
+      <div className="event-body-empty">
+        <p>본문은 슈퍼투데이 사이트에서 직접 확인하세요.</p>
+        {originalHref ? (
+          <a
+            className="event-body-original"
+            href={originalHref}
+            target="_blank"
+            rel="noopener noreferrer"
+          >
+            원문 열기
+          </a>
+        ) : null}
+      </div>
+    );
+  }
 
   return (
     <div

@@ -109,12 +109,9 @@ function parseSutoHotEvents(html) {
 async function hydrateEventDetails(events) {
   const hydratedEvents = [];
 
-  for (const [index, event] of events.entries()) {
-    // Cloudflare가 짧은 시간 다수 요청을 의심하므로 이벤트 간 600ms 간격을 둔다.
-    if (index > 0) {
-      await sleep(600);
-    }
-
+  for (const event of events) {
+    // 본문은 Cloudflare에 거의 다 막히는 게 현실이라 지연 없이 빠르게 시도만 한다.
+    // 막히면 카드에 "원문에서 확인" CTA가 노출되도록 UI에서 처리한다.
     const detail = await fetchEventDetail(event.originalUrl);
     const lines = detail?.lines ?? event.originalLines ?? [];
     const text = detail?.text ?? event.originalText ?? '';
