@@ -24,7 +24,7 @@ LIST_URL = f"{BASE}/cpevent?isActive=1"
 IMPERSONATE = "chrome124"
 TIMEOUT = 20
 DETAIL_LIMIT = 80
-LIST_PAGE_LIMIT = 10
+LIST_PAGE_LIMIT = int(os.environ.get("SUTO_LIST_PAGE_LIMIT", "20"))
 DETAIL_DELAY_SECONDS = float(os.environ.get("SUTO_DETAIL_DELAY_SECONDS", "1.1"))
 RATE_LIMIT_BACKOFF_SECONDS = [4, 9, 16]
 YOUTUBE_TRANSCRIPT_LIMIT = int(os.environ.get("SUTO_YOUTUBE_TRANSCRIPT_LIMIT", "0"))
@@ -82,10 +82,8 @@ def fetch_list() -> list[dict]:
                     response.raise_for_status()
                     page_events = parse_list(response.text, seen_ids, len(events))
                     events.extend(page_events)
-                    if len(events) >= DETAIL_LIMIT:
-                        break
                     time.sleep(0.25)
-                return events[:DETAIL_LIMIT]
+                return select_detail_targets(events)
             except Exception as exc:
                 last_error = exc
                 if attempt < 3:
@@ -149,6 +147,32 @@ def parse_list(html: str, seen_ids: set[str] | None = None, start_rank: int = 0)
         )
 
     return events
+
+
+def select_detail_targets(events: list[dict]) -> list[dict]:
+    quotas = {
+        "유튜브 이벤트": 50,
+        "네이버 블로그 이벤트": 10,
+        "앱 전용 이벤트": 5,
+    }
+    sorted_events = sorted(events, key=lambda event: int(event.get("rank") or 9999))
+    selected = []
+    selected_ids = set()
+
+    for platform, quota in quotas.items():
+        for event in [event for event in sorted_events if event.get("platform") == platform][:quota]:
+            selected.append(event)
+            selected_ids.add(event["id"])
+
+    for event in sorted_events:
+        if len(selected) >= DETAIL_LIMIT:
+            break
+        if event["id"] in selected_ids:
+            continue
+        selected.append(event)
+        selected_ids.add(event["id"])
+
+    return selected[:DETAIL_LIMIT]
 
 
 def fetch_detail(s, url: str) -> dict:

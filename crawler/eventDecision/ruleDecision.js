@@ -40,7 +40,7 @@ const negativeRules = [
 
 export function analyzeEventByRules(eventInput) {
   const clickScore = calculateClickScore(eventInput);
-  const actionType = inferActionType(clickScore);
+  const actionType = inferActionType(clickScore, eventInput);
   const estimatedSeconds = estimateSeconds({ ...eventInput, score: clickScore });
   const decisionReason = buildDecisionReason(eventInput, clickScore, actionType);
   const prizeText = extractPrizeText(eventInput);
@@ -114,10 +114,16 @@ export function calculateClickScore({
   return clamp(score, 0, 100);
 }
 
-export function inferActionType(score) {
+export function inferActionType(score, eventInput = {}) {
+  if (isYoutubeEvent(eventInput) && score >= 0) return 'home';
   if (score >= 70) return 'now';
   if (score >= 40) return 'home';
   return 'skip';
+}
+
+function isYoutubeEvent({ platform = '', title = '', originalUrl = '', applyUrl = '', externalLinks = [] } = {}) {
+  const text = [platform, title, originalUrl, applyUrl, ...(Array.isArray(externalLinks) ? externalLinks : [])].join(' ');
+  return /유튜브|youtube\.com|youtu\.be/i.test(text);
 }
 
 export function estimateSeconds({ title = '', platform = '', bodyText = '', originalText = '', originalLines = [], score }) {
