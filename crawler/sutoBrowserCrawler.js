@@ -18,6 +18,9 @@ const BODY_LIMIT = Number(process.env.SUTO_BODY_LIMIT ?? 12);
 const NAVIGATION_WAIT_MS = Number(process.env.SUTO_BODY_WAIT_MS ?? 7000);
 const SHOULD_REDECIDE_ALL = process.env.SUTO_REDECIDE_ALL === '1';
 const SHOULD_FORCE_BODY_CRAWL = process.env.SUTO_FORCE_BODY_CRAWL === '1';
+const SHOULD_USE_MOBILE = process.env.SUTO_BODY_MOBILE !== '0';
+const MOBILE_USER_AGENT =
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1';
 
 async function main() {
   loadLocalEnv();
@@ -148,6 +151,7 @@ async function saveBodyResult(supabase, event, result) {
     decision_reason: decision.decisionReason,
     prize_text: decision.prizeText,
     deadline_text: decision.deadlineText,
+    deadline_date: decision.deadlineDate || null,
     result_announcement_date: announcement.resultAnnouncementDate || null,
     result_announcement_text: announcement.resultAnnouncementText,
     effort: decision.effort,
@@ -158,16 +162,21 @@ async function saveBodyResult(supabase, event, result) {
 
   if (error) {
     if (isMissingDecisionColumnError(error)) {
-      const { error: rawOnlyError } = await supabase
+      const legacyPatch = { ...rowPatch };
+      for (const column of inferMissingColumns(error)) {
+        delete legacyPatch[column];
+      }
+
+      const { error: legacyError } = await supabase
         .from('events')
-        .update({ raw: nextRaw, effort: decision.effort, memo: decision.decisionReason })
+        .update(legacyPatch)
         .eq('id', event.id);
 
-      if (!rawOnlyError) {
+      if (!legacyError) {
         return;
       }
 
-      throw new Error(`Failed to save body for ${event.title}: ${rawOnlyError.message}`);
+      throw new Error(`Failed to save body for ${event.title}: ${legacyError.message}`);
     }
 
     throw new Error(`Failed to save body for ${event.title}: ${error.message}`);
@@ -177,10 +186,27 @@ async function saveBodyResult(supabase, event, result) {
 function isMissingDecisionColumnError(error) {
   return (
     error?.code === 'PGRST204' ||
-    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|result_announcement|schema cache|column/i.test(
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|deadline_date|result_announcement|schema cache|column/i.test(
       error?.message ?? '',
     )
   );
+}
+
+function inferMissingColumns(error) {
+  const message = error?.message ?? '';
+  const optionalColumns = [
+    'click_score',
+    'action_type',
+    'estimated_seconds',
+    'decision_reason',
+    'prize_text',
+    'deadline_text',
+    'deadline_date',
+    'result_announcement_date',
+    'result_announcement_text',
+  ];
+  const mentionedColumns = optionalColumns.filter((column) => message.includes(column));
+  return mentionedColumns.length > 0 ? mentionedColumns : ['deadline_date'];
 }
 
 async function crawlBody(url) {
@@ -191,6 +217,9 @@ async function crawlBody(url) {
   try {
     await client.send('Page.enable');
     await client.send('Runtime.enable');
+    if (SHOULD_USE_MOBILE) {
+      await enableMobileEmulation(client);
+    }
     await client.send('Page.navigate', { url });
     await sleep(NAVIGATION_WAIT_MS);
 
@@ -216,6 +245,25 @@ async function crawlBody(url) {
     await client.close();
     await closeDebugPage(page.id);
   }
+}
+
+async function enableMobileEmulation(client) {
+  await client.send('Emulation.setDeviceMetricsOverride', {
+    width: 390,
+    height: 844,
+    deviceScaleFactor: 3,
+    mobile: true,
+  });
+  await client.send('Emulation.setTouchEmulationEnabled', {
+    enabled: true,
+    configuration: 'mobile',
+  });
+  await client.send('Network.enable');
+  await client.send('Network.setUserAgentOverride', {
+    userAgent: MOBILE_USER_AGENT,
+    acceptLanguage: 'ko-KR,ko;q=0.9,en;q=0.5',
+    platform: 'iPhone',
+  });
 }
 
 function extractPageBody() {
@@ -291,6 +339,7 @@ async function launchChrome() {
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-popup-blocking',
+      SHOULD_USE_MOBILE ? '--window-size=390,844' : '--window-size=1280,900',
       'about:blank',
     ],
     {

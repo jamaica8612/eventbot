@@ -1,5 +1,6 @@
 import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
+import { spawn } from 'node:child_process';
 import { analyzeAnnouncementByRules } from './eventDecision/announcementDecision.js';
 import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
@@ -10,8 +11,7 @@ const SOURCE_URL =
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
 
 async function main() {
-  const html = await fetchHtml(SOURCE_URL);
-  const events = await hydrateEventDetails(parseSutoHotEvents(html));
+  const events = await loadSutoEvents();
   const payload = {
     source: SOURCE_NAME,
     sourceUrl: SOURCE_URL,
@@ -30,9 +30,98 @@ async function main() {
   console.log(`Saved ${events.length} events to ${OUTPUT_PATH}`);
 }
 
+async function loadSutoEvents() {
+  const curlCffiEvents = await fetchEventsViaCurlCffi().catch((error) => {
+    console.warn(`curl_cffi source failed. Falling back to AJAX source: ${error.message}`);
+    return [];
+  });
+
+  if (curlCffiEvents.length > 0) {
+    return curlCffiEvents.map(hydrateCurlCffiEvent);
+  }
+
+  const html = await fetchHtml(SOURCE_URL);
+  return hydrateEventDetails(parseSutoHotEvents(html));
+}
+
 async function saveJsonPayload(payload) {
   await mkdir(path.dirname(OUTPUT_PATH), { recursive: true });
   await writeFile(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+}
+
+function fetchEventsViaCurlCffi() {
+  return new Promise((resolve, reject) => {
+    const child = spawn(getPythonCommand(), ['crawler/sutoCurlCffiSource.py'], {
+      cwd: process.cwd(),
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+    let stdout = '';
+    let stderr = '';
+
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code !== 0) {
+        reject(new Error(stderr.trim() || `Python source exited with code ${code}`));
+        return;
+      }
+
+      try {
+        const events = JSON.parse(stdout);
+        resolve(Array.isArray(events) ? events : []);
+      } catch (error) {
+        reject(new Error(`Failed to parse Python source output: ${error.message}`));
+      }
+    });
+  });
+}
+
+function getPythonCommand() {
+  return process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3');
+}
+
+function hydrateCurlCffiEvent(event) {
+  const lines = event.originalLines ?? [];
+  const text = event.originalText ?? '';
+  const decision = analyzeEventByRules({
+    ...event,
+    dueText: event.deadlineText || event.due || '상세 확인 필요',
+    bodyText: text,
+    originalText: text,
+    originalLines: lines,
+  });
+  const announcement = analyzeAnnouncementByRules({
+    ...event,
+    ...decision,
+    bodyText: text,
+    originalText: text,
+    originalLines: lines,
+  });
+
+  return {
+    ...event,
+    due: event.deadlineText || decision.deadlineText,
+    deadlineText: event.deadlineText || decision.deadlineText,
+    deadlineDate: event.deadlineDate || decision.deadlineDate || '',
+    clickScore: decision.clickScore,
+    actionType: decision.actionType,
+    estimatedSeconds: decision.estimatedSeconds,
+    decisionReason: decision.decisionReason,
+    prizeText: decision.prizeText || event.prizeText || '',
+    effort: decision.effort,
+    effortLabel: decision.effortLabel,
+    status: 'ready',
+    memo: decision.decisionReason,
+    ...announcement,
+  };
 }
 
 // Cloudflare가 모바일 UA를 더 자주 의심하므로 데스크톱 UA를 1순위로 둔다.
@@ -199,6 +288,7 @@ function parseEventAnchor(href, innerHtml) {
     bookmarkCount,
     due,
     deadlineText: decision.deadlineText,
+    deadlineDate: decision.deadlineDate,
     clickScore: decision.clickScore,
     actionType: decision.actionType,
     estimatedSeconds: decision.estimatedSeconds,

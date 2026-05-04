@@ -18,6 +18,7 @@ create table if not exists public.events (
   decision_reason text,
   prize_text text,
   deadline_text text,
+  deadline_date date,
   effort text not null default 'quick',
   status text not null default 'ready',
   result_status text not null default 'unknown',
@@ -54,6 +55,7 @@ alter table public.events add column if not exists estimated_seconds integer;
 alter table public.events add column if not exists decision_reason text;
 alter table public.events add column if not exists prize_text text;
 alter table public.events add column if not exists deadline_text text;
+alter table public.events add column if not exists deadline_date date;
 alter table public.events add column if not exists result_announcement_date date;
 alter table public.events add column if not exists result_announcement_text text;
 alter table public.events add column if not exists prize_title text;

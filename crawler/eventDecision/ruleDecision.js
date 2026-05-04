@@ -1,3 +1,5 @@
+import { extractKoreanEventDates, normalizeDateText } from './dateExtraction.js';
+
 const effortByActionType = {
   now: 'quick',
   home: 'home',
@@ -42,7 +44,13 @@ export function analyzeEventByRules(eventInput) {
   const estimatedSeconds = estimateSeconds({ ...eventInput, score: clickScore });
   const decisionReason = buildDecisionReason(eventInput, clickScore, actionType);
   const prizeText = extractPrizeText(eventInput);
-  const deadlineText = eventInput.dueText ?? eventInput.deadlineText ?? eventInput.due ?? '상세 확인 필요';
+  const deadline = extractDeadlineByRules(eventInput);
+  const deadlineText =
+    deadline.text ||
+    eventInput.dueText ||
+    eventInput.deadlineText ||
+    eventInput.due ||
+    '상세 확인 필요';
 
   return {
     clickScore,
@@ -51,8 +59,27 @@ export function analyzeEventByRules(eventInput) {
     decisionReason,
     prizeText,
     deadlineText,
+    deadlineDate: eventInput.deadlineDate || deadline.date,
     effort: effortByActionType[actionType],
     effortLabel: effortLabelByActionType[actionType],
+  };
+}
+
+export function extractDeadlineByRules(eventInput = {}) {
+  const text = buildDecisionText(eventInput);
+  const line = findDeadlineLine(text);
+  if (!line) {
+    return {
+      date: eventInput.deadlineDate ?? '',
+      text: eventInput.deadlineText ?? eventInput.dueText ?? eventInput.due ?? '',
+    };
+  }
+
+  const dates = extractKoreanEventDates(line);
+  const date = dates.at(-1) ?? '';
+  return {
+    date: eventInput.deadlineDate || date,
+    text: normalizeDeadlineText(line, date),
   };
 }
 
@@ -140,6 +167,7 @@ export function getFallbackDecision(event) {
     decisionReason: event.decisionReason ?? event.memo ?? '',
     prizeText: event.prizeText ?? '',
     deadlineText: event.deadlineText ?? event.due ?? '상세 확인 필요',
+    deadlineDate: event.deadlineDate ?? '',
     effort: event.effort ?? effortByActionType[actionType],
     effortLabel: event.effortLabel ?? effortLabelByActionType[actionType],
   };
@@ -171,6 +199,30 @@ function extractPrizeText({ title = '', bodyText = '', originalText = '', origin
   const text = buildDecisionText({ title, bodyText, originalText, originalLines });
   const match = text.match(/(스타벅스|커피|상품권|네이버페이|포인트|치킨|편의점|쿠폰|기프티콘)[^,\]\n]*/);
   return match ? match[0].trim().slice(0, 32) : '';
+}
+
+function findDeadlineLine(text) {
+  const lines = text
+    .split(/\n+/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .filter((line) => !/당첨자?\s*발표|결과\s*발표|발표\s*일|수상작\s*발표|경품\s*발송|상품\s*발송/.test(line));
+
+  return (
+    lines.find(
+      (line) =>
+        /(?:이벤트|응모|참여|설문|투표|심사|접수)?\s*(?:기간|마감|기한|일정)|까지|종료/.test(line) &&
+        /(20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}|\d{1,2}\s*[.\-/월]\s*\d{1,2})/.test(line),
+    ) ?? ''
+  );
+}
+
+function normalizeDeadlineText(line, date) {
+  const text = normalizeDateText(line).slice(0, 100);
+  if (!date) {
+    return text;
+  }
+  return text || date;
 }
 
 function includesAny(text, words) {

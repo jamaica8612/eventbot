@@ -6,3 +6,5 @@ dist/
 .env.local
 .crawler-chrome-profile/
 .gh-auth*
+__pycache__/
+*.pyc

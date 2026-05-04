@@ -186,6 +186,7 @@ function NowEventCard({ event, onStatusChange }) {
       </div>
 
       <h3>{event.title}</h3>
+      <EventScheduleMeta event={event} />
 
       <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
@@ -221,6 +222,7 @@ function HomeEventCard({ event, onStatusChange }) {
       </div>
 
       <h3>{event.title}</h3>
+      <EventScheduleMeta event={event} />
       <p className="decision-reason">{event.decisionReason}</p>
       <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
@@ -252,6 +254,7 @@ function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) 
       </div>
 
       <h3>{event.title}</h3>
+      <EventScheduleMeta event={event} />
 
       <div className="prize-panel">
         <span>경품</span>
@@ -302,6 +305,7 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
       </div>
 
       <h3>{event.title}</h3>
+      <EventScheduleMeta event={event} />
       <p className="decision-reason">{event.decisionReason}</p>
       <EventSourceSummary event={event} />
 
@@ -319,7 +323,7 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 
       <div className="meta-row">
         <span>{event.source}</span>
-        <span>{event.due}</span>
+        {getDeadlineDisplay(event) ? <span>{getDeadlineDisplay(event)}</span> : null}
       </div>
 
       {showCompletionActions ? (
@@ -357,4 +361,25 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
       ) : null}
     </article>
   );
+}
+
+function EventScheduleMeta({ event }) {
+  const deadline = getDeadlineDisplay(event);
+  const announcement = event.resultAnnouncementDate || event.resultAnnouncementText;
+
+  if (!deadline && !announcement) {
+    return null;
+  }
+
+  return (
+    <div className="schedule-row" aria-label={`${event.title} 일정`}>
+      {deadline ? <span>마감 {deadline}</span> : null}
+      {announcement ? <span>발표 {event.resultAnnouncementDate || event.resultAnnouncementText}</span> : null}
+    </div>
+  );
+}
+
+function getDeadlineDisplay(event) {
+  const value = event.deadlineDate || event.deadlineText || event.due || '';
+  return value === '상세 확인 필요' ? '' : value;
 }

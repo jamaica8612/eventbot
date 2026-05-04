@@ -24,7 +24,7 @@ export async function upsertEvents(events) {
 
   if (error) {
     if (isMissingDecisionColumnError(error)) {
-      const legacyRows = events.map(toLegacyEventRow);
+      const legacyRows = events.map((event) => toLegacyEventRow(event, error));
       const { error: legacyError } = await supabase
         .from('events')
         .upsert(legacyRows, { onConflict: 'source_site,source_event_id' });
@@ -45,7 +45,7 @@ export async function upsertEvents(events) {
 function isMissingDecisionColumnError(error) {
   return (
     error?.code === 'PGRST204' ||
-    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|result_announcement|schema cache|column/i.test(
+    /click_score|action_type|estimated_seconds|decision_reason|prize_text|deadline_text|deadline_date|result_announcement|schema cache|column/i.test(
       error?.message ?? '',
     )
   );
@@ -98,6 +98,7 @@ function toEventRow(event) {
     decision_reason: event.decisionReason ?? '',
     prize_text: event.prizeText ?? '',
     deadline_text: event.deadlineText ?? event.due ?? '상세 확인 필요',
+    deadline_date: event.deadlineDate || null,
     result_announcement_date: event.resultAnnouncementDate || null,
     result_announcement_text: event.resultAnnouncementText ?? '',
     effort: event.effort ?? 'quick',
@@ -107,18 +108,38 @@ function toEventRow(event) {
   };
 }
 
-function toLegacyEventRow(event) {
-  const {
-    click_score,
-    action_type,
-    estimated_seconds,
-    decision_reason,
-    prize_text,
-    deadline_text,
-    result_announcement_date,
-    result_announcement_text,
-    ...row
-  } = toEventRow(event);
-
+function toLegacyEventRow(event, error) {
+  const row = toEventRow(event);
+  const missingColumns = inferMissingColumns(error);
+  for (const column of missingColumns) {
+    delete row[column];
+  }
   return row;
+}
+
+function inferMissingColumns(error) {
+  const message = error?.message ?? '';
+  const optionalColumns = [
+    'apply_url',
+    'click_score',
+    'action_type',
+    'estimated_seconds',
+    'decision_reason',
+    'prize_text',
+    'deadline_text',
+    'deadline_date',
+    'result_announcement_date',
+    'result_announcement_text',
+    'prize_title',
+    'prize_amount',
+    'receipt_status',
+    'winning_memo',
+  ];
+  const mentionedColumns = optionalColumns.filter((column) => message.includes(column));
+
+  if (mentionedColumns.length > 0) {
+    return mentionedColumns;
+  }
+
+  return ['deadline_date'];
 }
