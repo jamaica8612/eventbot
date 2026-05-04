@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import sys
 import time
@@ -19,6 +20,9 @@ LIST_URL = f"{BASE}/cpevent?isActive=1"
 IMPERSONATE = "chrome124"
 TIMEOUT = 20
 DETAIL_LIMIT = 80
+LIST_PAGE_LIMIT = 10
+DETAIL_DELAY_SECONDS = float(os.environ.get("SUTO_DETAIL_DELAY_SECONDS", "1.1"))
+RATE_LIMIT_BACKOFF_SECONDS = [4, 9, 16]
 MOBILE_UA = (
     "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
@@ -37,7 +41,7 @@ def main() -> None:
     with session() as s:
         for index, event in enumerate(events[:DETAIL_LIMIT]):
             if index > 0:
-                time.sleep(0.45)
+                time.sleep(DETAIL_DELAY_SECONDS)
             detail = fetch_detail_with_fallbacks(event["originalUrl"])
             payload.append({**event, **detail})
     print(json.dumps(payload, ensure_ascii=False))
@@ -59,11 +63,20 @@ def fetch_list() -> list[dict]:
         last_error = None
         for attempt in range(4):
             try:
-                response = s.get(LIST_URL)
-                if response.status_code == 403:
-                    raise RuntimeError("suto.co.kr returned HTTP 403")
-                response.raise_for_status()
-                return parse_list(response.text)
+                events = []
+                seen_ids: set[str] = set()
+                for page in range(1, LIST_PAGE_LIMIT + 1):
+                    url = LIST_URL if page == 1 else f"{LIST_URL}&page={page}&seek=1"
+                    response = s.get(url)
+                    if response.status_code == 403:
+                        raise RuntimeError("suto.co.kr returned HTTP 403")
+                    response.raise_for_status()
+                    page_events = parse_list(response.text, seen_ids, len(events))
+                    events.extend(page_events)
+                    if len(events) >= DETAIL_LIMIT:
+                        break
+                    time.sleep(0.25)
+                return events[:DETAIL_LIMIT]
             except Exception as exc:
                 last_error = exc
                 if attempt < 3:
@@ -71,10 +84,10 @@ def fetch_list() -> list[dict]:
         raise RuntimeError(f"failed to fetch suto list: {last_error}")
 
 
-def parse_list(html: str) -> list[dict]:
+def parse_list(html: str, seen_ids: set[str] | None = None, start_rank: int = 0) -> list[dict]:
     soup = BeautifulSoup(html, "lxml")
     events = []
-    seen_ids: set[str] = set()
+    seen_ids = seen_ids if seen_ids is not None else set()
 
     for tr in soup.select("tr"):
         link = tr.find("a", href=re.compile(r"^/cpevent/\d+"))
@@ -103,7 +116,7 @@ def parse_list(html: str) -> list[dict]:
         if not prize_tags:
             prize_tags = unique_texts(tr.select("td.td_gift a.event_tag_key"))
 
-        rank = len(events) + 1
+        rank = start_rank + len(events) + 1
         entries = first_number([cell.get_text(strip=True) for cell in tr.select("td.td_num")])
 
         events.append(
@@ -131,10 +144,17 @@ def parse_list(html: str) -> list[dict]:
 
 def fetch_detail(s, url: str) -> dict:
     try:
-        response = s.get(url)
-        if response.status_code == 429:
-            time.sleep(3)
+        response = None
+        for attempt, backoff in enumerate([0, *RATE_LIMIT_BACKOFF_SECONDS]):
+            if backoff:
+                time.sleep(backoff)
             response = s.get(url)
+            if response.status_code != 429:
+                break
+            if attempt >= len(RATE_LIMIT_BACKOFF_SECONDS):
+                break
+        if response is None:
+            raise RuntimeError("No response returned.")
         response.raise_for_status()
         body, links = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
@@ -185,8 +205,16 @@ def fetch_detail_with_fallbacks(url: str) -> dict:
 
 def parse_detail(html: str) -> tuple[str, list[str]]:
     soup = BeautifulSoup(html, "lxml")
-    body_el = soup.select_one("#bo_v_con") or soup.select_one(".bo_v_con")
-    body_text = body_el.get_text("\n", strip=True) if body_el else ""
+    body_scopes = unique_nodes(
+        soup.select("#bo_v_con")
+        + soup.select(".bo_v_con")
+        + soup.select(".view_content")
+        + soup.select(".item-box")
+    )
+    body_lines = []
+    for scope in body_scopes:
+        body_lines.extend(normalize_lines(scope.get_text("\n", strip=True).splitlines()))
+    body_text = "\n".join(body_lines)
 
     link_pattern = re.compile(
         "|".join(
@@ -226,6 +254,18 @@ def parse_detail(html: str) -> tuple[str, list[str]]:
         add_link(links, seen, match.group(0), link_pattern)
 
     return body_text, links
+
+
+def unique_nodes(nodes) -> list:
+    values = []
+    seen = set()
+    for node in nodes:
+        key = id(node)
+        if key in seen:
+            continue
+        seen.add(key)
+        values.append(node)
+    return values
 
 
 def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) -> None:

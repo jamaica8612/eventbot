@@ -15,9 +15,23 @@ export function extractKoreanEventDates(text, { baseDate = new Date() } = {}) {
   }
 
   const textWithoutFullDates = normalizedText.replace(fullDatePattern, ' ');
+  const shortYearPattern = /(?<!\d)(\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})/g;
+
+  for (const match of textWithoutFullDates.matchAll(shortYearPattern)) {
+    const date = formatInputDate(
+      inferCenturyYear(Number(match[1]), baseDate),
+      Number(match[2]),
+      Number(match[3]),
+    );
+    if (date) {
+      dates.push({ date, index: match.index ?? 0 });
+    }
+  }
+
+  const textWithoutExplicitYears = textWithoutFullDates.replace(shortYearPattern, ' ');
   const monthDayPattern = /(\d{1,2})\s*[.\-/월]\s*(\d{1,2})\s*(?:일)?/g;
 
-  for (const match of textWithoutFullDates.matchAll(monthDayPattern)) {
+  for (const match of textWithoutExplicitYears.matchAll(monthDayPattern)) {
     const date = formatInputDate(
       inferYear(Number(match[1]), baseDate),
       Number(match[1]),
@@ -52,6 +66,20 @@ function inferYear(month, baseDate) {
     return baseYear - 1;
   }
   return baseYear;
+}
+
+function inferCenturyYear(twoDigitYear, baseDate) {
+  const baseYear = baseDate.getFullYear();
+  const baseCentury = Math.floor(baseYear / 100) * 100;
+  let year = baseCentury + twoDigitYear;
+
+  if (year < baseYear - 50) {
+    year += 100;
+  } else if (year > baseYear + 50) {
+    year -= 100;
+  }
+
+  return year;
 }
 
 export function formatInputDate(year, month, day) {

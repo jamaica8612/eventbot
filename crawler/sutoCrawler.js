@@ -37,11 +37,49 @@ async function loadSutoEvents() {
   });
 
   if (curlCffiEvents.length > 0) {
-    return curlCffiEvents.map(hydrateCurlCffiEvent);
+    const events = curlCffiEvents.map(hydrateCurlCffiEvent);
+    printCrawlQualitySummary(events);
+    return events;
   }
 
   const html = await fetchHtml(SOURCE_URL);
   return hydrateEventDetails(parseSutoHotEvents(html));
+}
+
+function printCrawlQualitySummary(events) {
+  const total = events.length;
+  const count = (predicate) => events.filter(predicate).length;
+  const byMode = events.reduce((acc, event) => {
+    const mode = event.detailCrawlMode || 'unknown';
+    acc[mode] = (acc[mode] || 0) + 1;
+    return acc;
+  }, {});
+  const byStatus = events.reduce((acc, event) => {
+    const status = event.detailCrawlStatus || 'unknown';
+    acc[status] = (acc[status] || 0) + 1;
+    return acc;
+  }, {});
+  const weakBodies = events
+    .filter((event) => (event.originalLines ?? []).length < 2)
+    .map((event) => event.title)
+    .slice(0, 5);
+
+  console.log(
+    `Suto crawl quality: ${[
+      `${total} events`,
+      `body ${count((event) => (event.originalLines ?? []).length > 0)}/${total}`,
+      `deadline ${count((event) => event.deadlineDate || event.deadlineText)}/${total}`,
+      `announcement-date ${count((event) => event.resultAnnouncementDate)}/${total}`,
+      `announcement-text ${count((event) => event.resultAnnouncementText)}/${total}`,
+      `external-links ${count((event) => (event.externalLinks ?? []).length > 0)}/${total}`,
+      `mode ${JSON.stringify(byMode)}`,
+      `status ${JSON.stringify(byStatus)}`,
+    ].join(' | ')}`,
+  );
+
+  if (weakBodies.length > 0) {
+    console.warn(`Suto weak body candidates: ${weakBodies.join(' / ')}`);
+  }
 }
 
 async function saveJsonPayload(payload) {
