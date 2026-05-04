@@ -310,7 +310,9 @@ h3 {
   gap: 12px;
 }
 
-.event-card {
+.event-card,
+.manage-row,
+.ledger-row {
   display: grid;
   gap: 12px;
   border: 1px solid var(--border);
@@ -321,12 +323,7 @@ h3 {
 }
 
 .now-card {
-  gap: 13px;
-  border-color: var(--accent-border);
-}
-
-.announcement-card {
-  border-color: var(--accent-border);
+  gap: 12px;
 }
 
 .score-row {
@@ -897,12 +894,7 @@ h3 {
 }
 
 .ledger-row {
-  display: grid;
   gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 16px;
-  background: var(--surface);
-  padding: 13px;
 }
 
 .ledger-title-block {
@@ -976,13 +968,7 @@ h3 {
 }
 
 .manage-row {
-  display: grid;
   gap: 10px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: linear-gradient(180deg, var(--surface), var(--surface-raised));
-  padding: 13px;
-  box-shadow: none;
 }
 
 .manage-row strong,
@@ -1065,22 +1051,6 @@ h3 {
   min-height: 38px;
   border-radius: 10px;
   font-size: 0.82rem;
-}
-
-.completed-row,
-.result-manage-row {
-  position: relative;
-  overflow: hidden;
-}
-
-.completed-row::before,
-.result-manage-row::before {
-  content: "";
-  position: absolute;
-  inset: 0 auto 0 0;
-  width: 3px;
-  background: var(--wanted-blue);
-  opacity: 0.7;
 }
 
 .completed-row .result-badge {
