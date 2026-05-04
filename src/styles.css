@@ -930,7 +930,9 @@ h3 {
 .receipt-field,
 .winning-memo-field {
   display: grid;
-  gap: 5px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 900;
@@ -941,12 +943,12 @@ h3 {
 .receipt-field select,
 .winning-memo-field input {
   width: 100%;
-  min-height: 44px;
+  min-height: 38px;
   border: 1px solid var(--border-strong);
-  border-radius: 12px;
+  border-radius: 10px;
   background: var(--surface-raised);
   color: var(--text-main);
-  padding: 0 11px;
+  padding: 0 9px;
   font-weight: 900;
 }
 
@@ -1127,9 +1129,9 @@ h3 {
 .manage-edit-panel,
 .ledger-edit-panel {
   display: grid;
-  gap: 10px;
+  gap: 7px;
   border-top: 1px solid var(--border);
-  padding-top: 10px;
+  padding-top: 9px;
 }
 
 .announcement-state {
@@ -1241,6 +1243,15 @@ h3 {
 .ledger-memo { grid-area: memo; text-align: right; }
 .ledger-edit-panel { grid-column: 1 / -1; }
 
+.ledger-edit-panel {
+  grid-template-columns: 1fr 1fr;
+}
+
+.prize-title-field,
+.winning-memo-field {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 760px) {
   .app-shell {
     padding: 30px 24px 112px;
@@ -1267,9 +1278,7 @@ h3 {
     padding: 8px 10px calc(8px + env(safe-area-inset-bottom));
   }
 
-  .winning-memo-field {
-    grid-column: 1 / -1;
-  }
+  .winning-memo-field { grid-column: 1 / -1; }
 }
 
 @media (min-width: 980px) {
@@ -1445,9 +1454,9 @@ h3 {
     grid-template-columns: 1fr;
   }
 
-  .ledger-edit-panel {
-    grid-template-columns: minmax(180px, 1fr) 120px 140px minmax(220px, 1fr);
-  }
+  .ledger-edit-panel { grid-template-columns: minmax(220px, 1fr) 150px 160px; }
+  .prize-title-field { grid-column: auto; }
+  .winning-memo-field { grid-column: 1 / -1; }
 
   .event-card {
     min-width: 0;
