@@ -35,24 +35,49 @@ async function saveJsonPayload(payload) {
   await writeFile(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
-async function fetchHtml(url) {
-  const response = await fetch(url, {
-    headers: {
-      accept: 'text/html,application/xhtml+xml',
-      'user-agent': 'EventClickCrawler/0.1 (+local development)',
-    },
-  });
+const FETCH_USER_AGENTS = [
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
+  'Mozilla/5.0 (Linux; Android 13; SM-S918N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
+  'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+];
 
-  if (!response.ok) {
-    throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+async function fetchHtml(url, { retries = 2 } = {}) {
+  let lastError;
+
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    const userAgent = FETCH_USER_AGENTS[attempt % FETCH_USER_AGENTS.length];
+    try {
+      const response = await fetch(url, {
+        headers: {
+          accept: 'text/html,application/xhtml+xml',
+          'accept-language': 'ko-KR,ko;q=0.9,en;q=0.5',
+          'user-agent': userAgent,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+      }
+
+      const html = await response.text();
+      if (html.includes('Just a moment') || html.includes('__cf_chl')) {
+        // Cloudflare 챌린지는 우회 시도하지 않고 즉시 중단.
+        throw new Error('Cloudflare challenge page returned. Stop instead of bypassing it.');
+      }
+
+      return html;
+    } catch (error) {
+      lastError = error;
+      if (error.message.includes('Cloudflare')) {
+        throw error;
+      }
+      if (attempt < retries) {
+        await new Promise((resolve) => setTimeout(resolve, 400 * (attempt + 1)));
+      }
+    }
   }
 
-  const html = await response.text();
-  if (html.includes('Just a moment') || html.includes('__cf_chl')) {
-    throw new Error('Cloudflare challenge page returned. Stop instead of bypassing it.');
-  }
-
-  return html;
+  throw lastError;
 }
 
 function parseSutoHotEvents(html) {

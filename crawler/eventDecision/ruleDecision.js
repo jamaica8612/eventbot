@@ -11,7 +11,7 @@ const effortLabelByActionType = {
 };
 
 const positiveRules = [
-  { words: ['클릭', '응모', '간단', '퀴즈', '출석', '출첵'], score: 30, reason: '빠른 참여 키워드' },
+  { words: ['클릭', '응모', '간단', '퀴즈'], score: 30, reason: '빠른 참여 키워드' },
   { words: ['홈페이지 이벤트', '공식 홈페이지'], score: 20, reason: '홈페이지 이벤트' },
   { words: ['앱 이벤트', '앱에서'], score: 15, reason: '앱 이벤트' },
   { words: ['오늘 마감', '금일 마감', '마감임박'], score: 25, reason: '마감 임박' },
@@ -24,6 +24,7 @@ const positiveRules = [
 ];
 
 const negativeRules = [
+  { words: ['출석', '출첵', '매일 참여', '데일리'], score: -50, reason: '매일 반복 참여 필요' },
   { words: ['유튜브', '영상 시청', '구독'], score: -15, reason: '영상 확인 필요' },
   { words: ['정성 댓글', '센스 있는 이유', '이유까지 댓글'], score: -40, reason: '정성 댓글 필요' },
   { words: ['댓글', '댓글을 남겨', '댓글 이벤트'], score: -25, reason: '댓글 작성 필요' },

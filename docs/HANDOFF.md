@@ -47,23 +47,45 @@
 
 ## 다음에 해야 할 작업
 
-1. Supabase 프로젝트를 만들고 `supabase/schema.sql`을 실행합니다.
+1. Supabase 프로젝트를 만들고 `supabase/schema.sql`을 실행합니다 (RLS + 컬럼 단위 grant 포함).
 2. `.env.local`에 `.env.example` 기준으로 Supabase URL과 키를 넣습니다.
 3. `npm run crawl:suto`로 슈퍼투데이 이벤트가 DB에 upsert되는지 확인합니다.
 4. 웹앱이 DB에서 이벤트를 읽고 상태 변경을 저장하는지 확인합니다.
-5. Supabase 연결 후 GitHub Actions 하루 3회 자동 실행을 설계합니다.
+5. GitHub Actions Secrets에 `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 등록합니다.
+   - 시크릿이 없으면 워크플로우는 자동으로 JSON 폴백을 commit/push합니다.
 6. 모바일 실제 화면을 확인하고 글자 크기와 버튼 크기를 조정합니다.
+
+## 2026-05-04 자동 개선 적용 사항
+
+- App.jsx 1582줄 → 약 250줄 오케스트레이터로 축소. 컴포넌트/훅/유틸 9개 파일로 분리.
+- UTF-8 깨진 문자열 비교 버그 수정 (`경품 정보 미수집` 비교).
+- 미사용 `WinningRow` 컴포넌트 삭제.
+- `ruleDecision.js`: `출석`/`출첵`/`매일 참여`/`데일리`를 negativeRules로 이동 (-50점).
+- `sutoCrawler.js`: 지수 백오프 재시도 2회 + 모바일 UA 회전.
+- `supabase/schema.sql`: 중복 `add column` 정리, RLS를 anon에 대해 컬럼 단위 grant로 제한.
+- `normalizeContentLines`: O(n²) `indexOf` 중복 제거를 `Set` 기반 O(n)으로 교체.
+- "지금" 카드: 액션 버튼 4개 → 큰 `참여하기` 1개 + 보조 3개로 재구성.
+- `.github/workflows/crawl-suto.yml`: Supabase 미설정 시 JSON 자동 commit/push 단계 추가, `permissions: contents: write` 부여.
 
 ## 중요한 파일 위치
 
-- `crawler/sutoCrawler.js`: 슈퍼투데이 이벤트 수집기
-- `crawler/supabaseEventRepository.js`: Supabase 환경 변수가 있을 때 크롤링 결과를 DB에 upsert하는 저장소
-- `public/crawled-events.json`: 크롤링 결과 JSON
-- `src/App.jsx`: 현재 단일 화면 UI와 상태 변경 흐름
+- `crawler/sutoCrawler.js`: 슈퍼투데이 이벤트 수집기 (재시도/UA 회전 포함)
+- `crawler/supabaseEventRepository.js`: Supabase upsert 저장소
+- `crawler/eventDecision/ruleDecision.js`: 규칙 기반 클릭 점수/액션 판단
+- `public/crawled-events.json`: 크롤링 결과 JSON (Supabase 미설정 시 폴백)
+- `src/App.jsx`: 라우팅·상태 오케스트레이터 (~250줄로 축소)
+- `src/constants.js`: 상태 라벨, 필터 정의
+- `src/utils/format.js`: 날짜·금액·시간 포매터
+- `src/utils/eventModel.js`: enrich/filter/announcement/winning/content 순수 함수
+- `src/components/EventCards.jsx`: 4종 카드 + EventBodyToggle + AnnouncementPanel + ApplyLink
+- `src/components/WinningLedger.jsx`: 당첨 장부 + 행 컴포넌트
+- `src/components/ManagementLists.jsx`: 완료/결과 관리 표
+- `src/components/Navigation.jsx`: BottomNav, DesktopNav, SummaryItem, ManageMetrics
+- `src/hooks/useEvents.js`: 이벤트 로딩 + 테마
+- `src/hooks/useEventActions.js`: status/result/announcement/winning 4종 update 통합
 - `src/data/events.js`: 목업 이벤트 데이터
 - `src/storage/crawledEventStorage.js`: 크롤링 JSON 로드
 - `src/storage/supabaseEventStorage.js`: Supabase 이벤트 로드와 상태 저장
-- `src/storage/eventStatusStorage.js`: 이벤트 상태 localStorage 저장/복원
 - `src/storage/eventStatusStorage.js`: 이벤트 상태와 참여 결과 localStorage 저장/복원
 - `src/styles.css`: Wanted 계열 토큰, Pretendard, 모바일 우선 반응형 스타일
 - `vite.config.js`: Vite React 플러그인 설정
@@ -73,7 +95,7 @@
 - `docs/EVENT_SCHEMA.md`: DB 전환을 위한 이벤트 데이터 구조 초안
 - `docs/SUPABASE_PLAN.md`: Supabase 전환 계획
 - `docs/CRAWLING_SCHEDULE.md`: 크롤링 간격과 자동 실행 정책
-- `supabase/schema.sql`: Supabase SQL Editor에서 실행할 테이블 초안
+- `supabase/schema.sql`: Supabase SQL Editor에서 실행할 테이블 + RLS 정책
 
 ## 실행 방법
 

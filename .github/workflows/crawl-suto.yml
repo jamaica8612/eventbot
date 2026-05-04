@@ -3,7 +3,11 @@ name: Crawl Suto Events
 on:
   workflow_dispatch:
   schedule:
+    # 한국 시간 09:00, 15:00, 21:00 (UTC -9)
     - cron: "0 0,6,12 * * *"
+
+permissions:
+  contents: write
 
 jobs:
   crawl:
@@ -22,16 +26,29 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
-      - name: Check Supabase secrets
-        run: |
-          test -n "$VITE_SUPABASE_URL"
-          test -n "$SUPABASE_SERVICE_ROLE_KEY"
-        env:
-          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
-          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
-
-      - name: Crawl and upsert events
+      - name: Crawl events
+        # Supabase 시크릿이 있으면 DB upsert, 없으면 public/crawled-events.json 저장.
         run: npm run crawl:suto
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+
+      - name: Commit JSON fallback if Supabase is not configured
+        # Supabase 미설정 시 JSON 파일이 갱신된다. 변경분이 있으면 자동 커밋한다.
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+        run: |
+          if [[ -n "$VITE_SUPABASE_URL" && -n "$SUPABASE_SERVICE_ROLE_KEY" ]]; then
+            echo "Supabase configured, skipping JSON commit."
+            exit 0
+          fi
+          if [[ -n "$(git status --porcelain public/crawled-events.json)" ]]; then
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add public/crawled-events.json
+            git commit -m "chore: refresh crawled events"
+            git push
+          else
+            echo "No changes to commit."
+          fi

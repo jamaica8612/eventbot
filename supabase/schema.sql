@@ -44,24 +44,27 @@ create table if not exists public.events (
   constraint events_receipt_status_check check (receipt_status in ('unclaimed', 'requested', 'received'))
 );
 
-create index if not exists events_status_idx on public.events (status);
-create index if not exists events_result_status_idx on public.events (result_status);
-create index if not exists events_last_seen_at_idx on public.events (last_seen_at desc);
-create index if not exists events_effort_idx on public.events (effort);
-
+-- 기존 테이블이 있는 환경(이전 스키마 버전)에서도 안전하도록
+-- 누락 가능 컬럼은 add column if not exists로 보강한다.
+-- 새 환경에서는 위 create table이 이미 모두 만들어 두었으므로 no-op이다.
 alter table public.events add column if not exists apply_url text;
-alter table public.events add column if not exists prize_title text;
-alter table public.events add column if not exists prize_amount integer;
-alter table public.events add column if not exists receipt_status text not null default 'unclaimed';
-alter table public.events add column if not exists winning_memo text;
-alter table public.events add column if not exists result_announcement_date date;
-alter table public.events add column if not exists result_announcement_text text;
 alter table public.events add column if not exists click_score integer;
 alter table public.events add column if not exists action_type text;
 alter table public.events add column if not exists estimated_seconds integer;
 alter table public.events add column if not exists decision_reason text;
 alter table public.events add column if not exists prize_text text;
 alter table public.events add column if not exists deadline_text text;
+alter table public.events add column if not exists result_announcement_date date;
+alter table public.events add column if not exists result_announcement_text text;
+alter table public.events add column if not exists prize_title text;
+alter table public.events add column if not exists prize_amount integer;
+alter table public.events add column if not exists receipt_status text not null default 'unclaimed';
+alter table public.events add column if not exists winning_memo text;
+
+create index if not exists events_status_idx on public.events (status);
+create index if not exists events_result_status_idx on public.events (result_status);
+create index if not exists events_last_seen_at_idx on public.events (last_seen_at desc);
+create index if not exists events_effort_idx on public.events (effort);
 
 create or replace function public.set_updated_at()
 returns trigger
@@ -84,14 +87,34 @@ alter table public.events enable row level security;
 
 drop policy if exists "Public can read events" on public.events;
 drop policy if exists "Public can update events" on public.events;
+drop policy if exists "Anon can update event state" on public.events;
 
+-- 단일 사용자 도구이므로 anon 키로 읽기/상태 업데이트는 허용한다.
+-- 단, anon이 갱신할 수 있는 컬럼을 사용자 상태 컬럼으로만 제한해서
+-- 크롤러가 채우는 메타데이터(title, url, source 등)를 보호한다.
 create policy "Public can read events"
 on public.events
 for select
 using (true);
 
-create policy "Public can update events"
+create policy "Anon can update event state"
 on public.events
 for update
+to anon
 using (true)
 with check (true);
+
+-- 컬럼 단위 권한: anon이 update 가능한 컬럼만 화이트리스트로 부여한다.
+revoke update on public.events from anon;
+grant update (
+  status,
+  result_status,
+  participated_at,
+  result_checked_at,
+  result_announcement_date,
+  result_announcement_text,
+  prize_title,
+  prize_amount,
+  receipt_status,
+  winning_memo
+) on public.events to anon;
