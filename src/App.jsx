@@ -200,7 +200,7 @@ function App() {
                 ))
               ) : (
                 <p className="empty-message">
-                  {isLoading ? '이벤트를 불러오는 중입니다.' : '지금 볼 이벤트가 없습니다.'}
+                  {isLoading ? '이벤트를 불러오는 중입니다.' : getEmptyMessage(filter)}
                 </p>
               )}
             </div>
@@ -216,6 +216,13 @@ function App() {
       />
     </>
   );
+}
+
+function getEmptyMessage(filter) {
+  if (filter === 'now') return '지금 바로 처리할 이벤트가 없습니다.';
+  if (filter === 'home') return '집에서 처리할 이벤트가 없습니다.';
+  if (filter === 'skipped') return '제외한 이벤트가 없습니다.';
+  return '표시할 이벤트가 없습니다.';
 }
 
 function buildCounts(events) {

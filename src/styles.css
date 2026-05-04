@@ -118,6 +118,15 @@ h3 {
   line-height: 1.35;
 }
 
+.event-card h3,
+.manage-row-title,
+.ledger-title strong {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
 .app-shell {
   width: min(100%, 480px);
   margin: 0 auto;
@@ -287,11 +296,15 @@ h3 {
   flex: 0 0 auto;
   gap: 6px;
   align-items: center;
+  overflow: hidden;
+  max-width: min(68vw, 260px);
   min-height: 38px;
   border-radius: 999px;
   padding: 0 13px;
   color: var(--text-muted);
   font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .filter-chips button.is-active {
@@ -330,9 +343,17 @@ h3 {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 10px;
   color: var(--text-muted);
   font-size: 0.9rem;
   font-weight: 900;
+}
+
+.score-row span {
+  overflow: hidden;
+  min-width: 0;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .score-row strong {
@@ -374,6 +395,8 @@ h3 {
 .schedule-row span {
   display: inline-flex;
   align-items: center;
+  overflow: hidden;
+  max-width: 100%;
   min-height: 28px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -382,6 +405,8 @@ h3 {
   padding: 0 10px;
   font-size: 0.78rem;
   font-weight: 900;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .primary-apply {
@@ -442,6 +467,13 @@ h3 {
 .event-body-expanded {
   display: grid;
   gap: 5px;
+}
+
+.event-body-preview p {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .event-body-toggle p {
@@ -725,9 +757,13 @@ h3 {
 }
 
 .prize-panel strong {
+  display: -webkit-box;
+  overflow: hidden;
   color: var(--text-strong);
   font-size: 1rem;
   line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .announcement-panel {
@@ -798,6 +834,7 @@ h3 {
   color: var(--text-muted);
   padding: 26px 14px;
   font-weight: 800;
+  line-height: 1.35;
   text-align: center;
 }
 
@@ -920,9 +957,12 @@ h3 {
 }
 
 .ledger-title span {
+  overflow: hidden;
   color: var(--text-muted);
   font-size: 0.76rem;
   font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .prize-title-field,
@@ -1028,10 +1068,14 @@ h3 {
 }
 
 .manage-row-prize {
+  display: -webkit-box;
+  overflow: hidden;
   margin: 0;
   color: var(--text-main);
   font-size: 0.9rem;
   font-weight: 700;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .manage-row-prize span {
