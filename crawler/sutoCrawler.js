@@ -35,11 +35,20 @@ async function saveJsonPayload(payload) {
   await writeFile(OUTPUT_PATH, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
 }
 
+// Cloudflare가 모바일 UA를 더 자주 의심하므로 데스크톱 UA를 1순위로 둔다.
 const FETCH_USER_AGENTS = [
-  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
-  'Mozilla/5.0 (Linux; Android 13; SM-S918N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36',
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+  'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',
+  'Mozilla/5.0 (iPhone; CPU iPhone OS 17_5 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Mobile/15E148 Safari/604.1',
 ];
+
+function isCloudflareChallenge(status, html) {
+  // Cloudflare는 챌린지 페이지를 403/503 + "Just a moment..." 본문으로 돌려준다.
+  if (typeof html === 'string' && (html.includes('Just a moment') || html.includes('__cf_chl'))) {
+    return true;
+  }
+  return status === 403 || status === 503;
+}
 
 async function fetchHtml(url, { retries = 2 } = {}) {
   let lastError;
@@ -55,14 +64,15 @@ async function fetchHtml(url, { retries = 2 } = {}) {
         },
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
+      // 응답 본문을 먼저 읽어 Cloudflare 챌린지 페이지 여부를 확인한다.
+      const html = await response.text();
+
+      if (isCloudflareChallenge(response.status, html)) {
+        throw new Error('Cloudflare challenge page returned. Stop instead of bypassing it.');
       }
 
-      const html = await response.text();
-      if (html.includes('Just a moment') || html.includes('__cf_chl')) {
-        // Cloudflare 챌린지는 우회 시도하지 않고 즉시 중단.
-        throw new Error('Cloudflare challenge page returned. Stop instead of bypassing it.');
+      if (!response.ok) {
+        throw new Error(`Failed to fetch ${url}: ${response.status} ${response.statusText}`);
       }
 
       return html;
@@ -80,6 +90,10 @@ async function fetchHtml(url, { retries = 2 } = {}) {
   throw lastError;
 }
 
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 function parseSutoHotEvents(html) {
   const anchorMatches = [
     ...html.matchAll(
@@ -95,7 +109,12 @@ function parseSutoHotEvents(html) {
 async function hydrateEventDetails(events) {
   const hydratedEvents = [];
 
-  for (const event of events) {
+  for (const [index, event] of events.entries()) {
+    // Cloudflare가 짧은 시간 다수 요청을 의심하므로 이벤트 간 600ms 간격을 둔다.
+    if (index > 0) {
+      await sleep(600);
+    }
+
     const detail = await fetchEventDetail(event.originalUrl);
     const lines = detail?.lines ?? event.originalLines ?? [];
     const text = detail?.text ?? event.originalText ?? '';
