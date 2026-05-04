@@ -109,7 +109,7 @@ function App() {
             />
             <SummaryItem
               active={filter === 'todayAnnouncement'}
-              label="오늘발표"
+              label="발표예정"
               value={counts.todayAnnouncement}
               onClick={() => setFilter('todayAnnouncement')}
             />

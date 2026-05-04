@@ -71,13 +71,13 @@ export function ResultManagementList({ events, isLoading, onAnnouncementChange, 
   if (events.length === 0) {
     return (
       <p className="empty-message">
-        {isLoading ? '이벤트를 불러오는 중입니다.' : '확인할 결과가 없습니다.'}
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '발표 예정 이벤트가 없습니다.'}
       </p>
     );
   }
 
   return (
-    <div className="manage-list result-list" role="table" aria-label="결과 확인 관리">
+    <div className="manage-list result-list" role="table" aria-label="발표 예정 관리">
       <div className="manage-head result-head" role="row">
         <span>상태</span>
         <span>이벤트</span>

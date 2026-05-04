@@ -53,8 +53,7 @@ export function matchesTodayAnnouncement(event) {
   if (event.status !== 'done' || event.resultStatus !== 'unknown') {
     return false;
   }
-  const announcement = getAnnouncementStatus(event);
-  return announcement.state !== 'future';
+  return Boolean(event.resultAnnouncementDate || event.resultAnnouncementText);
 }
 
 export function getAnnouncementStatus(event) {
@@ -76,7 +75,7 @@ export function getAnnouncementTime(event) {
 }
 
 export function sortTodayAnnouncements(events) {
-  const priority = { overdue: 0, today: 1, unknown: 2, future: 3 };
+  const priority = { overdue: 0, today: 1, future: 2, unknown: 3 };
   return [...events].sort((first, second) => {
     const firstStatus = getAnnouncementStatus(first);
     const secondStatus = getAnnouncementStatus(second);
