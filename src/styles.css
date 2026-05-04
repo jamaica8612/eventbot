@@ -328,6 +328,7 @@ h3 {
 .ledger-row {
   display: grid;
   gap: 12px;
+  min-width: 0;
   border: 1px solid var(--border);
   border-radius: 18px;
   background: var(--surface);
@@ -418,6 +419,8 @@ h3 {
 .event-body-toggle {
   display: grid;
   gap: 5px;
+  min-width: 0;
+  max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 14px;
   background: var(--soft-panel);
@@ -467,6 +470,7 @@ h3 {
 .event-body-expanded {
   display: grid;
   gap: 5px;
+  min-width: 0;
 }
 
 .event-body-preview p {
@@ -479,10 +483,13 @@ h3 {
 .event-body-toggle p {
   display: -webkit-box;
   overflow: hidden;
+  max-width: 100%;
   color: var(--text-main);
   font-size: 0.9rem;
   font-weight: 700;
   line-height: 1.35;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -494,11 +501,13 @@ h3 {
 .event-body-expanded p {
   display: block;
   overflow: visible;
+  white-space: normal;
 }
 
 .youtube-transcript {
   display: grid;
   gap: 6px;
+  min-width: 0;
   border-top: 1px solid rgba(255, 211, 77, 0.24);
   margin-top: 8px;
   padding-top: 10px;
@@ -514,6 +523,8 @@ h3 {
   color: var(--text-muted);
   font-size: 0.84rem;
   font-weight: 700;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
 }
 
 .youtube-transcript-button {
@@ -534,12 +545,14 @@ h3 {
   color: var(--danger);
   font-size: 0.82rem;
   font-weight: 800;
+  overflow-wrap: anywhere;
 }
 
 .event-body-facts {
   display: flex;
   flex-wrap: wrap;
   gap: 6px;
+  min-width: 0;
   border-top: 1px solid var(--border);
   margin-top: 8px;
   padding-top: 8px;
@@ -549,6 +562,7 @@ h3 {
 .event-body-facts a {
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   min-height: 28px;
   border-radius: 999px;
   background: var(--surface-raised);
@@ -556,6 +570,8 @@ h3 {
   padding: 0 9px;
   font-size: 0.82rem;
   font-weight: 900;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
   text-decoration: none;
 }
 
