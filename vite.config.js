@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
-import { extractVideoId, fetchYoutubeTranscript } from './api/youtubeTranscriptCore.js';
+import { extractVideoId, fetchYoutubeContext } from './api/youtubeTranscriptCore.js';
 
 export default defineConfig({
   base: process.env.GITHUB_PAGES ? '/eventbot/' : '/',
@@ -17,7 +17,7 @@ function youtubeTranscriptApi() {
           const videoId =
             requestUrl.searchParams.get('videoId') ||
             extractVideoId(requestUrl.searchParams.get('url') ?? '');
-          const transcript = await fetchYoutubeTranscript({ videoId });
+          const transcript = await fetchYoutubeContext({ videoId });
           response.setHeader('content-type', 'application/json; charset=utf-8');
           response.end(JSON.stringify(transcript));
         } catch (error) {

@@ -21,7 +21,18 @@ export function extractVideoId(value = '') {
   return '';
 }
 
-export async function fetchYoutubeTranscript({ videoId, url }) {
+export async function fetchYoutubeTranscript(input) {
+  const context = await fetchYoutubeContext(input);
+  if (!context.transcript?.text) {
+    throw new Error(context.transcriptError || '유튜브 스크립트를 가져오지 못했습니다.');
+  }
+  return {
+    videoId: context.videoId,
+    ...context.transcript,
+  };
+}
+
+export async function fetchYoutubeContext({ videoId, url }) {
   const resolvedVideoId = videoId || extractVideoId(url);
   if (!resolvedVideoId) {
     throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
@@ -35,12 +46,40 @@ export async function fetchYoutubeTranscript({ videoId, url }) {
   }
 
   const playerResponse = extractPlayerResponse(html);
+  const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  let transcript = null;
+  let transcriptError = '';
+
   if (tracks.length === 0) {
-    throw new Error('공개 자막이나 자동 자막이 없는 영상입니다.');
+    transcriptError = '공개 자막이나 자동 자막이 없는 영상입니다.';
+  } else {
+    try {
+      transcript = await fetchTranscriptTrack({
+        videoId: resolvedVideoId,
+        watchUrl,
+        track: chooseCaptionTrack(tracks),
+      });
+    } catch (error) {
+      transcriptError = error.message || '유튜브 스크립트를 가져오지 못했습니다.';
+    }
   }
 
-  const track = chooseCaptionTrack(tracks);
+  return {
+    videoId: resolvedVideoId,
+    url: watchUrl,
+    ...metadata,
+    availableCaptionLanguages: tracks.map((track) => ({
+      code: track.languageCode ?? '',
+      name: getText(track.name),
+      isGenerated: track.kind === 'asr',
+    })),
+    transcript,
+    transcriptError,
+  };
+}
+
+async function fetchTranscriptTrack({ videoId, watchUrl, track }) {
   const transcriptUrl = withJsonFormat(track.baseUrl);
   const transcriptResponse = await fetch(transcriptUrl, {
     headers: { ...WATCH_HEADERS, referer: watchUrl },
@@ -61,12 +100,35 @@ export async function fetchYoutubeTranscript({ videoId, url }) {
   }
 
   return {
-    videoId: resolvedVideoId,
+    videoId,
     language: track.languageCode ?? '',
-    languageName: track.name?.simpleText ?? track.name?.runs?.map((run) => run.text).join('') ?? '',
+    languageName: getText(track.name),
     isGenerated: track.kind === 'asr',
     lines,
     text: lines.join('\n'),
+  };
+}
+
+function extractVideoMetadata(playerResponse, html, watchUrl) {
+  const details = playerResponse?.videoDetails ?? {};
+  const microformat = playerResponse?.microformat?.playerMicroformatRenderer ?? {};
+  const owner = microformat.ownerChannelName || details.author || '';
+  const description = details.shortDescription || getText(microformat.description);
+  const publishDate = microformat.publishDate || microformat.uploadDate || '';
+
+  return {
+    title: details.title || getMetaContent(html, 'name="title"') || '',
+    channelName: owner,
+    channelUrl: microformat.ownerProfileUrl
+      ? new URL(microformat.ownerProfileUrl, watchUrl).toString()
+      : '',
+    description,
+    publishDate,
+    lengthSeconds: details.lengthSeconds ? Number(details.lengthSeconds) : null,
+    viewCount: details.viewCount ? Number(details.viewCount) : null,
+    keywords: Array.isArray(details.keywords) ? details.keywords.slice(0, 20) : [],
+    category: microformat.category || '',
+    thumbnailUrl: details.thumbnail?.thumbnails?.at(-1)?.url || '',
   };
 }
 
@@ -159,6 +221,19 @@ function compactTranscriptLines(snippets) {
   if (current) lines.push(current);
 
   return lines.slice(0, 80);
+}
+
+function getText(value) {
+  if (!value) return '';
+  if (typeof value === 'string') return value;
+  if (value.simpleText) return value.simpleText;
+  if (Array.isArray(value.runs)) return value.runs.map((run) => run.text).join('');
+  return '';
+}
+
+function getMetaContent(html, selectorPart) {
+  const pattern = new RegExp(`<meta[^>]*${selectorPart}[^>]*content=["']([^"']+)["'][^>]*>`, 'i');
+  return decodeHtml(html.match(pattern)?.[1] ?? '');
 }
 
 function decodeHtml(value) {

@@ -527,6 +527,40 @@ h3 {
   word-break: keep-all;
 }
 
+.youtube-context {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+  border: 1px solid rgba(255, 211, 77, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 211, 77, 0.06);
+  padding: 10px;
+}
+
+.youtube-context strong {
+  color: var(--warning);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.youtube-context p {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+}
+
+.youtube-context button {
+  min-height: 36px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: var(--warning);
+  color: #111827;
+  font-size: 0.84rem;
+  font-weight: 950;
+}
+
 .youtube-transcript-button {
   min-height: 38px;
   border: 1px solid var(--accent-border);

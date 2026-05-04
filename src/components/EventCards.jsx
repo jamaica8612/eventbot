@@ -83,13 +83,16 @@ export function AnnouncementPanel({ event, onAnnouncementChange }) {
 function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
   const [loadedTranscriptLines, setLoadedTranscriptLines] = useState([]);
+  const [youtubeContext, setYoutubeContext] = useState(null);
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
+  const [copyStatus, setCopyStatus] = useState('idle');
   const originalHref = event.originalUrl ?? event.url;
   const savedTranscriptLines = buildYoutubeTranscriptLines(event);
   const youtubeTranscriptLines = savedTranscriptLines.length > 0 ? savedTranscriptLines : loadedTranscriptLines;
   const youtubeLink = buildYoutubeLinks(event)[0];
   const canFetchYoutubeTranscript = Boolean(youtubeLink && savedTranscriptLines.length === 0);
+  const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext, youtubeTranscriptLines);
 
   async function handleYoutubeTranscriptFetch(clickEvent) {
     clickEvent.stopPropagation();
@@ -101,13 +104,28 @@ function EventBodyToggle({ event, lines, facts }) {
       const response = await fetch(`/api/youtube-transcript?url=${encodeURIComponent(youtubeLink)}`);
       const payload = await response.json();
       if (!response.ok) {
-        throw new Error(payload.error || '유튜브 스크립트를 가져오지 못했습니다.');
+        throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
       }
-      setLoadedTranscriptLines(payload.lines ?? []);
+      setYoutubeContext(payload);
+      setLoadedTranscriptLines(payload.transcript?.lines ?? []);
+      setTranscriptError(payload.transcriptError ?? '');
       setTranscriptStatus('done');
     } catch (error) {
-      setTranscriptError(error.message || '유튜브 스크립트를 가져오지 못했습니다.');
+      setTranscriptError(error.message || '유튜브 댓글자료를 가져오지 못했습니다.');
       setTranscriptStatus('failed');
+    }
+  }
+
+  async function handleCopyYoutubeMaterial(clickEvent) {
+    clickEvent.stopPropagation();
+    if (!commentMaterialText) return;
+
+    try {
+      await navigator.clipboard.writeText(commentMaterialText);
+      setCopyStatus('copied');
+      window.setTimeout(() => setCopyStatus('idle'), 1600);
+    } catch {
+      setCopyStatus('failed');
     }
   }
 
@@ -156,10 +174,23 @@ function EventBodyToggle({ event, lines, facts }) {
               onClick={handleYoutubeTranscriptFetch}
               disabled={transcriptStatus === 'loading'}
             >
-              {transcriptStatus === 'loading' ? '스크립트 가져오는 중' : '스크립트 가져오기'}
+              {transcriptStatus === 'loading' ? '댓글자료 가져오는 중' : '댓글자료 가져오기'}
             </button>
           ) : null}
           {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
+          {youtubeContext ? (
+            <div className="youtube-context">
+              <strong>GPT 댓글 생성용 자료</strong>
+              <p>영상 제목: {youtubeContext.title || '-'}</p>
+              <p>채널: {youtubeContext.channelName || '-'}</p>
+              {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
+              {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
+              <button type="button" onClick={handleCopyYoutubeMaterial}>
+                {copyStatus === 'copied' ? '복사됨' : 'GPT용 복사'}
+              </button>
+              {copyStatus === 'failed' ? <p className="youtube-transcript-error">복사에 실패했습니다.</p> : null}
+            </div>
+          ) : null}
           {youtubeTranscriptLines.length > 0 ? (
             <div className="youtube-transcript">
               <strong>유튜브 스크립트</strong>
@@ -220,6 +251,67 @@ function extractYoutubeVideoId(url) {
     value.match(/youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1] ??
     ''
   );
+}
+
+function buildYoutubeCommentMaterialText(event, context, transcriptLines) {
+  if (!context) return '';
+
+  const originalLines = buildUserContentLines(event).slice(0, 16);
+  const transcriptText = transcriptLines.length > 0 ? transcriptLines.join('\n') : '스크립트 없음';
+  const captionInfo = context.availableCaptionLanguages?.length
+    ? context.availableCaptionLanguages
+        .map((caption) => `${caption.name || caption.code}${caption.isGenerated ? ' 자동생성' : ''}`)
+        .join(', ')
+    : '없음';
+
+  return [
+    '[GPT 댓글 생성용 유튜브 이벤트 자료]',
+    '',
+    '아래 정보를 바탕으로 자연스럽고 성의 있는 이벤트 댓글을 만들어줘.',
+    '너무 광고문구처럼 쓰지 말고, 영상 내용을 이해한 사람처럼 구체적으로 작성해줘.',
+    '',
+    '[이벤트 정보]',
+    `이벤트 제목: ${event.title}`,
+    `플랫폼: ${event.platform}`,
+    `마감: ${event.deadlineDate || event.deadlineText || event.due || '-'}`,
+    `발표: ${event.resultAnnouncementDate || event.resultAnnouncementText || '-'}`,
+    `경품: ${event.prizeText || event.prizeTitle || '-'}`,
+    `참여 링크: ${event.applyUrl || event.url || '-'}`,
+    '',
+    '[유튜브 영상 정보]',
+    `영상 제목: ${context.title || '-'}`,
+    `채널: ${context.channelName || '-'}`,
+    `영상 URL: ${context.url || '-'}`,
+    `업로드일: ${context.publishDate || '-'}`,
+    `영상 길이: ${formatDuration(context.lengthSeconds)}`,
+    `조회수: ${formatNumber(context.viewCount)}`,
+    `카테고리: ${context.category || '-'}`,
+    `키워드: ${context.keywords?.length ? context.keywords.join(', ') : '-'}`,
+    `자막: ${captionInfo}`,
+    '',
+    '[영상 설명]',
+    context.description || '-',
+    '',
+    '[이벤트 본문]',
+    originalLines.join('\n') || '-',
+    '',
+    '[유튜브 스크립트]',
+    transcriptText,
+  ].join('\n');
+}
+
+function formatDuration(seconds) {
+  if (!Number.isFinite(seconds)) return '-';
+  const hours = Math.floor(seconds / 3600);
+  const minutes = Math.floor((seconds % 3600) / 60);
+  const rest = seconds % 60;
+  return hours > 0
+    ? `${hours}:${String(minutes).padStart(2, '0')}:${String(rest).padStart(2, '0')}`
+    : `${minutes}:${String(rest).padStart(2, '0')}`;
+}
+
+function formatNumber(value) {
+  return Number.isFinite(value) ? value.toLocaleString('ko-KR') : '-';
 }
 
 function EventSourceSummary({ event }) {
