@@ -9,6 +9,10 @@ from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
 from curl_cffi import requests as cc
+try:
+    from youtube_transcript_api import YouTubeTranscriptApi
+except Exception:  # pragma: no cover - optional at runtime
+    YouTubeTranscriptApi = None
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -23,6 +27,11 @@ DETAIL_LIMIT = 80
 LIST_PAGE_LIMIT = 10
 DETAIL_DELAY_SECONDS = float(os.environ.get("SUTO_DETAIL_DELAY_SECONDS", "1.1"))
 RATE_LIMIT_BACKOFF_SECONDS = [4, 9, 16]
+YOUTUBE_TRANSCRIPT_LIMIT = int(os.environ.get("SUTO_YOUTUBE_TRANSCRIPT_LIMIT", "0"))
+YOUTUBE_TRANSCRIPT_LINE_LIMIT = int(os.environ.get("SUTO_YOUTUBE_TRANSCRIPT_LINE_LIMIT", "64"))
+YOUTUBE_TRANSCRIPT_TEXT_LIMIT = int(os.environ.get("SUTO_YOUTUBE_TRANSCRIPT_TEXT_LIMIT", "6000"))
+YOUTUBE_TRANSCRIPT_DELAY_SECONDS = float(os.environ.get("SUTO_YOUTUBE_TRANSCRIPT_DELAY_SECONDS", "3"))
+YOUTUBE_TRANSCRIPT_BLOCKED = False
 MOBILE_UA = (
     "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 "
     "(KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
@@ -156,12 +165,15 @@ def fetch_detail(s, url: str) -> dict:
         if response is None:
             raise RuntimeError("No response returned.")
         response.raise_for_status()
-        body, links = parse_detail(response.text)
+        body, links, metadata_lines = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
+        youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),
             "originalLines": lines,
+            "detailMetaLines": metadata_lines,
             "externalLinks": links,
+            "youtubeTranscripts": youtube_transcripts,
             "detailCrawlStatus": "ok" if lines else "empty",
             "detailCrawlMessage": "Fetched with curl_cffi chrome impersonation.",
         }
@@ -169,7 +181,9 @@ def fetch_detail(s, url: str) -> dict:
         return {
             "originalText": "",
             "originalLines": [],
+            "detailMetaLines": [],
             "externalLinks": [],
+            "youtubeTranscripts": [],
             "detailCrawlStatus": "failed",
             "detailCrawlMessage": str(exc),
         }
@@ -203,18 +217,20 @@ def fetch_detail_with_fallbacks(url: str) -> dict:
     return max(results, key=lambda item: len(item["originalLines"]))
 
 
-def parse_detail(html: str) -> tuple[str, list[str]]:
+def parse_detail(html: str) -> tuple[str, list[str], list[str]]:
     soup = BeautifulSoup(html, "lxml")
     body_scopes = unique_nodes(
         soup.select("#bo_v_con")
         + soup.select(".bo_v_con")
         + soup.select(".view_content")
-        + soup.select(".item-box")
     )
     body_lines = []
     for scope in body_scopes:
         body_lines.extend(normalize_lines(scope.get_text("\n", strip=True).splitlines()))
     body_text = "\n".join(body_lines)
+    metadata_lines = []
+    for scope in unique_nodes(soup.select(".item-box")):
+        metadata_lines.extend(normalize_lines(scope.get_text("\n", strip=True).splitlines()))
 
     link_pattern = re.compile(
         "|".join(
@@ -253,7 +269,7 @@ def parse_detail(html: str) -> tuple[str, list[str]]:
     for match in re.finditer(r"https?://[^\s\"'<>)]+", body_text):
         add_link(links, seen, match.group(0), link_pattern)
 
-    return body_text, links
+    return body_text, links, metadata_lines
 
 
 def unique_nodes(nodes) -> list:
@@ -272,6 +288,126 @@ def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) 
     if value and pattern.search(value) and value not in seen:
         seen.add(value)
         links.append(value)
+
+
+def fetch_youtube_transcripts(links: list[str]) -> list[dict]:
+    global YOUTUBE_TRANSCRIPT_BLOCKED
+    if YOUTUBE_TRANSCRIPT_LIMIT <= 0 or YOUTUBE_TRANSCRIPT_BLOCKED:
+        return []
+
+    video_refs = unique_youtube_video_refs(links)
+    if not video_refs:
+        return []
+
+    if YouTubeTranscriptApi is None:
+        return [
+            {
+                "videoId": video_refs[0]["videoId"],
+                "url": video_refs[0]["url"],
+                "status": "unavailable",
+                "message": "youtube-transcript-api is not installed.",
+                "lines": [],
+                "text": "",
+            }
+        ]
+
+    api = YouTubeTranscriptApi()
+    transcripts = []
+    for ref in video_refs[:YOUTUBE_TRANSCRIPT_LIMIT]:
+        try:
+            if transcripts:
+                time.sleep(YOUTUBE_TRANSCRIPT_DELAY_SECONDS)
+            fetched = api.fetch(ref["videoId"], languages=["ko", "en"])
+            snippets = list(fetched)
+            lines = compact_transcript_lines([snippet.text for snippet in snippets])
+            text = "\n".join(lines)[:YOUTUBE_TRANSCRIPT_TEXT_LIMIT].strip()
+            transcripts.append(
+                {
+                    "videoId": ref["videoId"],
+                    "url": ref["url"],
+                    "status": "ok" if text else "empty",
+                    "language": getattr(fetched, "language_code", ""),
+                    "isGenerated": bool(getattr(fetched, "is_generated", False)),
+                    "lineCount": len(lines),
+                    "text": text,
+                    "lines": lines,
+                }
+            )
+        except Exception as exc:
+            message = first_error_line(str(exc))
+            if "IpBlocked" in type(exc).__name__ or "blocking requests from your IP" in str(exc):
+                YOUTUBE_TRANSCRIPT_BLOCKED = True
+                message = "YouTube transcript requests are blocked by the current IP."
+            transcripts.append(
+                {
+                    "videoId": ref["videoId"],
+                    "url": ref["url"],
+                    "status": "failed",
+                    "message": message,
+                    "lines": [],
+                    "text": "",
+                }
+            )
+    return transcripts
+
+
+def unique_youtube_video_refs(links: list[str]) -> list[dict]:
+    refs = []
+    seen = set()
+    for link in links:
+        video_id = extract_youtube_video_id(link)
+        if not video_id or video_id in seen:
+            continue
+        seen.add(video_id)
+        refs.append({"videoId": video_id, "url": link})
+    return refs
+
+
+def first_error_line(value: str) -> str:
+    for line in value.splitlines():
+        line = line.strip()
+        if line:
+            return line[:240]
+    return ""
+
+
+def extract_youtube_video_id(url: str) -> str:
+    value = str(url or "")
+    patterns = [
+        r"youtu\.be/([A-Za-z0-9_-]{6,})",
+        r"youtube\.com/(?:watch\?[^#]*v=|embed/|shorts/)([A-Za-z0-9_-]{6,})",
+    ]
+    for pattern in patterns:
+        match = re.search(pattern, value)
+        if match:
+            return match.group(1).split("&")[0].split("?")[0]
+    return ""
+
+
+def compact_transcript_lines(snippets: list[str]) -> list[str]:
+    lines = []
+    current = ""
+    seen = set()
+    for snippet in snippets:
+        value = re.sub(r"\s+", " ", str(snippet)).strip()
+        if not value:
+            continue
+        if current and len(current) + len(value) > 180:
+            add_transcript_line(lines, seen, current)
+            current = value
+        else:
+            current = f"{current} {value}".strip()
+    if current:
+        add_transcript_line(lines, seen, current)
+    return lines[:YOUTUBE_TRANSCRIPT_LINE_LIMIT]
+
+
+def add_transcript_line(lines: list[str], seen: set[str], value: str) -> None:
+    line = value.strip()
+    if not line or line in seen:
+        return
+    seen.add(line)
+    lines.append(line)
 
 
 def normalize_deadline_date(value: str) -> str:

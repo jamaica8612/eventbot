@@ -72,6 +72,7 @@ function printCrawlQualitySummary(events) {
       `announcement-date ${count((event) => event.resultAnnouncementDate)}/${total}`,
       `announcement-text ${count((event) => event.resultAnnouncementText)}/${total}`,
       `external-links ${count((event) => (event.externalLinks ?? []).length > 0)}/${total}`,
+      `youtube-script ${count((event) => hasYoutubeTranscript(event))}/${total}`,
       `mode ${JSON.stringify(byMode)}`,
       `status ${JSON.stringify(byStatus)}`,
     ].join(' | ')}`,
@@ -80,6 +81,10 @@ function printCrawlQualitySummary(events) {
   if (weakBodies.length > 0) {
     console.warn(`Suto weak body candidates: ${weakBodies.join(' / ')}`);
   }
+}
+
+function hasYoutubeTranscript(event) {
+  return (event.youtubeTranscripts ?? []).some((transcript) => transcript.status === 'ok' && transcript.text);
 }
 
 async function saveJsonPayload(payload) {
@@ -129,18 +134,21 @@ function getPythonCommand() {
 function hydrateCurlCffiEvent(event) {
   const lines = event.originalLines ?? [];
   const text = event.originalText ?? '';
+  const detailMetaText = Array.isArray(event.detailMetaLines) ? event.detailMetaLines.join('\n') : '';
+  const youtubeTranscriptText = buildYoutubeTranscriptText(event.youtubeTranscripts);
+  const analysisText = [text, detailMetaText, youtubeTranscriptText].filter(Boolean).join('\n');
   const decision = analyzeEventByRules({
     ...event,
     dueText: event.deadlineText || event.due || '상세 확인 필요',
-    bodyText: text,
-    originalText: text,
+    bodyText: analysisText,
+    originalText: analysisText,
     originalLines: lines,
   });
   const announcement = analyzeAnnouncementByRules({
     ...event,
     ...decision,
-    bodyText: text,
-    originalText: text,
+    bodyText: analysisText,
+    originalText: analysisText,
     originalLines: lines,
   });
 
@@ -163,6 +171,14 @@ function hydrateCurlCffiEvent(event) {
 }
 
 // Cloudflare가 모바일 UA를 더 자주 의심하므로 데스크톱 UA를 1순위로 둔다.
+function buildYoutubeTranscriptText(transcripts = []) {
+  return transcripts
+    .filter((transcript) => transcript?.status === 'ok' && transcript.text)
+    .map((transcript) => transcript.text)
+    .join('\n')
+    .slice(0, 8000);
+}
+
 const FETCH_USER_AGENTS = [
   'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
   'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.5 Safari/605.1.15',

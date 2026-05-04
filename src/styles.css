@@ -496,6 +496,46 @@ h3 {
   overflow: visible;
 }
 
+.youtube-transcript {
+  display: grid;
+  gap: 6px;
+  border-top: 1px solid rgba(255, 211, 77, 0.24);
+  margin-top: 8px;
+  padding-top: 10px;
+}
+
+.youtube-transcript strong {
+  color: var(--warning);
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.youtube-transcript p {
+  color: var(--text-muted);
+  font-size: 0.84rem;
+  font-weight: 700;
+}
+
+.youtube-transcript-button {
+  min-height: 38px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: rgba(255, 211, 77, 0.1);
+  color: var(--warning);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.youtube-transcript-button:disabled {
+  opacity: 0.72;
+}
+
+.youtube-transcript-error {
+  color: var(--danger);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
 .event-body-facts {
   display: flex;
   flex-wrap: wrap;

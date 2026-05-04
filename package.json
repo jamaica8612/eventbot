@@ -8,6 +8,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "crawl:suto": "node crawler/sutoCrawler.js",
+    "crawl:suto:youtube": "node -e \"process.env.SUTO_YOUTUBE_TRANSCRIPT_LIMIT='1'; import('./crawler/sutoCrawler.js')\"",
     "crawl:suto:body": "node crawler/sutoBrowserCrawler.js",
     "verify:supabase": "node scripts/verifySupabase.js"
   },

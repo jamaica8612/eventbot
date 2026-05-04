@@ -82,7 +82,34 @@ export function AnnouncementPanel({ event, onAnnouncementChange }) {
 
 function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
+  const [loadedTranscriptLines, setLoadedTranscriptLines] = useState([]);
+  const [transcriptStatus, setTranscriptStatus] = useState('idle');
+  const [transcriptError, setTranscriptError] = useState('');
   const originalHref = event.originalUrl ?? event.url;
+  const savedTranscriptLines = buildYoutubeTranscriptLines(event);
+  const youtubeTranscriptLines = savedTranscriptLines.length > 0 ? savedTranscriptLines : loadedTranscriptLines;
+  const youtubeLink = buildYoutubeLinks(event)[0];
+  const canFetchYoutubeTranscript = Boolean(youtubeLink && savedTranscriptLines.length === 0);
+
+  async function handleYoutubeTranscriptFetch(clickEvent) {
+    clickEvent.stopPropagation();
+    if (!youtubeLink || transcriptStatus === 'loading') return;
+
+    setTranscriptStatus('loading');
+    setTranscriptError('');
+    try {
+      const response = await fetch(`/api/youtube-transcript?url=${encodeURIComponent(youtubeLink)}`);
+      const payload = await response.json();
+      if (!response.ok) {
+        throw new Error(payload.error || '유튜브 스크립트를 가져오지 못했습니다.');
+      }
+      setLoadedTranscriptLines(payload.lines ?? []);
+      setTranscriptStatus('done');
+    } catch (error) {
+      setTranscriptError(error.message || '유튜브 스크립트를 가져오지 못했습니다.');
+      setTranscriptStatus('failed');
+    }
+  }
 
   // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
   // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
@@ -122,6 +149,25 @@ function EventBodyToggle({ event, lines, facts }) {
           {lines.map((line) => (
             <p key={line}>{line}</p>
           ))}
+          {canFetchYoutubeTranscript ? (
+            <button
+              type="button"
+              className="youtube-transcript-button"
+              onClick={handleYoutubeTranscriptFetch}
+              disabled={transcriptStatus === 'loading'}
+            >
+              {transcriptStatus === 'loading' ? '스크립트 가져오는 중' : '스크립트 가져오기'}
+            </button>
+          ) : null}
+          {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
+          {youtubeTranscriptLines.length > 0 ? (
+            <div className="youtube-transcript">
+              <strong>유튜브 스크립트</strong>
+              {youtubeTranscriptLines.map((line) => (
+                <p key={line}>{line}</p>
+              ))}
+            </div>
+          ) : null}
           <div className="event-body-facts" aria-label="원문 보조 정보">
             {facts.map((fact) => (
               <span key={fact}>{fact}</span>
@@ -146,6 +192,33 @@ function EventBodyToggle({ event, lines, facts }) {
         </div>
       )}
     </div>
+  );
+}
+
+function buildYoutubeTranscriptLines(event) {
+  const transcripts = event.youtubeTranscripts ?? event.raw?.youtubeTranscripts ?? [];
+  return transcripts
+    .filter((transcript) => transcript?.status === 'ok')
+    .flatMap((transcript) => transcript.lines ?? transcript.text?.split(/\n+/) ?? [])
+    .map((line) => String(line).replace(/\s+/g, ' ').trim())
+    .filter(Boolean)
+    .slice(0, 12);
+}
+
+function buildYoutubeLinks(event) {
+  const raw = event.raw ?? {};
+  return [event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+    .filter(Boolean)
+    .filter((url, index, urls) => urls.indexOf(url) === index)
+    .filter((url) => extractYoutubeVideoId(url));
+}
+
+function extractYoutubeVideoId(url) {
+  const value = String(url ?? '');
+  return (
+    value.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)?.[1] ??
+    value.match(/youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1] ??
+    ''
   );
 }
 
