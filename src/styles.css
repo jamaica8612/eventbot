@@ -971,7 +971,8 @@ h3 {
   gap: 10px;
 }
 
-.result-manage-row {
+.result-manage-row,
+.ledger-row {
   position: relative;
   padding-top: 42px;
 }
@@ -1224,14 +1225,12 @@ h3 {
   line-height: 1;
 }
 
-/* 카드 내부 그리드: 라벨된 셀들이 2칸씩 묶이고 수정 버튼이 우하단으로. */
 .ledger-row {
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   grid-template-areas:
     "title title"
     "prize amount"
-    "receipt memo"
-    ".       edit";
+    "receipt memo";
   align-items: start;
 }
 
@@ -1240,7 +1239,6 @@ h3 {
 .ledger-amount { grid-area: amount; text-align: right; }
 .ledger-receipt { grid-area: receipt; }
 .ledger-memo { grid-area: memo; text-align: right; }
-.ledger-row > .manage-edit-button { grid-area: edit; justify-self: end; }
 .ledger-edit-panel { grid-column: 1 / -1; }
 
 @media (min-width: 760px) {

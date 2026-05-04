@@ -102,7 +102,7 @@ function WinningLedgerRow({ event, onMetaChange }) {
       <span className="ledger-memo">{event.winningMemo || '-'}</span>
       <button
         type="button"
-        className="manage-edit-button"
+        className="manage-edit-text-button"
         onClick={() => setIsEditing((value) => !value)}
       >
         수정
