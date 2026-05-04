@@ -44,7 +44,7 @@ function CompletedListItem({ event, onResultChange }) {
       </header>
       <strong className="manage-row-title">{event.title}</strong>
       <span className={`result-badge result-${resultStatus}`}>{resultLabels[resultStatus]}</span>
-      <div className="manage-result-actions">
+      <div className="manage-result-actions manage-actions-three">
         <button
           type="button"
           className={resultStatus === 'won' ? 'is-won' : ''}
@@ -59,10 +59,10 @@ function CompletedListItem({ event, onResultChange }) {
         >
           미당첨
         </button>
+        {event.originalUrl || event.url ? (
+          <ApplyLink className="manage-link" url={event.originalUrl ?? event.url} label="이벤트확인" />
+        ) : null}
       </div>
-      {event.originalUrl || event.url ? (
-        <ApplyLink className="manage-link" url={event.originalUrl ?? event.url} label="다시보기" />
-      ) : null}
     </article>
   );
 }
@@ -104,6 +104,13 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
 
   return (
     <article className="manage-row result-manage-row" role="row">
+      <button
+        type="button"
+        className="manage-edit-text-button"
+        onClick={() => setIsEditing((value) => !value)}
+      >
+        수정
+      </button>
       <header className="manage-row-meta">
         <span className={`announcement-state announcement-state-${announcement.state}`}>
           {announcement.label}
@@ -114,7 +121,7 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
       <p className="manage-row-prize">
         <span>경품</span> {getPrizeDisplay(event)}
       </p>
-      <div className="manage-result-actions">
+      <div className="manage-result-actions manage-actions-three">
         <button
           type="button"
           className={resultStatus === 'won' ? 'is-won' : ''}
@@ -129,8 +136,6 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
         >
           미당첨
         </button>
-      </div>
-      <div className="manage-row-side">
         {event.originalUrl || event.url ? (
           <ApplyLink
             className="manage-link"
@@ -138,13 +143,6 @@ function ResultListItem({ event, onAnnouncementChange, onResultChange }) {
             label="발표 확인"
           />
         ) : null}
-        <button
-          type="button"
-          className="manage-edit-button"
-          onClick={() => setIsEditing((value) => !value)}
-        >
-          수정
-        </button>
       </div>
       {isEditing ? (
         <div className="manage-edit-panel">
