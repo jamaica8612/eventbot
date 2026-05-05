@@ -9,6 +9,8 @@ import {
   hasCrawledBody,
 } from '../utils/eventModel.js';
 
+const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
+
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   if (filter === 'now') {
     return <NowEventCard event={event} onStatusChange={onStatusChange} />;
@@ -37,13 +39,23 @@ export function EventCard({ event, filter, onResultChange, onAnnouncementChange,
 }
 
 export function ApplyLink({ className, url, label = '참여하기' }) {
+  function handleApplyClick(clickEvent) {
+    clickEvent.stopPropagation();
+    clickEvent.preventDefault();
+
+    const opened = window.open(url, '_blank', 'noopener,noreferrer');
+    if (!opened) {
+      window.location.href = url;
+    }
+  }
+
   return (
     <a
       className={className}
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      onClick={(clickEvent) => clickEvent.stopPropagation()}
+      onClick={handleApplyClick}
     >
       {label}
     </a>
@@ -130,10 +142,13 @@ function EventBodyToggle({ event, lines, facts }) {
 
     setTranscriptStatus('loading');
     setTranscriptError('');
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => abortController.abort(), YOUTUBE_CONTEXT_TIMEOUT_MS);
     try {
       const response = await fetch('/api/youtube-transcript', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
+        signal: abortController.signal,
         body: JSON.stringify({
           url: youtubeLink,
           eventInfo: {
@@ -154,8 +169,14 @@ function EventBodyToggle({ event, lines, facts }) {
       setTranscriptError(payload.transcriptError ?? '');
       setTranscriptStatus('done');
     } catch (error) {
-      setTranscriptError(error.message || '유튜브 댓글자료를 가져오지 못했습니다.');
+      const message =
+        error.name === 'AbortError'
+          ? '댓글 후보 생성이 너무 오래 걸려 중단했습니다. 잠시 뒤 다시 시도하세요.'
+          : error.message || '유튜브 댓글자료를 가져오지 못했습니다.';
+      setTranscriptError(message);
       setTranscriptStatus('failed');
+    } finally {
+      window.clearTimeout(timeoutId);
     }
   }
 

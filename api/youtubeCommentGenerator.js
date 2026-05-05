@@ -21,7 +21,12 @@ function loadSystemPrompt() {
   return cachedSystemPrompt;
 }
 
-export async function generateCommentCandidates({ videoUrl, eventInfo = {}, comments = [] }) {
+export async function generateCommentCandidates({
+  videoUrl,
+  eventInfo = {},
+  comments = [],
+  timeoutMs = 80000,
+}) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY 환경변수가 설정되지 않았습니다.');
@@ -67,11 +72,25 @@ export async function generateCommentCandidates({ videoUrl, eventInfo = {}, comm
     },
   };
 
-  const response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(requestBody),
-  });
+  const abortController = new AbortController();
+  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
+  let response;
+
+  try {
+    response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      signal: abortController.signal,
+      body: JSON.stringify(requestBody),
+    });
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('Gemini 응답 시간이 너무 오래 걸렸습니다.');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
+  }
 
   const rawText = await response.text();
   if (!response.ok) {

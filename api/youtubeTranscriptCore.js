@@ -1,6 +1,10 @@
 import { spawn } from 'node:child_process';
 import { generateCommentCandidates } from './youtubeCommentGenerator.js';
 
+const COMMENTS_TIMEOUT_MS = 25000;
+const TRANSCRIPT_TIMEOUT_MS = 20000;
+const COMMENT_CANDIDATES_TIMEOUT_MS = 80000;
+
 const WATCH_HEADERS = {
   'user-agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -56,11 +60,16 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
   let commentCandidates = [];
   let commentCandidatesError = '';
   try {
-    commentCandidates = await generateCommentCandidates({
-      videoUrl: watchUrl,
-      eventInfo: eventInfo ?? {},
-      comments,
-    });
+    commentCandidates = await withTimeout(
+      generateCommentCandidates({
+        videoUrl: watchUrl,
+        eventInfo: eventInfo ?? {},
+        comments,
+        timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
+      }),
+      COMMENT_CANDIDATES_TIMEOUT_MS + 5000,
+      'Gemini 댓글 생성 시간이 너무 오래 걸렸습니다.',
+    );
   } catch (error) {
     commentCandidatesError = error.message || 'Gemini 댓글 생성에 실패했습니다.';
   }
@@ -84,7 +93,9 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
 
 async function fetchCommentsSafe(videoId) {
   try {
-    const payload = await runPythonJson(['scripts/youtube_comments_fetch.py', videoId, '50']);
+    const payload = await runPythonJson(['scripts/youtube_comments_fetch.py', videoId, '50'], {
+      timeoutMs: COMMENTS_TIMEOUT_MS,
+    });
     return Array.isArray(payload.comments) ? payload.comments : [];
   } catch {
     return [];
@@ -104,7 +115,9 @@ async function fetchTranscriptSafe(videoId) {
 }
 
 function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
-  return runPythonJson(['scripts/youtube_transcript_api_fetch.py', videoId]).then((payload) => ({
+  return runPythonJson(['scripts/youtube_transcript_api_fetch.py', videoId], {
+    timeoutMs: TRANSCRIPT_TIMEOUT_MS,
+  }).then((payload) => ({
     videoId,
     language: payload.language || '',
     languageName: payload.languageName || 'youtube-transcript-api',
@@ -115,9 +128,10 @@ function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
   }));
 }
 
-function runPythonJson(args) {
+function runPythonJson(args, options = {}) {
   return new Promise((resolve, reject) => {
     const python = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3');
+    let settled = false;
     const child = spawn(python, args, {
       cwd: process.cwd(),
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
@@ -134,8 +148,25 @@ function runPythonJson(args) {
     child.stderr.on('data', (chunk) => {
       stderr += chunk;
     });
-    child.on('error', reject);
+    const timeoutId = options.timeoutMs
+      ? setTimeout(() => {
+          if (settled) return;
+          settled = true;
+          child.kill();
+          reject(new Error(`Python 작업 시간이 너무 오래 걸렸습니다: ${args[0]}`));
+        }, options.timeoutMs)
+      : null;
+
+    child.on('error', (error) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
+      reject(error);
+    });
     child.on('close', (code) => {
+      if (settled) return;
+      settled = true;
+      if (timeoutId) clearTimeout(timeoutId);
       try {
         const payload = JSON.parse(stdout || '{}');
         if (code !== 0 || payload.error) {
@@ -148,6 +179,15 @@ function runPythonJson(args) {
       }
     });
   });
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  let timeoutId;
+  const timeout = new Promise((_, reject) => {
+    timeoutId = setTimeout(() => reject(new Error(message)), timeoutMs);
+  });
+
+  return Promise.race([promise, timeout]).finally(() => clearTimeout(timeoutId));
 }
 
 function extractVideoMetadata(playerResponse, html, watchUrl) {
