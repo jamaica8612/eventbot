@@ -16,9 +16,7 @@ export function extractVideoId(value = '') {
 
   for (const pattern of patterns) {
     const match = text.match(pattern);
-    if (match) {
-      return match[1].split('&')[0].split('?')[0];
-    }
+    if (match) return match[1].split('&')[0].split('?')[0];
   }
   return '';
 }
@@ -26,7 +24,7 @@ export function extractVideoId(value = '') {
 export async function fetchYoutubeTranscript(input) {
   const context = await fetchYoutubeContext(input);
   if (!context.transcript?.text) {
-    throw new Error(context.transcriptError || '유튜브 스크립트를 가져오지 못했습니다.');
+    throw new Error(context.transcriptError || '유튜브 자막을 가져오지 못했습니다.');
   }
   return {
     videoId: context.videoId,
@@ -36,9 +34,7 @@ export async function fetchYoutubeTranscript(input) {
 
 export async function fetchYoutubeContext({ videoId, url, audioFallback = false }) {
   const resolvedVideoId = videoId || extractVideoId(url);
-  if (!resolvedVideoId) {
-    throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
-  }
+  if (!resolvedVideoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${resolvedVideoId}`;
   const watchResponse = await fetch(watchUrl, { headers: WATCH_HEADERS });
@@ -53,17 +49,26 @@ export async function fetchYoutubeContext({ videoId, url, audioFallback = false 
   let transcript = null;
   let transcriptError = '';
 
-  if (tracks.length === 0) {
-    transcriptError = '공개 자막이나 자동 자막이 없는 영상입니다.';
-  } else {
-    try {
-      transcript = await fetchTranscriptTrack({
-        videoId: resolvedVideoId,
-        watchUrl,
-        track: chooseCaptionTrack(tracks),
-      });
-    } catch (error) {
-      transcriptError = error.message || '유튜브 스크립트를 가져오지 못했습니다.';
+  try {
+    transcript = await fetchTranscriptWithYoutubeTranscriptApi(resolvedVideoId);
+  } catch (error) {
+    transcriptError = error.message || 'youtube-transcript-api로 자막을 가져오지 못했습니다.';
+  }
+
+  if (!transcript?.text) {
+    if (tracks.length === 0) {
+      transcriptError = `${transcriptError} 공개 자막이나 자동 자막이 없는 영상입니다.`.trim();
+    } else {
+      try {
+        transcript = await fetchTranscriptTrack({
+          videoId: resolvedVideoId,
+          watchUrl,
+          track: chooseCaptionTrack(tracks),
+        });
+        transcriptError = '';
+      } catch (error) {
+        transcriptError = error.message || '유튜브 자막을 가져오지 못했습니다.';
+      }
     }
   }
 
@@ -92,10 +97,39 @@ export async function fetchYoutubeContext({ videoId, url, audioFallback = false 
   };
 }
 
+function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
+  return runPythonJson(['scripts/youtube_transcript_api_fetch.py', videoId]).then((payload) => ({
+    videoId,
+    language: payload.language || '',
+    languageName: payload.languageName || 'youtube-transcript-api',
+    isGenerated: Boolean(payload.isGenerated),
+    source: payload.source || 'youtube-transcript-api',
+    lines: payload.lines || [],
+    text: payload.text || '',
+  }));
+}
+
 function transcribeYoutubeAudio(watchUrl) {
+  return runPythonJson([
+    'scripts/youtube_audio_transcribe.py',
+    watchUrl,
+    process.env.YOUTUBE_WHISPER_MODEL || 'base',
+  ]).then((payload) => ({
+    videoId: extractVideoId(watchUrl),
+    language: payload.language || 'ko',
+    languageName: '오디오 음성인식',
+    isGenerated: true,
+    source: payload.source || 'audio-whisper',
+    model: payload.model || '',
+    lines: payload.lines || [],
+    text: payload.text || '',
+  }));
+}
+
+function runPythonJson(args) {
   return new Promise((resolve, reject) => {
     const python = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3');
-    const child = spawn(python, ['scripts/youtube_audio_transcribe.py', watchUrl, process.env.YOUTUBE_WHISPER_MODEL || 'base'], {
+    const child = spawn(python, args, {
       cwd: process.cwd(),
       env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
       stdio: ['ignore', 'pipe', 'pipe'],
@@ -119,18 +153,9 @@ function transcribeYoutubeAudio(watchUrl) {
           reject(new Error(payload.error || stderr.trim() || `Python exited with code ${code}`));
           return;
         }
-        resolve({
-          videoId: extractVideoId(watchUrl),
-          language: payload.language || 'ko',
-          languageName: '오디오 음성인식',
-          isGenerated: true,
-          source: payload.source || 'audio-whisper',
-          model: payload.model || '',
-          lines: payload.lines || [],
-          text: payload.text || '',
-        });
+        resolve(payload);
       } catch (error) {
-        reject(new Error(`음성인식 결과를 읽지 못했습니다: ${error.message}`));
+        reject(new Error(`Python 결과를 읽지 못했습니다: ${error.message}`));
       }
     });
   });
@@ -161,6 +186,7 @@ async function fetchTranscriptTrack({ videoId, watchUrl, track }) {
     language: track.languageCode ?? '',
     languageName: getText(track.name),
     isGenerated: track.kind === 'asr',
+    source: 'youtube-timedtext',
     lines,
     text: lines.join('\n'),
   };
@@ -192,9 +218,7 @@ function extractVideoMetadata(playerResponse, html, watchUrl) {
 function extractPlayerResponse(html) {
   const marker = 'ytInitialPlayerResponse = ';
   const start = html.indexOf(marker);
-  if (start < 0) {
-    throw new Error('유튜브 플레이어 정보를 찾지 못했습니다.');
-  }
+  if (start < 0) throw new Error('유튜브 플레이어 정보를 찾지 못했습니다.');
 
   const jsonStart = start + marker.length;
   const jsonText = readBalancedJson(html, jsonStart);
@@ -209,13 +233,9 @@ function readBalancedJson(text, start) {
   for (let index = start; index < text.length; index += 1) {
     const char = text[index];
     if (inString) {
-      if (escaped) {
-        escaped = false;
-      } else if (char === '\\') {
-        escaped = true;
-      } else if (char === '"') {
-        inString = false;
-      }
+      if (escaped) escaped = false;
+      else if (char === '\\') escaped = true;
+      else if (char === '"') inString = false;
       continue;
     }
 
@@ -223,9 +243,7 @@ function readBalancedJson(text, start) {
     if (char === '{') depth += 1;
     if (char === '}') {
       depth -= 1;
-      if (depth === 0) {
-        return text.slice(start, index + 1);
-      }
+      if (depth === 0) return text.slice(start, index + 1);
     }
   }
 
