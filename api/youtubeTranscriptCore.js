@@ -1,4 +1,5 @@
 import { spawn } from 'node:child_process';
+import { generateCommentCandidates } from './youtubeCommentGenerator.js';
 
 const WATCH_HEADERS = {
   'user-agent':
@@ -32,7 +33,7 @@ export async function fetchYoutubeTranscript(input) {
   };
 }
 
-export async function fetchYoutubeContext({ videoId, url, audioFallback = false }) {
+export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
   const resolvedVideoId = videoId || extractVideoId(url);
   if (!resolvedVideoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
@@ -46,41 +47,22 @@ export async function fetchYoutubeContext({ videoId, url, audioFallback = false 
   const playerResponse = extractPlayerResponse(html);
   const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  let transcript = null;
-  let transcriptError = '';
 
+  const [comments, transcriptResult] = await Promise.all([
+    fetchCommentsSafe(resolvedVideoId),
+    fetchTranscriptSafe(resolvedVideoId),
+  ]);
+
+  let commentCandidates = [];
+  let commentCandidatesError = '';
   try {
-    transcript = await fetchTranscriptWithYoutubeTranscriptApi(resolvedVideoId);
+    commentCandidates = await generateCommentCandidates({
+      videoUrl: watchUrl,
+      eventInfo: eventInfo ?? {},
+      comments,
+    });
   } catch (error) {
-    transcriptError = error.message || 'youtube-transcript-api로 자막을 가져오지 못했습니다.';
-  }
-
-  if (!transcript?.text) {
-    if (tracks.length === 0) {
-      transcriptError = `${transcriptError} 공개 자막이나 자동 자막이 없는 영상입니다.`.trim();
-    } else {
-      try {
-        transcript = await fetchTranscriptTrack({
-          videoId: resolvedVideoId,
-          watchUrl,
-          track: chooseCaptionTrack(tracks),
-        });
-        transcriptError = '';
-      } catch (error) {
-        transcriptError = error.message || '유튜브 자막을 가져오지 못했습니다.';
-      }
-    }
-  }
-
-  if (!transcript?.text && audioFallback) {
-    try {
-      transcript = await transcribeYoutubeAudio(watchUrl);
-      transcriptError = '';
-    } catch (error) {
-      transcriptError = `${transcriptError || '자막을 가져오지 못했습니다.'} 오디오 음성인식도 실패했습니다: ${
-        error.message || error
-      }`;
-    }
+    commentCandidatesError = error.message || 'Gemini 댓글 생성에 실패했습니다.';
   }
 
   return {
@@ -92,9 +74,33 @@ export async function fetchYoutubeContext({ videoId, url, audioFallback = false 
       name: getText(track.name),
       isGenerated: track.kind === 'asr',
     })),
-    transcript,
-    transcriptError,
+    transcript: transcriptResult.transcript,
+    transcriptError: transcriptResult.error,
+    comments,
+    commentCandidates,
+    commentCandidatesError,
   };
+}
+
+async function fetchCommentsSafe(videoId) {
+  try {
+    const payload = await runPythonJson(['scripts/youtube_comments_fetch.py', videoId, '50']);
+    return Array.isArray(payload.comments) ? payload.comments : [];
+  } catch {
+    return [];
+  }
+}
+
+async function fetchTranscriptSafe(videoId) {
+  try {
+    const transcript = await fetchTranscriptWithYoutubeTranscriptApi(videoId);
+    return { transcript, error: '' };
+  } catch (error) {
+    return {
+      transcript: null,
+      error: error.message || '백업 자막을 가져오지 못했습니다.',
+    };
+  }
 }
 
 function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
@@ -104,23 +110,6 @@ function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
     languageName: payload.languageName || 'youtube-transcript-api',
     isGenerated: Boolean(payload.isGenerated),
     source: payload.source || 'youtube-transcript-api',
-    lines: payload.lines || [],
-    text: payload.text || '',
-  }));
-}
-
-function transcribeYoutubeAudio(watchUrl) {
-  return runPythonJson([
-    'scripts/youtube_audio_transcribe.py',
-    watchUrl,
-    process.env.YOUTUBE_WHISPER_MODEL || 'base',
-  ]).then((payload) => ({
-    videoId: extractVideoId(watchUrl),
-    language: payload.language || 'ko',
-    languageName: '오디오 음성인식',
-    isGenerated: true,
-    source: payload.source || 'audio-whisper',
-    model: payload.model || '',
     lines: payload.lines || [],
     text: payload.text || '',
   }));
@@ -159,37 +148,6 @@ function runPythonJson(args) {
       }
     });
   });
-}
-
-async function fetchTranscriptTrack({ videoId, watchUrl, track }) {
-  const transcriptUrl = withJsonFormat(track.baseUrl);
-  const transcriptResponse = await fetch(transcriptUrl, {
-    headers: { ...WATCH_HEADERS, referer: watchUrl },
-  });
-  const transcriptPayload = await transcriptResponse.text();
-
-  if (transcriptResponse.status === 429 || transcriptPayload.includes('<title>Sorry')) {
-    throw new Error('현재 IP에서 유튜브 자막 요청이 제한되었습니다. 잠시 뒤 다시 시도하세요.');
-  }
-  if (!transcriptResponse.ok) {
-    throw new Error(`유튜브 자막을 가져오지 못했습니다. (${transcriptResponse.status})`);
-  }
-
-  const snippets = parseTranscriptPayload(transcriptPayload);
-  const lines = compactTranscriptLines(snippets);
-  if (lines.length === 0) {
-    throw new Error('자막은 찾았지만 읽을 수 있는 문장이 없습니다.');
-  }
-
-  return {
-    videoId,
-    language: track.languageCode ?? '',
-    languageName: getText(track.name),
-    isGenerated: track.kind === 'asr',
-    source: 'youtube-timedtext',
-    lines,
-    text: lines.join('\n'),
-  };
 }
 
 function extractVideoMetadata(playerResponse, html, watchUrl) {
@@ -248,54 +206,6 @@ function readBalancedJson(text, start) {
   }
 
   throw new Error('유튜브 플레이어 JSON을 끝까지 읽지 못했습니다.');
-}
-
-function chooseCaptionTrack(tracks) {
-  return (
-    tracks.find((track) => track.languageCode === 'ko') ??
-    tracks.find((track) => track.languageCode?.startsWith('ko')) ??
-    tracks.find((track) => track.languageCode === 'en') ??
-    tracks[0]
-  );
-}
-
-function withJsonFormat(baseUrl) {
-  const url = new URL(baseUrl);
-  url.searchParams.set('fmt', 'json3');
-  return url.toString();
-}
-
-function parseTranscriptPayload(payload) {
-  try {
-    const parsed = JSON.parse(payload);
-    return (parsed.events ?? [])
-      .flatMap((event) => event.segs ?? [])
-      .map((segment) => segment.utf8)
-      .filter(Boolean);
-  } catch {
-    return [...payload.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)].map((match) =>
-      decodeHtml(match[1]),
-    );
-  }
-}
-
-function compactTranscriptLines(snippets) {
-  const lines = [];
-  let current = '';
-
-  for (const snippet of snippets) {
-    const value = String(snippet).replace(/\s+/g, ' ').trim();
-    if (!value) continue;
-    if (current && current.length + value.length > 180) {
-      lines.push(current);
-      current = value;
-    } else {
-      current = `${current} ${value}`.trim();
-    }
-  }
-  if (current) lines.push(current);
-
-  return lines.slice(0, 80);
 }
 
 function getText(value) {

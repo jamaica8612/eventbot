@@ -586,6 +586,65 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.comment-candidates {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  border: 1px solid rgba(120, 200, 140, 0.28);
+  border-radius: 10px;
+  background: rgba(120, 200, 140, 0.06);
+  padding: 10px;
+}
+
+.comment-candidates strong {
+  color: var(--accent, #6ad391);
+  font-size: 0.86rem;
+  font-weight: 900;
+}
+
+.comment-candidate {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface, rgba(255, 255, 255, 0.04));
+  padding: 9px 10px;
+}
+
+.comment-candidate-style {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.comment-candidate-text {
+  color: var(--text-main);
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+  word-break: keep-all;
+  white-space: pre-wrap;
+}
+
+.comment-candidate-copy {
+  position: relative;
+  z-index: 1;
+  justify-self: end;
+  min-height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--accent-border);
+  border-radius: 8px;
+  background: rgba(120, 200, 140, 0.18);
+  color: var(--accent, #6ad391);
+  font-size: 0.8rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
 .event-body-facts {
   display: flex;
   flex-wrap: wrap;

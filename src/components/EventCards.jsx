@@ -116,11 +116,12 @@ function EventBodyToggle({ event, lines, facts }) {
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
   const [copyStatus, setCopyStatus] = useState('idle');
+  const [copiedCandidateIndex, setCopiedCandidateIndex] = useState(-1);
   const originalHref = event.originalUrl ?? event.url;
   const savedTranscriptLines = buildYoutubeTranscriptLines(event);
   const youtubeTranscriptLines = savedTranscriptLines.length > 0 ? savedTranscriptLines : loadedTranscriptLines;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const canFetchYoutubeTranscript = Boolean(youtubeLink && savedTranscriptLines.length === 0);
+  const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext, youtubeTranscriptLines);
 
   async function handleYoutubeTranscriptFetch(clickEvent) {
@@ -130,9 +131,20 @@ function EventBodyToggle({ event, lines, facts }) {
     setTranscriptStatus('loading');
     setTranscriptError('');
     try {
-      const response = await fetch(
-        `/api/youtube-transcript?audioFallback=1&url=${encodeURIComponent(youtubeLink)}`,
-      );
+      const response = await fetch('/api/youtube-transcript', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({
+          url: youtubeLink,
+          eventInfo: {
+            title: event.title,
+            platform: event.platform,
+            deadline: event.deadlineDate || event.deadlineText || event.due || '',
+            prize: event.prizeText || event.prizeTitle || '',
+            bodyLines: buildUserContentLines(event).slice(0, 16),
+          },
+        }),
+      });
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
@@ -157,6 +169,19 @@ function EventBodyToggle({ event, lines, facts }) {
       window.setTimeout(() => setCopyStatus('idle'), 1600);
     } catch {
       setCopyStatus('failed');
+    }
+  }
+
+  async function handleCopyCandidate(clickEvent, candidateText, index) {
+    clickEvent.stopPropagation();
+    if (!candidateText) return;
+
+    try {
+      await copyTextToClipboard(candidateText);
+      setCopiedCandidateIndex(index);
+      window.setTimeout(() => setCopiedCandidateIndex(-1), 1600);
+    } catch {
+      setCopiedCandidateIndex(-2);
     }
   }
 
@@ -207,18 +232,15 @@ function EventBodyToggle({ event, lines, facts }) {
               onClick={handleYoutubeTranscriptFetch}
               disabled={transcriptStatus === 'loading'}
             >
-              {transcriptStatus === 'loading' ? '댓글자료/음성인식 중' : '댓글자료 가져오기'}
+              {transcriptStatus === 'loading' ? '댓글 후보 생성 중' : '댓글 후보 만들기'}
             </button>
           ) : null}
           {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
           {youtubeContext ? (
             <div className="youtube-context">
-              <strong>GPT 댓글 생성용 자료</strong>
+              <strong>영상 정보</strong>
               <p>영상 제목: {youtubeContext.title || '-'}</p>
               <p>채널: {youtubeContext.channelName || '-'}</p>
-              {youtubeContext.transcript?.source === 'audio-whisper' ? (
-                <p>스크립트: 오디오 음성인식으로 생성됨</p>
-              ) : null}
               {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
               {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
               <button
@@ -227,10 +249,39 @@ function EventBodyToggle({ event, lines, facts }) {
                 onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
                 onClick={handleCopyYoutubeMaterial}
               >
-                {copyStatus === 'copied' ? '복사됨' : 'GPT용 복사'}
+                {copyStatus === 'copied' ? '복사됨' : '전체 자료 복사'}
               </button>
               {copyStatus === 'failed' ? <p className="youtube-transcript-error">복사에 실패했습니다.</p> : null}
             </div>
+          ) : null}
+          {youtubeContext?.commentCandidates?.length ? (
+            <div className="comment-candidates">
+              <strong>댓글 후보</strong>
+              {youtubeContext.commentCandidates.map((candidate, index) => (
+                <div key={index} className="comment-candidate">
+                  {candidate.style ? (
+                    <p className="comment-candidate-style">{candidate.style}</p>
+                  ) : null}
+                  <p className="comment-candidate-text">{candidate.text}</p>
+                  <button
+                    type="button"
+                    className="comment-candidate-copy"
+                    onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                    onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                    onClick={(clickEvent) => handleCopyCandidate(clickEvent, candidate.text, index)}
+                  >
+                    {copiedCandidateIndex === index ? '복사됨' : '이 댓글 복사'}
+                  </button>
+                </div>
+              ))}
+              {copiedCandidateIndex === -2 ? (
+                <p className="youtube-transcript-error">복사에 실패했습니다.</p>
+              ) : null}
+            </div>
+          ) : youtubeContext?.commentCandidatesError ? (
+            <p className="youtube-transcript-error">
+              댓글 후보 생성 실패: {youtubeContext.commentCandidatesError}
+            </p>
           ) : null}
           {youtubeTranscriptLines.length > 0 ? (
             <div className="youtube-transcript">
