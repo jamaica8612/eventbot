@@ -17,7 +17,8 @@ function youtubeTranscriptApi() {
           const videoId =
             requestUrl.searchParams.get('videoId') ||
             extractVideoId(requestUrl.searchParams.get('url') ?? '');
-          const transcript = await fetchYoutubeContext({ videoId });
+          const audioFallback = requestUrl.searchParams.get('audioFallback') === '1';
+          const transcript = await fetchYoutubeContext({ videoId, audioFallback });
           response.setHeader('content-type', 'application/json; charset=utf-8');
           response.end(JSON.stringify(transcript));
         } catch (error) {

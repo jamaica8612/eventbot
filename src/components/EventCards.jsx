@@ -101,7 +101,9 @@ function EventBodyToggle({ event, lines, facts }) {
     setTranscriptStatus('loading');
     setTranscriptError('');
     try {
-      const response = await fetch(`/api/youtube-transcript?url=${encodeURIComponent(youtubeLink)}`);
+      const response = await fetch(
+        `/api/youtube-transcript?audioFallback=1&url=${encodeURIComponent(youtubeLink)}`,
+      );
       const payload = await response.json();
       if (!response.ok) {
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
@@ -174,7 +176,7 @@ function EventBodyToggle({ event, lines, facts }) {
               onClick={handleYoutubeTranscriptFetch}
               disabled={transcriptStatus === 'loading'}
             >
-              {transcriptStatus === 'loading' ? '댓글자료 가져오는 중' : '댓글자료 가져오기'}
+              {transcriptStatus === 'loading' ? '댓글자료/음성인식 중' : '댓글자료 가져오기'}
             </button>
           ) : null}
           {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
@@ -183,6 +185,9 @@ function EventBodyToggle({ event, lines, facts }) {
               <strong>GPT 댓글 생성용 자료</strong>
               <p>영상 제목: {youtubeContext.title || '-'}</p>
               <p>채널: {youtubeContext.channelName || '-'}</p>
+              {youtubeContext.transcript?.source === 'audio-whisper' ? (
+                <p>스크립트: 오디오 음성인식으로 생성됨</p>
+              ) : null}
               {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
               {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
               <button type="button" onClick={handleCopyYoutubeMaterial}>

@@ -1,3 +1,5 @@
+import { spawn } from 'node:child_process';
+
 const WATCH_HEADERS = {
   'user-agent':
     'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -32,7 +34,7 @@ export async function fetchYoutubeTranscript(input) {
   };
 }
 
-export async function fetchYoutubeContext({ videoId, url }) {
+export async function fetchYoutubeContext({ videoId, url, audioFallback = false }) {
   const resolvedVideoId = videoId || extractVideoId(url);
   if (!resolvedVideoId) {
     throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
@@ -65,6 +67,17 @@ export async function fetchYoutubeContext({ videoId, url }) {
     }
   }
 
+  if (!transcript?.text && audioFallback) {
+    try {
+      transcript = await transcribeYoutubeAudio(watchUrl);
+      transcriptError = '';
+    } catch (error) {
+      transcriptError = `${transcriptError || '자막을 가져오지 못했습니다.'} 오디오 음성인식도 실패했습니다: ${
+        error.message || error
+      }`;
+    }
+  }
+
   return {
     videoId: resolvedVideoId,
     url: watchUrl,
@@ -77,6 +90,50 @@ export async function fetchYoutubeContext({ videoId, url }) {
     transcript,
     transcriptError,
   };
+}
+
+function transcribeYoutubeAudio(watchUrl) {
+  return new Promise((resolve, reject) => {
+    const python = process.env.PYTHON_COMMAND || (process.platform === 'win32' ? 'python' : 'python3');
+    const child = spawn(python, ['scripts/youtube_audio_transcribe.py', watchUrl, process.env.YOUTUBE_WHISPER_MODEL || 'base'], {
+      cwd: process.cwd(),
+      env: { ...process.env, PYTHONIOENCODING: 'utf-8' },
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+
+    let stdout = '';
+    let stderr = '';
+    child.stdout.setEncoding('utf8');
+    child.stderr.setEncoding('utf8');
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk;
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk;
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      try {
+        const payload = JSON.parse(stdout || '{}');
+        if (code !== 0 || payload.error) {
+          reject(new Error(payload.error || stderr.trim() || `Python exited with code ${code}`));
+          return;
+        }
+        resolve({
+          videoId: extractVideoId(watchUrl),
+          language: payload.language || 'ko',
+          languageName: '오디오 음성인식',
+          isGenerated: true,
+          source: payload.source || 'audio-whisper',
+          model: payload.model || '',
+          lines: payload.lines || [],
+          text: payload.text || '',
+        });
+      } catch (error) {
+        reject(new Error(`음성인식 결과를 읽지 못했습니다: ${error.message}`));
+      }
+    });
+  });
 }
 
 async function fetchTranscriptTrack({ videoId, watchUrl, track }) {

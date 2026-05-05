@@ -4,7 +4,8 @@ export default async function handler(request, response) {
   try {
     const requestUrl = new URL(request.url, 'http://localhost');
     const videoId = requestUrl.searchParams.get('videoId') || extractVideoId(requestUrl.searchParams.get('url'));
-    const context = await fetchYoutubeContext({ videoId });
+    const audioFallback = requestUrl.searchParams.get('audioFallback') === '1';
+    const context = await fetchYoutubeContext({ videoId, audioFallback });
     response.status(200).json(context);
   } catch (error) {
     response.status(400).json({
