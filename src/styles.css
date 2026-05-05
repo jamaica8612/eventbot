@@ -552,6 +552,8 @@ h3 {
 }
 
 .youtube-context button {
+  position: relative;
+  z-index: 1;
   min-height: 36px;
   border: 1px solid var(--accent-border);
   border-radius: 8px;
@@ -562,6 +564,8 @@ h3 {
 }
 
 .youtube-transcript-button {
+  position: relative;
+  z-index: 1;
   min-height: 38px;
   border: 1px solid var(--accent-border);
   border-radius: 8px;
@@ -787,6 +791,8 @@ h3 {
 
 .apply-link {
   display: inline-flex;
+  position: relative;
+  z-index: 1;
   align-items: center;
   justify-content: center;
   min-height: 46px;

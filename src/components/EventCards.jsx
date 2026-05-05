@@ -38,10 +38,39 @@ export function EventCard({ event, filter, onResultChange, onAnnouncementChange,
 
 export function ApplyLink({ className, url, label = '참여하기' }) {
   return (
-    <a className={className} href={url} target="_blank" rel="noopener noreferrer">
+    <a
+      className={className}
+      href={url}
+      target="_blank"
+      rel="noopener noreferrer"
+      onClick={(clickEvent) => clickEvent.stopPropagation()}
+    >
       {label}
     </a>
   );
+}
+
+async function copyTextToClipboard(text) {
+  if (navigator.clipboard?.writeText) {
+    await navigator.clipboard.writeText(text);
+    return;
+  }
+
+  const textarea = document.createElement('textarea');
+  textarea.value = text;
+  textarea.setAttribute('readonly', '');
+  textarea.style.position = 'fixed';
+  textarea.style.top = '0';
+  textarea.style.left = '-9999px';
+  document.body.appendChild(textarea);
+  textarea.focus();
+  textarea.select();
+  const didCopy = document.execCommand('copy');
+  document.body.removeChild(textarea);
+
+  if (!didCopy) {
+    throw new Error('copy failed');
+  }
 }
 
 export function AnnouncementPanel({ event, onAnnouncementChange }) {
@@ -123,7 +152,7 @@ function EventBodyToggle({ event, lines, facts }) {
     if (!commentMaterialText) return;
 
     try {
-      await navigator.clipboard.writeText(commentMaterialText);
+      await copyTextToClipboard(commentMaterialText);
       setCopyStatus('copied');
       window.setTimeout(() => setCopyStatus('idle'), 1600);
     } catch {
@@ -173,6 +202,8 @@ function EventBodyToggle({ event, lines, facts }) {
             <button
               type="button"
               className="youtube-transcript-button"
+              onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+              onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
               onClick={handleYoutubeTranscriptFetch}
               disabled={transcriptStatus === 'loading'}
             >
@@ -190,7 +221,12 @@ function EventBodyToggle({ event, lines, facts }) {
               ) : null}
               {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
               {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
-              <button type="button" onClick={handleCopyYoutubeMaterial}>
+              <button
+                type="button"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={handleCopyYoutubeMaterial}
+              >
                 {copyStatus === 'copied' ? '복사됨' : 'GPT용 복사'}
               </button>
               {copyStatus === 'failed' ? <p className="youtube-transcript-error">복사에 실패했습니다.</p> : null}
