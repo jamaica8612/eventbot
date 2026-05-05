@@ -41,11 +41,10 @@ export function EventCard({ event, filter, onResultChange, onAnnouncementChange,
 export function ApplyLink({ className, url, label = '참여하기' }) {
   function handleApplyClick(clickEvent) {
     clickEvent.stopPropagation();
-    clickEvent.preventDefault();
 
-    const opened = window.open(url, '_blank', 'noopener,noreferrer');
-    if (!opened) {
-      window.location.href = url;
+    if (isAndroidDevice()) {
+      clickEvent.preventDefault();
+      window.location.href = buildSamsungInternetIntentUrl(url);
     }
   }
 
@@ -60,6 +59,23 @@ export function ApplyLink({ className, url, label = '참여하기' }) {
       {label}
     </a>
   );
+}
+
+function isAndroidDevice() {
+  return /Android/i.test(window.navigator.userAgent);
+}
+
+function buildSamsungInternetIntentUrl(url) {
+  try {
+    const parsedUrl = new URL(url);
+    if (!['http:', 'https:'].includes(parsedUrl.protocol)) return url;
+    const path = `${parsedUrl.host}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
+    return `intent://${path}#Intent;scheme=${parsedUrl.protocol.replace(':', '')};package=com.sec.android.app.sbrowser;S.browser_fallback_url=${encodeURIComponent(
+      url,
+    )};end`;
+  } catch {
+    return url;
+  }
 }
 
 async function copyTextToClipboard(text) {
@@ -123,18 +139,15 @@ export function AnnouncementPanel({ event, onAnnouncementChange }) {
 
 function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
-  const [loadedTranscriptLines, setLoadedTranscriptLines] = useState([]);
   const [youtubeContext, setYoutubeContext] = useState(null);
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
   const [copyStatus, setCopyStatus] = useState('idle');
   const [copiedCandidateIndex, setCopiedCandidateIndex] = useState(-1);
   const originalHref = event.originalUrl ?? event.url;
-  const savedTranscriptLines = buildYoutubeTranscriptLines(event);
-  const youtubeTranscriptLines = savedTranscriptLines.length > 0 ? savedTranscriptLines : loadedTranscriptLines;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const canFetchYoutubeTranscript = Boolean(youtubeLink);
-  const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext, youtubeTranscriptLines);
+  const canFetchYoutubeTranscript = isYoutubeEvent(event) && Boolean(youtubeLink);
+  const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
 
   async function handleYoutubeTranscriptFetch(clickEvent) {
     clickEvent.stopPropagation();
@@ -165,8 +178,7 @@ function EventBodyToggle({ event, lines, facts }) {
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
       }
       setYoutubeContext(payload);
-      setLoadedTranscriptLines(payload.transcript?.lines ?? []);
-      setTranscriptError(payload.transcriptError ?? '');
+      setTranscriptError('');
       setTranscriptStatus('done');
     } catch (error) {
       const message =
@@ -304,14 +316,6 @@ function EventBodyToggle({ event, lines, facts }) {
               댓글 후보 생성 실패: {youtubeContext.commentCandidatesError}
             </p>
           ) : null}
-          {youtubeTranscriptLines.length > 0 ? (
-            <div className="youtube-transcript">
-              <strong>유튜브 스크립트</strong>
-              {youtubeTranscriptLines.map((line) => (
-                <p key={line}>{line}</p>
-              ))}
-            </div>
-          ) : null}
           <div className="event-body-facts" aria-label="원문 보조 정보">
             {facts.map((fact) => (
               <span key={fact}>{fact}</span>
@@ -339,22 +343,17 @@ function EventBodyToggle({ event, lines, facts }) {
   );
 }
 
-function buildYoutubeTranscriptLines(event) {
-  const transcripts = event.youtubeTranscripts ?? event.raw?.youtubeTranscripts ?? [];
-  return transcripts
-    .filter((transcript) => transcript?.status === 'ok')
-    .flatMap((transcript) => transcript.lines ?? transcript.text?.split(/\n+/) ?? [])
-    .map((line) => String(line).replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .slice(0, 12);
-}
-
 function buildYoutubeLinks(event) {
   const raw = event.raw ?? {};
   return [event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
     .filter((url) => extractYoutubeVideoId(url));
+}
+
+function isYoutubeEvent(event) {
+  const platform = String(event.platform ?? '').toLowerCase();
+  return platform.includes('유튜브') || platform.includes('youtube');
 }
 
 function extractYoutubeVideoId(url) {
@@ -366,16 +365,16 @@ function extractYoutubeVideoId(url) {
   );
 }
 
-function buildYoutubeCommentMaterialText(event, context, transcriptLines) {
+function buildYoutubeCommentMaterialText(event, context) {
   if (!context) return '';
 
   const originalLines = buildUserContentLines(event).slice(0, 16);
-  const transcriptText = transcriptLines.length > 0 ? transcriptLines.join('\n') : '스크립트 없음';
-  const captionInfo = context.availableCaptionLanguages?.length
-    ? context.availableCaptionLanguages
-        .map((caption) => `${caption.name || caption.code}${caption.isGenerated ? ' 자동생성' : ''}`)
-        .join(', ')
-    : '없음';
+  const commentLines = (context.comments ?? [])
+    .slice(0, 20)
+    .map((comment) => `- 좋아요 ${comment.likes ?? 0}: ${comment.text}`);
+  const candidateLines = (context.commentCandidates ?? []).map(
+    (candidate, index) => `${index + 1}. ${candidate.style ? `${candidate.style}: ` : ''}${candidate.text}`,
+  );
 
   return [
     '[GPT 댓글 생성용 유튜브 이벤트 자료]',
@@ -400,7 +399,6 @@ function buildYoutubeCommentMaterialText(event, context, transcriptLines) {
     `조회수: ${formatNumber(context.viewCount)}`,
     `카테고리: ${context.category || '-'}`,
     `키워드: ${context.keywords?.length ? context.keywords.join(', ') : '-'}`,
-    `자막: ${captionInfo}`,
     '',
     '[영상 설명]',
     context.description || '-',
@@ -408,8 +406,11 @@ function buildYoutubeCommentMaterialText(event, context, transcriptLines) {
     '[이벤트 본문]',
     originalLines.join('\n') || '-',
     '',
-    '[유튜브 스크립트]',
-    transcriptText,
+    '[인기 댓글 참고]',
+    commentLines.join('\n') || '-',
+    '',
+    '[생성된 댓글 후보]',
+    candidateLines.join('\n') || '-',
   ].join('\n');
 }
 

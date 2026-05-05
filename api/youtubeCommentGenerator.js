@@ -123,14 +123,25 @@ export async function generateCommentCandidates({
     .filter((item) => item && typeof item.text === 'string' && item.text.trim())
     .map((item) => ({
       style: String(item.style || '').trim(),
-      text: item.text.trim(),
+      text: sanitizeCommentText(item.text),
     }));
+}
+
+function sanitizeCommentText(text) {
+  return String(text)
+    .trim()
+    .replace(/^[`'"“”‘’「」『』]+/, '')
+    .replace(/[`'"“”‘’「」『』]+$/, '')
+    .trim();
 }
 
 function buildUserPrompt(eventInfo, comments) {
   const lines = [];
   lines.push('서로 다른 스타일로 이벤트 댓글 후보 3개를 만들어줘.');
-  lines.push('영상은 위에 첨부됨. 영상 내용을 정확히 이해하고, 다른 참가자 댓글의 분위기는 참고만 하되 표현/문장은 따라하지 말 것.');
+  lines.push('영상은 위에 첨부됨. 영상 내용을 정확히 이해하고, 다른 참가자 댓글의 말투, 길이, 참여 방식, 관심 포인트를 적극 참고할 것.');
+  lines.push('다만 다른 참가자의 문장을 그대로 베끼거나 몇 단어만 바꾼 듯한 문장은 만들지 말 것.');
+  lines.push('작은따옴표와 큰따옴표는 쓰지 말고, 실제 사람이 댓글창에 바로 남긴 것처럼 자연스럽게 써줘.');
+  lines.push('후보 중 하나는 상황에 맞으면 유머러스형으로 만들어줘. 억지 농담은 피하고 가볍게 웃을 수 있는 정도만 허용.');
   lines.push('');
   lines.push('[이벤트 정보]');
   lines.push(`제목: ${eventInfo.title || '-'}`);

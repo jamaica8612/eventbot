@@ -2,7 +2,6 @@ import { spawn } from 'node:child_process';
 import { generateCommentCandidates } from './youtubeCommentGenerator.js';
 
 const COMMENTS_TIMEOUT_MS = 25000;
-const TRANSCRIPT_TIMEOUT_MS = 20000;
 const COMMENT_CANDIDATES_TIMEOUT_MS = 80000;
 
 const WATCH_HEADERS = {
@@ -28,12 +27,11 @@ export function extractVideoId(value = '') {
 
 export async function fetchYoutubeTranscript(input) {
   const context = await fetchYoutubeContext(input);
-  if (!context.transcript?.text) {
-    throw new Error(context.transcriptError || '유튜브 자막을 가져오지 못했습니다.');
-  }
   return {
     videoId: context.videoId,
-    ...context.transcript,
+    source: 'youtube-video-context',
+    lines: [],
+    text: '',
   };
 }
 
@@ -52,10 +50,7 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
   const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
 
-  const [comments, transcriptResult] = await Promise.all([
-    fetchCommentsSafe(resolvedVideoId),
-    fetchTranscriptSafe(resolvedVideoId),
-  ]);
+  const comments = await fetchCommentsSafe(resolvedVideoId);
 
   let commentCandidates = [];
   let commentCandidatesError = '';
@@ -83,8 +78,8 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
       name: getText(track.name),
       isGenerated: track.kind === 'asr',
     })),
-    transcript: transcriptResult.transcript,
-    transcriptError: transcriptResult.error,
+    transcript: null,
+    transcriptError: '',
     comments,
     commentCandidates,
     commentCandidatesError,
@@ -100,32 +95,6 @@ async function fetchCommentsSafe(videoId) {
   } catch {
     return [];
   }
-}
-
-async function fetchTranscriptSafe(videoId) {
-  try {
-    const transcript = await fetchTranscriptWithYoutubeTranscriptApi(videoId);
-    return { transcript, error: '' };
-  } catch (error) {
-    return {
-      transcript: null,
-      error: error.message || '백업 자막을 가져오지 못했습니다.',
-    };
-  }
-}
-
-function fetchTranscriptWithYoutubeTranscriptApi(videoId) {
-  return runPythonJson(['scripts/youtube_transcript_api_fetch.py', videoId], {
-    timeoutMs: TRANSCRIPT_TIMEOUT_MS,
-  }).then((payload) => ({
-    videoId,
-    language: payload.language || '',
-    languageName: payload.languageName || 'youtube-transcript-api',
-    isGenerated: Boolean(payload.isGenerated),
-    source: payload.source || 'youtube-transcript-api',
-    lines: payload.lines || [],
-    text: payload.text || '',
-  }));
 }
 
 function runPythonJson(args, options = {}) {
