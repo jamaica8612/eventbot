@@ -17,7 +17,7 @@ export async function upsertEvents(events) {
     },
   });
 
-  const rows = events.map(toEventRow);
+  const rows = await buildRowsPreservingBodies(supabase, events);
   const { error } = await supabase
     .from('events')
     .upsert(rows, { onConflict: 'source_site,source_event_id' });
@@ -115,6 +115,54 @@ function toLegacyEventRow(event, error) {
     delete row[column];
   }
   return row;
+}
+
+async function buildRowsPreservingBodies(supabase, events) {
+  const sourceIds = events.map((event) => event.id.replace(/^suto-/, ''));
+  const { data, error } = await supabase
+    .from('events')
+    .select('source_event_id,raw')
+    .eq('source_site', 'suto')
+    .in('source_event_id', sourceIds);
+
+  if (error || !Array.isArray(data)) {
+    return events.map(toEventRow);
+  }
+
+  const existingById = new Map(data.map((row) => [row.source_event_id, row.raw]));
+  return events.map((event) => {
+    const sourceEventId = event.id.replace(/^suto-/, '');
+    const existingRaw = existingById.get(sourceEventId);
+    return toEventRow(mergeExistingBody(event, existingRaw));
+  });
+}
+
+function mergeExistingBody(event, existingRaw) {
+  if (hasBody(event) || !hasBody(existingRaw)) {
+    return event;
+  }
+
+  return {
+    ...event,
+    originalText: existingRaw.originalText ?? event.originalText,
+    originalLines: existingRaw.originalLines ?? event.originalLines,
+    detailMetaLines: existingRaw.detailMetaLines ?? event.detailMetaLines,
+    externalLinks: event.externalLinks?.length ? event.externalLinks : existingRaw.externalLinks ?? [],
+    youtubeTranscripts: event.youtubeTranscripts?.length
+      ? event.youtubeTranscripts
+      : existingRaw.youtubeTranscripts ?? [],
+    detailCrawlStatus: event.detailCrawlStatus === 'ok' ? event.detailCrawlStatus : 'preserved',
+    detailCrawlMessage:
+      event.detailCrawlStatus === 'ok'
+        ? event.detailCrawlMessage
+        : 'Preserved previously crawled body because the latest crawl returned an empty body.',
+  };
+}
+
+function hasBody(value) {
+  return (
+    Array.isArray(value?.originalLines) && value.originalLines.length > 0
+  ) || Boolean(typeof value?.originalText === 'string' && value.originalText.trim());
 }
 
 function inferMissingColumns(error) {
