@@ -144,13 +144,21 @@ function EventBodyToggle({ event, lines, facts }) {
   const [transcriptError, setTranscriptError] = useState('');
   const [copyStatus, setCopyStatus] = useState('idle');
   const [copiedCandidateIndex, setCopiedCandidateIndex] = useState(-1);
+  const [areCandidatesVisible, setAreCandidatesVisible] = useState(true);
+  const [manualCopyText, setManualCopyText] = useState('');
   const originalHref = event.originalUrl ?? event.url;
   const youtubeLink = buildYoutubeLinks(event)[0];
   const canFetchYoutubeTranscript = isYoutubeEvent(event) && Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
+  const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
 
   async function handleYoutubeTranscriptFetch(clickEvent) {
     clickEvent.stopPropagation();
+    if (hasCommentCandidates) {
+      setAreCandidatesVisible(true);
+      setTranscriptError('');
+      return;
+    }
     if (!youtubeLink || transcriptStatus === 'loading') return;
 
     setTranscriptStatus('loading');
@@ -178,6 +186,7 @@ function EventBodyToggle({ event, lines, facts }) {
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
       }
       setYoutubeContext(payload);
+      setAreCandidatesVisible(true);
       setTranscriptError('');
       setTranscriptStatus('done');
     } catch (error) {
@@ -198,9 +207,11 @@ function EventBodyToggle({ event, lines, facts }) {
 
     try {
       await copyTextToClipboard(commentMaterialText);
+      setManualCopyText('');
       setCopyStatus('copied');
       window.setTimeout(() => setCopyStatus('idle'), 1600);
     } catch {
+      setManualCopyText(commentMaterialText);
       setCopyStatus('failed');
     }
   }
@@ -211,9 +222,11 @@ function EventBodyToggle({ event, lines, facts }) {
 
     try {
       await copyTextToClipboard(candidateText);
+      setManualCopyText('');
       setCopiedCandidateIndex(index);
       window.setTimeout(() => setCopiedCandidateIndex(-1), 1600);
     } catch {
+      setManualCopyText(candidateText);
       setCopiedCandidateIndex(-2);
     }
   }
@@ -265,7 +278,11 @@ function EventBodyToggle({ event, lines, facts }) {
               onClick={handleYoutubeTranscriptFetch}
               disabled={transcriptStatus === 'loading'}
             >
-              {transcriptStatus === 'loading' ? '댓글 후보 생성 중' : '댓글 후보 만들기'}
+              {transcriptStatus === 'loading'
+                ? '댓글 후보 생성 중'
+                : hasCommentCandidates
+                  ? '댓글 후보 보기'
+                  : '댓글 후보 만들기'}
             </button>
           ) : null}
           {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
@@ -284,10 +301,12 @@ function EventBodyToggle({ event, lines, facts }) {
               >
                 {copyStatus === 'copied' ? '복사됨' : '전체 자료 복사'}
               </button>
-              {copyStatus === 'failed' ? <p className="youtube-transcript-error">복사에 실패했습니다.</p> : null}
+              {copyStatus === 'failed' ? (
+                <p className="youtube-transcript-error">복사에 실패했습니다. 아래 텍스트를 직접 복사하세요.</p>
+              ) : null}
             </div>
           ) : null}
-          {youtubeContext?.commentCandidates?.length ? (
+          {areCandidatesVisible && hasCommentCandidates ? (
             <div className="comment-candidates">
               <strong>댓글 후보</strong>
               {youtubeContext.commentCandidates.map((candidate, index) => (
@@ -308,13 +327,24 @@ function EventBodyToggle({ event, lines, facts }) {
                 </div>
               ))}
               {copiedCandidateIndex === -2 ? (
-                <p className="youtube-transcript-error">복사에 실패했습니다.</p>
+                <p className="youtube-transcript-error">복사에 실패했습니다. 아래 텍스트를 직접 복사하세요.</p>
               ) : null}
             </div>
           ) : youtubeContext?.commentCandidatesError ? (
             <p className="youtube-transcript-error">
               댓글 후보 생성 실패: {youtubeContext.commentCandidatesError}
             </p>
+          ) : null}
+          {manualCopyText ? (
+            <textarea
+              className="manual-copy-box"
+              value={manualCopyText}
+              readOnly
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                clickEvent.currentTarget.select();
+              }}
+            />
           ) : null}
           <div className="event-body-facts" aria-label="원문 보조 정보">
             {facts.map((fact) => (

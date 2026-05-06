@@ -645,6 +645,21 @@ h3 {
   cursor: pointer;
 }
 
+.manual-copy-box {
+  width: 100%;
+  min-height: 92px;
+  border: 1px solid var(--border-strong);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--text-main);
+  padding: 10px;
+  font-size: 0.86rem;
+  font-weight: 700;
+  line-height: 1.45;
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+
 .event-body-facts {
   display: flex;
   flex-wrap: wrap;
