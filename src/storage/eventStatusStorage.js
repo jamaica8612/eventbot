@@ -1,3 +1,5 @@
+import { normalizePrizeAmountInput } from '../utils/format.js';
+
 const STORAGE_KEY = 'event-click-status-map';
 const validStatuses = new Set(['ready', 'later', 'done', 'skipped']);
 const validResultStatuses = new Set(['unknown', 'won', 'lost']);
@@ -107,7 +109,7 @@ export function saveWinningMeta(eventId, meta) {
   };
 
   if (typeof meta.prizeAmount === 'string') {
-    nextState.prizeAmount = meta.prizeAmount.replace(/[^\d]/g, '');
+    nextState.prizeAmount = normalizePrizeAmountInput(meta.prizeAmount);
   }
 
   if (typeof meta.prizeTitle === 'string') {

@@ -1015,7 +1015,7 @@ h3 {
 
 .ledger-summary {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1044,7 +1044,7 @@ h3 {
 
 .ledger-view-toggle {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -1374,6 +1374,48 @@ h3 {
   display: block;
 }
 
+.ledger-amount.is-missing {
+  color: var(--danger);
+}
+
+.ledger-quick-receipt,
+.amount-quick-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.ledger-quick-receipt {
+  justify-content: flex-end;
+}
+
+.ledger-quick-receipt button,
+.amount-quick-row button {
+  min-height: 32px;
+  border-radius: 999px;
+  padding: 0 10px;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.ledger-quick-receipt button.is-received {
+  border-color: rgba(34, 197, 94, 0.35);
+  background: rgba(34, 197, 94, 0.16);
+  color: var(--success);
+}
+
+.ledger-quick-receipt button.is-unreceived {
+  border-color: rgba(255, 210, 74, 0.32);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
+.amount-quick-row button {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
 
 /* 카드 내부에 라벨이 없으면 한눈에 의미가 안 보이므로 ::before로 라벨을 붙인다. */
 .ledger-prize::before,
@@ -1446,7 +1488,8 @@ h3 {
   grid-template-areas:
     "title title"
     "prize amount"
-    "receipt memo";
+    "receipt memo"
+    "quick quick";
   align-items: start;
 }
 
@@ -1455,6 +1498,7 @@ h3 {
 .ledger-amount { grid-area: amount; text-align: right; }
 .ledger-receipt { grid-area: receipt; }
 .ledger-memo { grid-area: memo; text-align: right; }
+.ledger-quick-receipt { grid-area: quick; }
 .ledger-edit-panel { grid-column: 1 / -1; }
 
 .ledger-edit-panel {
@@ -1462,7 +1506,8 @@ h3 {
 }
 
 .prize-title-field,
-.winning-memo-field {
+.winning-memo-field,
+.amount-quick-row {
   grid-column: 1 / -1;
 }
 
@@ -1689,7 +1734,7 @@ h3 {
   }
 
   .ledger-summary {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .ledger-table {

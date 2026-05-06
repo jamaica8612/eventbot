@@ -1,5 +1,22 @@
 export function parsePrizeAmount(value) {
-  return Number.parseInt(String(value ?? '').replace(/[^\d]/g, ''), 10) || 0;
+  return Number.parseInt(normalizePrizeAmountInput(value), 10) || 0;
+}
+
+export function normalizePrizeAmountInput(value) {
+  const text = String(value ?? '').replace(/,/g, '').trim();
+  if (!text) return '';
+
+  const manMatch = text.match(/(\d+(?:\.\d+)?)\s*만/);
+  if (manMatch) {
+    return String(Math.round(Number(manMatch[1]) * 10000));
+  }
+
+  const cheonMatch = text.match(/(\d+(?:\.\d+)?)\s*천/);
+  if (cheonMatch) {
+    return String(Math.round(Number(cheonMatch[1]) * 1000));
+  }
+
+  return text.replace(/[^\d]/g, '');
 }
 
 export function formatWon(value) {

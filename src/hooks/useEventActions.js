@@ -11,6 +11,7 @@ import {
   buildStatusPatch,
   getPrizeDisplay,
 } from '../utils/eventModel.js';
+import { normalizePrizeAmountInput } from '../utils/format.js';
 
 const SYNC_ERROR_MESSAGE = '저장에 실패했습니다. 네트워크 상태를 확인한 뒤 다시 눌러주세요.';
 
@@ -128,7 +129,7 @@ export function useEventActions({ events, setEvents, setSyncError }) {
                   typeof meta.prizeTitle === 'string' ? meta.prizeTitle : event.prizeTitle,
                 prizeAmount:
                   typeof meta.prizeAmount === 'string'
-                    ? meta.prizeAmount.replace(/[^\d]/g, '')
+                    ? normalizePrizeAmountInput(meta.prizeAmount)
                     : event.prizeAmount,
                 winningMemo:
                   typeof meta.winningMemo === 'string' ? meta.winningMemo : event.winningMemo,
