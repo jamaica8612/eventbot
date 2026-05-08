@@ -4,7 +4,6 @@ const JSON_HEADERS = {
   'access-control-allow-methods': 'POST, OPTIONS',
   'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
 };
-
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
@@ -26,7 +25,7 @@ Deno.serve(async (request) => {
     return json({ error: '비밀번호가 맞지 않습니다.' }, 401);
   }
 
-  return json({ ok: true });
+  return json({ ok: true, token: await createToken(expectedPasscode) });
 });
 
 function json(payload: unknown, status = 200) {
@@ -44,4 +43,29 @@ function constantTimeEqual(left: string, right: string) {
   }
 
   return diff === 0;
+}
+
+async function createToken(secret: string) {
+  const issuedAt = String(Date.now());
+  const signature = await sign(issuedAt, secret);
+  return `${issuedAt}.${signature}`;
+}
+
+async function sign(value: string, secret: string) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
+  return toBase64Url(new Uint8Array(signature));
+}
+
+function toBase64Url(bytes: Uint8Array) {
+  let text = '';
+  for (const byte of bytes) text += String.fromCharCode(byte);
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
 }

@@ -1,16 +1,12 @@
-import { createClient } from '@supabase/supabase-js';
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
+import { getAuthToken } from './passcodeAuthStorage.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
-const supabase = hasSupabaseConfig
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : null;
-
-const FILTER_SETTINGS_KEY = 'filter_settings';
+const DATA_FUNCTION_URL = `${supabaseUrl}/functions/v1/eventbot-data`;
 
 const effortLabels = {
   quick: '현장 딸각',
@@ -19,109 +15,86 @@ const effortLabels = {
 };
 
 export async function loadSupabaseEvents() {
-  if (!supabase) {
+  if (!hasSupabaseConfig) {
     return [];
   }
 
-  const { data, error } = await supabase
-    .from('events')
-    .select('*')
-    .order('last_seen_at', { ascending: false })
-    .limit(240);
-
-  if (error || !Array.isArray(data)) {
+  const payload = await callDataFunction('GET', 'events');
+  const rows = payload.events;
+  if (!Array.isArray(rows)) {
     return [];
   }
 
-  return data.map(toAppEvent);
+  return rows.map(toAppEvent);
 }
-
 export async function updateSupabaseEventState(eventId, patch) {
-  if (!supabase) {
+  if (!hasSupabaseConfig) {
     return;
   }
 
-  const rowPatch = toStateRowPatch(patch);
-  if (Object.keys(rowPatch).length === 0) {
-    return;
-  }
-
-  const { error } = await supabase.from('events').update(rowPatch).eq('id', eventId);
-  if (error) {
-    if (isMissingWinningColumnError(error)) {
-      const legacyPatch = { ...rowPatch };
-      delete legacyPatch.prize_title;
-      delete legacyPatch.winning_memo;
-      delete legacyPatch.result_announcement_date;
-      delete legacyPatch.result_announcement_text;
-
-      const { error: legacyError } = await supabase
-        .from('events')
-        .update(legacyPatch)
-        .eq('id', eventId);
-
-      if (!legacyError) {
-        return;
-      }
-    }
-
-    throw new Error(error.message);
-  }
+  await callDataFunction('POST', '', {
+    action: 'updateEventState',
+    eventId,
+    patch,
+  });
 }
 
 export async function loadSupabaseFilterSettings() {
-  if (!supabase) {
+  if (!hasSupabaseConfig) {
     return null;
   }
 
-  const { data, error } = await supabase
-    .from('app_settings')
-    .select('value')
-    .eq('key', FILTER_SETTINGS_KEY)
-    .maybeSingle();
-
-  if (error) {
-    if (isMissingSettingsTableError(error)) {
-      return null;
-    }
-    throw new Error(error.message);
-  }
-
-  return data?.value ?? null;
+  const payload = await callDataFunction('GET', 'filterSettings');
+  return payload.value ?? null;
 }
 
 export async function saveSupabaseFilterSettings(settings) {
-  if (!supabase) {
+  if (!hasSupabaseConfig) {
     return;
   }
 
-  const { error } = await supabase
-    .from('app_settings')
-    .upsert({ key: FILTER_SETTINGS_KEY, value: settings }, { onConflict: 'key' });
+  await callDataFunction('POST', '', {
+    action: 'saveFilterSettings',
+    settings,
+  });
+}
 
-  if (error) {
-    if (isMissingSettingsTableError(error)) {
-      return;
-    }
-    throw new Error(error.message);
+export async function loadSupabaseCrawlerStatus() {
+  if (!hasSupabaseConfig) {
+    return null;
   }
+
+  const payload = await callDataFunction('GET', 'crawlStatus');
+  return payload.value ?? null;
 }
 
-function isMissingSettingsTableError(error) {
-  return (
-    error?.code === '42P01' ||
-    error?.code === 'PGRST205' ||
-    /app_settings|schema cache|relation .* does not exist|could not find the table/i.test(
-      error?.message ?? '',
-    )
-  );
-}
+async function callDataFunction(method, resource, body) {
+  const token = getAuthToken();
+  if (!token) {
+    throw new Error('잠금 해제가 필요합니다.');
+  }
 
-function isMissingWinningColumnError(error) {
-  return (
-    error?.code === 'PGRST204' ||
-    /prize_title|winning_memo|result_announcement|schema cache|column/i.test(error?.message ?? '')
-  );
+  const url = new URL(DATA_FUNCTION_URL);
+  if (resource) {
+    url.searchParams.set('resource', resource);
+  }
+
+  const response = await fetch(url, {
+    method,
+    headers: {
+      'content-type': 'application/json',
+      apikey: supabaseAnonKey,
+      authorization: `Bearer ${supabaseAnonKey}`,
+      'x-eventbot-token': token,
+    },
+    body: body ? JSON.stringify(body) : undefined,
+  });
+
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(payload.error || 'DB 요청에 실패했습니다.');
+  }
+  return payload;
 }
 
 function toAppEvent(row) {
@@ -182,28 +155,4 @@ function toAppEvent(row) {
     originalLines: raw.originalLines,
     originalText: raw.originalText,
   };
-}
-
-function toStateRowPatch(patch) {
-  const rowPatch = {};
-
-  if (patch.status) rowPatch.status = patch.status;
-  if (patch.resultStatus) rowPatch.result_status = patch.resultStatus;
-  if ('participatedAt' in patch) rowPatch.participated_at = patch.participatedAt;
-  if ('resultCheckedAt' in patch) rowPatch.result_checked_at = patch.resultCheckedAt;
-  if ('resultAnnouncementDate' in patch) {
-    rowPatch.result_announcement_date = patch.resultAnnouncementDate || null;
-  }
-  if ('resultAnnouncementText' in patch) {
-    rowPatch.result_announcement_text = patch.resultAnnouncementText;
-  }
-  if ('receiptStatus' in patch) rowPatch.receipt_status = patch.receiptStatus;
-  if ('prizeTitle' in patch) rowPatch.prize_title = patch.prizeTitle;
-  if ('winningMemo' in patch) rowPatch.winning_memo = patch.winningMemo;
-  if ('prizeAmount' in patch) {
-    const parsedAmount = Number.parseInt(String(patch.prizeAmount).replace(/[^\d]/g, ''), 10);
-    rowPatch.prize_amount = Number.isFinite(parsedAmount) ? parsedAmount : null;
-  }
-
-  return rowPatch;
 }

@@ -207,3 +207,12 @@ npm run build
 - 2026-05-02 UI 피드백 이후 큰 히어로/좌측 패널 느낌을 줄이고 컴팩트 대시보드형 상단으로 바꿨다.
 - 하단 주요 메뉴는 `전체`, `현장`, `나중`, `결과`, `당첨` 5개만 둔다.
 - `참여함`, `미당첨`, `제외`는 목록 위 보조 칩으로 둔다.
+## 2026-05-09 DB 접근 보호 적용 사항
+
+- `verify-passcode` Edge Function이 비밀번호 secret을 확인하고 30일 유효 토큰을 발급합니다.
+- `eventbot-data` Edge Function을 추가해 이벤트 조회, 상태 저장, 필터 설정, 크롤링 상태 조회를 처리합니다.
+- GitHub Pages 클라이언트는 Supabase 테이블을 직접 읽거나 쓰지 않고, 잠금 해제 토큰을 `x-eventbot-token` 헤더로 보냅니다.
+- 원격 DB 마이그레이션 `202605090001_lock_anon_access.sql`을 적용해 `events`, `app_settings`의 anon 직접 접근을 막았습니다.
+- `scripts/verifySupabase.js`가 검증 성공 시 `app_settings.crawl_status`에 전체 이벤트 수와 최신 `last_seen_at`을 저장합니다.
+- 앱 상단에 마지막 크롤링 검증 시각, DB 이벤트 수, 최신 수집 시각을 표시합니다.
+- AI 댓글 후보 품질 개선은 별도 계획으로 분리했습니다.

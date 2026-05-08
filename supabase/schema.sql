@@ -111,49 +111,9 @@ drop policy if exists "Anon can update app settings" on public.app_settings;
 -- 단일 사용자 도구이므로 anon 키로 읽기/상태 업데이트는 허용한다.
 -- 단, anon이 갱신할 수 있는 컬럼을 사용자 상태 컬럼으로만 제한해서
 -- 크롤러가 채우는 메타데이터(title, url, source 등)를 보호한다.
-create policy "Public can read events"
-on public.events
-for select
-using (true);
-
-create policy "Anon can update event state"
-on public.events
-for update
-to anon
-using (true)
-with check (true);
-
-create policy "Public can read app settings"
-on public.app_settings
-for select
-using (true);
-
-create policy "Anon can insert app settings"
-on public.app_settings
-for insert
-to anon
-with check (true);
-
-create policy "Anon can update app settings"
-on public.app_settings
-for update
-to anon
-using (true)
-with check (true);
+-- The public app no longer reads/writes tables directly with the anon key.
+-- Data access goes through Edge Functions after passcode token verification.
 
 -- 컬럼 단위 권한: anon이 update 가능한 컬럼만 화이트리스트로 부여한다.
-revoke update on public.events from anon;
-grant update (
-  status,
-  result_status,
-  participated_at,
-  result_checked_at,
-  result_announcement_date,
-  result_announcement_text,
-  prize_title,
-  prize_amount,
-  receipt_status,
-  winning_memo
-) on public.events to anon;
-
-grant select, insert, update on public.app_settings to anon;
+revoke select, insert, update, delete on public.events from anon;
+revoke select, insert, update, delete on public.app_settings from anon;

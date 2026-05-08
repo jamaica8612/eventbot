@@ -137,3 +137,10 @@
 - `clickScore >= 70`은 `지금`, `40~69`는 `집에서`, `40 미만`은 `제외 후보`로 분류한다.
 - Gemini를 이벤트 분류 판단에 확장하지 않는다. AI 참여 범위는 댓글 후보 생성으로 제한한다.
 - 기존 DB에 새 컬럼이 없어도 앱은 `effort` 기반 fallback으로 동작한다.
+## DB 접근은 비밀번호 토큰 검증 후 Edge Function으로만 처리한다
+
+- GitHub Pages 클라이언트는 Supabase anon key를 포함할 수 있으므로, 테이블을 직접 읽고 쓰지 않는다.
+- 비밀번호 검증은 `verify-passcode` Edge Function이 `EVENTBOT_PASSCODE` secret으로 처리하고, 통과 시 30일 유효 토큰을 발급한다.
+- 이벤트 조회/상태 저장/필터 설정/크롤링 상태 조회는 `eventbot-data` Edge Function으로만 처리한다.
+- `events`, `app_settings`의 anon 직접 권한은 제거한다. 크롤러와 데이터 함수는 service role로 접근한다.
+- AI 댓글 후보 개선은 별도 계획으로 분리하고, 이번 보안/동기화 작업에 섞지 않는다.

@@ -23,6 +23,7 @@ import {
 } from './storage/filterSettingsStorage.js';
 import {
   hasSupabaseConfig,
+  loadSupabaseCrawlerStatus,
   loadSupabaseFilterSettings,
   saveSupabaseFilterSettings,
 } from './storage/supabaseEventStorage.js';
@@ -71,6 +72,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
+  const [crawlerStatus, setCrawlerStatus] = useState(null);
   const didLoadFilterSettings = useRef(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [notificationState, setNotificationState] = useState(() =>
@@ -117,6 +119,23 @@ function EventBotApp({ theme, setTheme, onLock }) {
       .finally(() => {
         didLoadFilterSettings.current = true;
       });
+  }, []);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig) return;
+
+    let isMounted = true;
+    loadSupabaseCrawlerStatus()
+      .then((status) => {
+        if (isMounted) setCrawlerStatus(status);
+      })
+      .catch(() => {
+        if (isMounted) setCrawlerStatus(null);
+      });
+
+    return () => {
+      isMounted = false;
+    };
   }, []);
 
   useEffect(() => {
@@ -282,6 +301,8 @@ function EventBotApp({ theme, setTheme, onLock }) {
           {syncNotice ? (
             <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
           ) : null}
+
+          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
 
           {(installPrompt || notificationState !== 'granted') ? (
             <PwaPanel
@@ -480,6 +501,37 @@ function PwaPanel({ canInstall, notificationState, onInstall, onRequestNotificat
       </div>
     </section>
   );
+}
+
+function CrawlerStatusPanel({ status }) {
+  const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
+  const latestSeenAt = formatDateTime(status.latestSeenAt);
+  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
+
+  return (
+    <section className="crawler-status-panel" aria-label="크롤링 상태">
+      <div>
+        <strong>크롤링 정상</strong>
+        <span>마지막 확인 {checkedAt}</span>
+      </div>
+      <div>
+        <span>DB {total}개</span>
+        <span>최신 수집 {latestSeenAt}</span>
+      </div>
+    </section>
+  );
+}
+
+function formatDateTime(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('ko-KR', {
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function getEmptyMessage(filter) {

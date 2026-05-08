@@ -47,6 +47,20 @@ async function verifySupabase() {
   }
 
   const latestSeenAt = data?.[0]?.last_seen_at ?? 'none';
+  await saveCrawlStatus(supabase, {
+    status: 'success',
+    checkedAt: new Date().toISOString(),
+    totalEvents: count ?? 0,
+    latestSeenAt,
+    recentEvents: (data ?? []).map((event) => ({
+      sourceSite: event.source_site,
+      sourceEventId: event.source_event_id,
+      title: event.title,
+      status: event.status,
+      lastSeenAt: event.last_seen_at,
+    })),
+  });
+
   console.log(`Supabase connection OK. events=${count ?? 0}, latest_last_seen_at=${latestSeenAt}`);
   for (const event of data ?? []) {
     console.log(
@@ -58,6 +72,16 @@ async function verifySupabase() {
         event.title,
       ].join(' | '),
     );
+  }
+}
+
+async function saveCrawlStatus(supabase, value) {
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: 'crawl_status', value }, { onConflict: 'key' });
+
+  if (error) {
+    throw new Error(`Supabase crawl status save failed: ${error.message}`);
   }
 }
 
