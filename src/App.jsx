@@ -26,6 +26,11 @@ import {
   loadSupabaseFilterSettings,
   saveSupabaseFilterSettings,
 } from './storage/supabaseEventStorage.js';
+import {
+  clearSavedAuth,
+  hasSavedAuth,
+  verifyPasscode,
+} from './storage/passcodeAuthStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
@@ -38,6 +43,28 @@ import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
 import { EventSearch } from './components/EventSearch.jsx';
 
 function App() {
+  const [theme, setTheme] = useTheme();
+  const [isUnlocked, setIsUnlocked] = useState(hasSavedAuth);
+
+  function lockApp() {
+    clearSavedAuth();
+    setIsUnlocked(false);
+  }
+
+  if (!isUnlocked) {
+    return (
+      <PasscodeGate
+        theme={theme}
+        setTheme={setTheme}
+        onUnlock={() => setIsUnlocked(true)}
+      />
+    );
+  }
+
+  return <EventBotApp theme={theme} setTheme={setTheme} onLock={lockApp} />;
+}
+
+function EventBotApp({ theme, setTheme, onLock }) {
   const { events, setEvents, isLoading } = useEvents();
   const [filter, setFilter] = useState('now');
   const [platformFilter, setPlatformFilter] = useState('all');
@@ -49,8 +76,6 @@ function App() {
   const [notificationState, setNotificationState] = useState(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
   );
-  const [theme, setTheme] = useTheme();
-
   const {
     updateStatus,
     updateResult,
@@ -180,16 +205,25 @@ function App() {
               <h1 id="page-title">이벤트 딸깍</h1>
               <p className="overview-copy">마감 전에는 빠르게 응모하고, 참여 후에는 응모함에서 정리합니다.</p>
             </div>
-            <button
-              type="button"
-              className="theme-switch"
-              aria-label="테마 변경"
-              onClick={() =>
-                setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
-              }
-            >
-              {theme === 'dark' ? '다크' : '라이트'}
-            </button>
+            <div className="hero-actions">
+              <button
+                type="button"
+                className="theme-switch"
+                aria-label="테마 변경"
+                onClick={() =>
+                  setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
+                }
+              >
+                {theme === 'dark' ? '다크' : '라이트'}
+              </button>
+              <button
+                type="button"
+                className="theme-switch"
+                onClick={onLock}
+              >
+                잠금
+              </button>
+            </div>
           </div>
 
           <div className="summary-grid" aria-label="핵심 현황">
@@ -354,6 +388,68 @@ function App() {
         onSelect={setFilter}
       />
     </>
+  );
+}
+
+function PasscodeGate({ theme, setTheme, onUnlock }) {
+  const [passcode, setPasscode] = useState('');
+  const [error, setError] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await verifyPasscode(passcode.trim());
+      onUnlock();
+    } catch (submitError) {
+      setError(submitError instanceof Error ? submitError.message : '비밀번호를 확인해 주세요.');
+    } finally {
+      setIsSubmitting(false);
+    }
+  }
+
+  return (
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-head">
+          <div>
+            <p className="app-kicker">EVENT CLICK</p>
+            <h1 id="auth-title">잠금 해제</h1>
+          </div>
+          <button
+            type="button"
+            className="theme-switch"
+            aria-label="테마 변경"
+            onClick={() =>
+              setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
+            }
+          >
+            {theme === 'dark' ? '다크' : '라이트'}
+          </button>
+        </div>
+
+        <form className="auth-form" onSubmit={handleSubmit}>
+          <label>
+            <span>비밀번호</span>
+            <input
+              type="password"
+              inputMode="numeric"
+              autoComplete="current-password"
+              value={passcode}
+              onChange={(event) => setPasscode(event.target.value)}
+              autoFocus
+            />
+          </label>
+          {error ? <p className="auth-error">{error}</p> : null}
+          <button type="submit" disabled={isSubmitting || !passcode.trim()}>
+            {isSubmitting ? '확인 중' : '열기'}
+          </button>
+        </form>
+      </section>
+    </main>
   );
 }
 

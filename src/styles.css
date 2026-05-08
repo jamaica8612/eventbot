@@ -146,6 +146,13 @@ h3 {
   align-items: start;
 }
 
+.hero-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
 .theme-switch {
   min-width: 64px;
   min-height: 36px;
@@ -155,6 +162,88 @@ h3 {
   padding: 0 12px;
   font-size: 0.78rem;
   font-weight: 900;
+}
+
+.auth-shell {
+  display: grid;
+  width: min(100%, 480px);
+  min-height: 100vh;
+  margin: 0 auto;
+  padding: 44px 16px;
+  place-items: center;
+}
+
+.auth-card {
+  display: grid;
+  gap: 22px;
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--surface);
+  padding: 18px;
+  box-shadow: var(--shadow-card);
+}
+
+.auth-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.auth-form {
+  display: grid;
+  gap: 12px;
+}
+
+.auth-form label {
+  display: grid;
+  gap: 6px;
+}
+
+.auth-form span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.auth-form input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid var(--border-strong);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  color: var(--text-main);
+  padding: 0 12px;
+  font-size: 1.08rem;
+  font-weight: 900;
+}
+
+.auth-form input:focus {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
+}
+
+.auth-form button[type="submit"] {
+  border-color: var(--wanted-blue);
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  box-shadow: var(--shadow-cta);
+}
+
+.auth-form button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.auth-error {
+  border: 1px solid rgba(240, 68, 82, 0.24);
+  border-radius: 10px;
+  background: rgba(251, 113, 133, 0.12);
+  color: var(--danger);
+  padding: 9px 10px;
+  font-size: 0.84rem;
+  font-weight: 800;
 }
 
 .app-kicker,
