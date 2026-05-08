@@ -11,6 +11,8 @@ import {
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
+const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
+const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '');
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   if (filter === 'now') {
@@ -191,9 +193,10 @@ function EventBodyToggle({ event, lines, facts }) {
     const abortController = new AbortController();
     const timeoutId = window.setTimeout(() => abortController.abort(), YOUTUBE_CONTEXT_TIMEOUT_MS);
     try {
-      const response = await fetch(`${API_BASE_URL}/api/youtube-transcript`, {
+      const endpoint = getYoutubeContextEndpoint();
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: getYoutubeContextHeaders(endpoint),
         signal: abortController.signal,
         body: JSON.stringify({
           url: youtubeLink,
@@ -396,6 +399,26 @@ function EventBodyToggle({ event, lines, facts }) {
       )}
     </div>
   );
+}
+
+function getYoutubeContextEndpoint() {
+  if (API_BASE_URL) return `${API_BASE_URL}/api/youtube-transcript`;
+  if (shouldUseSupabaseFunction()) return `${SUPABASE_URL}/functions/v1/youtube-transcript`;
+  return '/api/youtube-transcript';
+}
+
+function shouldUseSupabaseFunction() {
+  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || typeof window === 'undefined') return false;
+  return !['localhost', '127.0.0.1'].includes(window.location.hostname);
+}
+
+function getYoutubeContextHeaders(endpoint) {
+  const headers = { 'content-type': 'application/json' };
+  if (SUPABASE_URL && endpoint.startsWith(`${SUPABASE_URL}/functions/v1/`)) {
+    headers.apikey = SUPABASE_ANON_KEY;
+    headers.authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+  }
+  return headers;
 }
 
 async function readJsonResponse(response) {

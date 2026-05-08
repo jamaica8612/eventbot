@@ -39,13 +39,13 @@ GEMINI_API_KEY
 
 `SUPABASE_SERVICE_ROLE_KEY`는 Vercel에 넣지 않습니다. 이 키는 크롤러와 GitHub Actions에서만 사용합니다.
 
-GitHub Pages에서 댓글 후보 만들기를 쓰려면 별도 API 배포 주소가 필요합니다. Vercel 배포 주소가 있다면 GitHub Actions Pages 빌드 secret에 다음 값을 추가합니다.
+GitHub Pages에서 댓글 후보 만들기는 Supabase Edge Function으로 실행합니다. Function Secret에 다음 값을 추가합니다.
 
 ```text
-VITE_API_BASE_URL=https://your-vercel-app.vercel.app
+GEMINI_API_KEY
 ```
 
-이 값이 없으면 GitHub Pages는 정적 호스팅이라 `/api/youtube-transcript`를 실행할 수 없습니다.
+프론트는 배포 환경에서 자동으로 `${VITE_SUPABASE_URL}/functions/v1/youtube-transcript`를 호출합니다. localhost에서는 기존 Vite dev server의 `/api/youtube-transcript`를 사용합니다.
 
 ## GitHub Actions Secrets
 
