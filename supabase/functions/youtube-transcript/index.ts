@@ -165,23 +165,31 @@ async function generateCommentCandidates({
 
 function buildUserPrompt(eventInfo: Record<string, unknown>) {
   const bodyLines = Array.isArray(eventInfo.bodyLines) ? eventInfo.bodyLines : [];
+  const participationHints = Array.isArray(eventInfo.participationHints)
+    ? eventInfo.participationHints
+    : [];
   return [
-    '서로 다른 스타일로 이벤트 댓글 후보 3개를 만들어줘.',
+    '서로 다른 목적의 이벤트 댓글 후보 3개를 만들어줘.',
+    '반드시 JSON의 candidates 배열만 채워라. 각 후보는 style과 text를 가진다.',
+    '후보 1: 짧고 자연스러운 댓글. 후보 2: 이벤트 조건을 충족하는 성의형 댓글. 후보 3: 영상 내용이 드러나는 개성형 댓글.',
     '영상 내용을 정확히 이해하고, 이벤트 참여 댓글처럼 자연스럽게 작성해줘.',
     '작은따옴표와 큰따옴표는 쓰지 말고, 실제 사람이 댓글창에 바로 남긴 것처럼 써줘.',
-    '후보 중 하나는 상황에 맞으면 유머러스형으로 만들어줘. 억지 농담은 피할 것.',
+    '당첨 보장, 과장 광고, 허위 시청 경험, 개인정보, 친구 태그 조작 문구는 쓰지 마.',
+    '각 댓글은 1~3문장, 35~140자 사이로 작성해줘.',
     '',
     '[이벤트 정보]',
     `제목: ${eventInfo.title || '-'}`,
     `플랫폼: ${eventInfo.platform || '-'}`,
     `마감: ${eventInfo.deadline || '-'}`,
+    `발표: ${eventInfo.announcement || '-'}`,
     `경품: ${eventInfo.prize || '-'}`,
+    `참여 힌트: ${participationHints.join(', ') || '-'}`,
     bodyLines.length ? '본문 발췌:' : '',
-    ...bodyLines.slice(0, 16).map((line) => `  ${line}`),
+    ...bodyLines.slice(0, 24).map((line) => `  ${line}`),
     '',
     '[다른 참가자 댓글] 없음 또는 비활성화된 영상',
     '',
-    '각 후보는 권장 스타일 중 서로 다른 것으로 선택하고, style 필드에 그 스타일 이름을 한국어로 기입.',
+    'style 필드는 짧게 "짧은 자연형", "조건 충족형", "영상 공감형"처럼 한국어로 기입.',
   ]
     .filter((line) => line !== '')
     .join('\n');
@@ -271,7 +279,9 @@ function decodeHtml(value: string) {
     .replace(/&#39;|&#039;/g, "'");
 }
 
-const SYSTEM_PROMPT = `너는 한국 이벤트 댓글 작성을 돕는 어시스턴트다.
+const SYSTEM_PROMPT = `너는 한국 이벤트 댓글 후보 작성을 돕는 어시스턴트다.
+AI의 역할은 댓글 후보 생성으로만 제한된다. 이벤트 참여 여부 판단, 검색, 응모, 당첨 판정은 하지 않는다.
 사용자가 제공한 이벤트 정보와 영상 내용을 바탕으로 자연스럽고 짧은 댓글 후보를 만든다.
 과장 광고 문구처럼 쓰지 말고, 실제 사람이 영상 내용을 보고 남긴 댓글처럼 구체적으로 쓴다.
-개인정보, 당첨 보장, 허위 시청 경험은 만들지 않는다.`;
+다른 사람 댓글을 베끼지 않고 새 문장으로 작성한다.
+개인정보, 당첨 보장, 허위 시청 경험, 조작적 태그/공유 문구는 만들지 않는다.`;

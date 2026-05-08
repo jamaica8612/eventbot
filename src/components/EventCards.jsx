@@ -158,13 +158,7 @@ function EventBodyToggle({ event, lines, facts }) {
         signal: abortController.signal,
         body: JSON.stringify({
           url: youtubeLink,
-          eventInfo: {
-            title: event.title,
-            platform: event.platform,
-            deadline: event.deadlineDate || event.deadlineText || event.due || '',
-            prize: event.prizeText || event.prizeTitle || '',
-            bodyLines: buildUserContentLines(event).slice(0, 16),
-          },
+          eventInfo: buildCommentEventInfo(event),
         }),
       });
       const payload = await readJsonResponse(response);
@@ -294,7 +288,10 @@ function EventBodyToggle({ event, lines, facts }) {
           ) : null}
           {areCandidatesVisible && hasCommentCandidates ? (
             <div className="comment-candidates">
-              <strong>댓글 후보</strong>
+              <div className="comment-candidates-head">
+                <strong>댓글 후보</strong>
+                <span>복사해서 필요한 부분만 다듬어 쓰세요</span>
+              </div>
               {youtubeContext.commentCandidates.map((candidate, index) => (
                 <div key={index} className="comment-candidate">
                   {candidate.style ? (
@@ -425,7 +422,8 @@ function extractYoutubeVideoId(url) {
 function buildYoutubeCommentMaterialText(event, context) {
   if (!context) return '';
 
-  const originalLines = buildUserContentLines(event).slice(0, 16);
+  const eventInfo = buildCommentEventInfo(event);
+  const originalLines = eventInfo.bodyLines;
   const commentLines = (context.comments ?? [])
     .slice(0, 20)
     .map((comment) => `- 좋아요 ${comment.likes ?? 0}: ${comment.text}`);
@@ -434,18 +432,19 @@ function buildYoutubeCommentMaterialText(event, context) {
   );
 
   return [
-    '[GPT 댓글 생성용 유튜브 이벤트 자료]',
+    '[댓글 후보 생성용 유튜브 이벤트 자료]',
     '',
-    '아래 정보를 바탕으로 자연스럽고 성의 있는 이벤트 댓글을 만들어줘.',
-    '너무 광고문구처럼 쓰지 말고, 영상 내용을 이해한 사람처럼 구체적으로 작성해줘.',
+    '아래 정보를 바탕으로 이벤트 댓글 후보를 만들어줘.',
+    'AI가 쓴 설명문처럼 쓰지 말고, 영상과 이벤트 조건을 이해한 사람이 바로 댓글창에 남기는 말투로 작성해줘.',
     '',
     '[이벤트 정보]',
-    `이벤트 제목: ${event.title}`,
-    `플랫폼: ${event.platform}`,
-    `마감: ${event.deadlineDate || event.deadlineText || event.due || '-'}`,
-    `발표: ${event.resultAnnouncementDate || event.resultAnnouncementText || '-'}`,
-    `경품: ${event.prizeText || event.prizeTitle || '-'}`,
-    `참여 링크: ${event.applyUrl || event.url || '-'}`,
+    `제목: ${eventInfo.title}`,
+    `플랫폼: ${eventInfo.platform}`,
+    `마감: ${eventInfo.deadline || '-'}`,
+    `발표: ${eventInfo.announcement || '-'}`,
+    `경품: ${eventInfo.prize || '-'}`,
+    `참여 링크: ${eventInfo.applyUrl || '-'}`,
+    `참여 힌트: ${eventInfo.participationHints.join(', ') || '-'}`,
     '',
     '[유튜브 영상 정보]',
     `영상 제목: ${context.title || '-'}`,
@@ -469,6 +468,43 @@ function buildYoutubeCommentMaterialText(event, context) {
     '[생성된 댓글 후보]',
     candidateLines.join('\n') || '-',
   ].join('\n');
+}
+
+function buildCommentEventInfo(event) {
+  const bodyLines = buildUserContentLines(event).slice(0, 24);
+  const text = [event.title, event.platform, event.prizeText, event.prizeTitle, ...bodyLines]
+    .filter(Boolean)
+    .join('\n');
+
+  return {
+    title: event.title,
+    platform: event.platform,
+    deadline: event.deadlineDate || event.deadlineText || event.due || '',
+    announcement: event.resultAnnouncementDate || event.resultAnnouncementText || '',
+    prize: event.prizeText || event.prizeTitle || '',
+    applyUrl: event.applyUrl || event.url || '',
+    bodyLines,
+    participationHints: inferParticipationHints(text),
+  };
+}
+
+function inferParticipationHints(text) {
+  const hints = [];
+  const rules = [
+    [/구독|구독자/, '구독 언급 가능'],
+    [/좋아요|추천/, '좋아요 참여 가능'],
+    [/댓글|정답|이유|기대평|응원/, '댓글 조건 확인'],
+    [/공유|리그램|스토리/, '공유 조건 확인'],
+    [/친구|태그|소환/, '친구 태그 조건 확인'],
+    [/퀴즈|정답|문제/, '정답형 댓글 가능'],
+  ];
+
+  for (const [pattern, hint] of rules) {
+    if (pattern.test(text) && !hints.includes(hint)) {
+      hints.push(hint);
+    }
+  }
+  return hints.slice(0, 5);
 }
 
 function formatDuration(seconds) {

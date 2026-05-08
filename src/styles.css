@@ -1231,10 +1231,21 @@ h3 {
   padding: 10px;
 }
 
-.comment-candidates strong {
+.comment-candidates-head {
+  display: grid;
+  gap: 2px;
+}
+
+.comment-candidates-head strong {
   color: var(--accent, #6ad391);
   font-size: 0.86rem;
   font-weight: 900;
+}
+
+.comment-candidates-head span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 800;
 }
 
 .comment-candidate {

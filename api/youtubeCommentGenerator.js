@@ -137,20 +137,28 @@ function sanitizeCommentText(text) {
 
 function buildUserPrompt(eventInfo, comments) {
   const lines = [];
-  lines.push('서로 다른 스타일로 이벤트 댓글 후보 3개를 만들어줘.');
-  lines.push('영상은 위에 첨부됨. 영상 내용을 정확히 이해하고, 다른 참가자 댓글의 말투, 길이, 참여 방식, 관심 포인트를 적극 참고할 것.');
+  const participationHints = Array.isArray(eventInfo.participationHints)
+    ? eventInfo.participationHints
+    : [];
+  lines.push('서로 다른 목적의 이벤트 댓글 후보 3개를 만들어줘.');
+  lines.push('반드시 JSON의 candidates 배열만 채워라. 각 후보는 style과 text를 가진다.');
+  lines.push('후보 1: 짧고 자연스러운 댓글. 후보 2: 이벤트 조건을 충족하는 성의형 댓글. 후보 3: 영상 내용이 드러나는 개성형 댓글.');
+  lines.push('영상은 위에 첨부됨. 영상 내용을 정확히 이해하고, 다른 참가자 댓글의 말투, 길이, 참여 방식, 관심 포인트를 참고할 것.');
   lines.push('다만 다른 참가자의 문장을 그대로 베끼거나 몇 단어만 바꾼 듯한 문장은 만들지 말 것.');
   lines.push('작은따옴표와 큰따옴표는 쓰지 말고, 실제 사람이 댓글창에 바로 남긴 것처럼 자연스럽게 써줘.');
-  lines.push('후보 중 하나는 상황에 맞으면 유머러스형으로 만들어줘. 억지 농담은 피하고 가볍게 웃을 수 있는 정도만 허용.');
+  lines.push('당첨 보장, 과장 광고, 허위 시청 경험, 개인정보, 친구 태그 조작 문구는 쓰지 마.');
+  lines.push('각 댓글은 1~3문장, 35~140자 사이로 작성해줘.');
   lines.push('');
   lines.push('[이벤트 정보]');
   lines.push(`제목: ${eventInfo.title || '-'}`);
   lines.push(`플랫폼: ${eventInfo.platform || '-'}`);
   lines.push(`마감: ${eventInfo.deadline || '-'}`);
+  lines.push(`발표: ${eventInfo.announcement || '-'}`);
   lines.push(`경품: ${eventInfo.prize || '-'}`);
+  lines.push(`참여 힌트: ${participationHints.join(', ') || '-'}`);
   if (Array.isArray(eventInfo.bodyLines) && eventInfo.bodyLines.length) {
     lines.push('본문 발췌:');
-    for (const line of eventInfo.bodyLines.slice(0, 16)) {
+    for (const line of eventInfo.bodyLines.slice(0, 24)) {
       lines.push(`  ${line}`);
     }
   }
@@ -169,6 +177,6 @@ function buildUserPrompt(eventInfo, comments) {
   }
 
   lines.push('');
-  lines.push('각 후보는 권장 스타일 중 서로 다른 것으로 선택하고, style 필드에 그 스타일 이름을 한국어로 기입.');
+  lines.push('style 필드는 짧게 "짧은 자연형", "조건 충족형", "영상 공감형"처럼 한국어로 기입.');
   return lines.join('\n');
 }
