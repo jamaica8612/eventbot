@@ -5,7 +5,6 @@ loadLocalEnv();
 
 const requiredKeys = [
   'VITE_SUPABASE_URL',
-  'VITE_SUPABASE_ANON_KEY',
   'SUPABASE_SERVICE_ROLE_KEY',
 ];
 
@@ -47,7 +46,8 @@ async function verifySupabase() {
     throw new Error(`Supabase recent query failed: ${recentError.message}`);
   }
 
-  console.log(`Supabase connection OK. events=${count ?? 0}`);
+  const latestSeenAt = data?.[0]?.last_seen_at ?? 'none';
+  console.log(`Supabase connection OK. events=${count ?? 0}, latest_last_seen_at=${latestSeenAt}`);
   for (const event of data ?? []) {
     console.log(
       [

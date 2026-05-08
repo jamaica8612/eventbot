@@ -19,7 +19,19 @@ const positiveRules = [
   { words: ['오늘 마감', '금일 마감', '마감임박'], score: 25, reason: '마감 임박' },
   { words: ['내일 마감'], score: 15, reason: '내일 마감' },
   {
-    words: ['스타벅스', '커피', '상품권', '네이버페이', '포인트', '치킨', '편의점', '쿠폰', '기프티콘'],
+    words: [
+      '스타벅스',
+      '커피',
+      '상품권',
+      '네이버페이',
+      '포인트',
+      '치킨',
+      '편의점',
+      '쿠폰',
+      '기프티콘',
+      '배민',
+      '올리브영',
+    ],
     score: 10,
     reason: '보상 키워드',
   },
@@ -203,8 +215,23 @@ function extractPrizeText({ title = '', bodyText = '', originalText = '', origin
   if (prizeText) return prizeText;
 
   const text = buildDecisionText({ title, bodyText, originalText, originalLines });
-  const match = text.match(/(스타벅스|커피|상품권|네이버페이|포인트|치킨|편의점|쿠폰|기프티콘)[^,\]\n]*/);
-  return match ? match[0].trim().slice(0, 32) : '';
+  const prizeLine = text
+    .split(/\n+/)
+    .map((line) => line.replace(/\s+/g, ' ').trim())
+    .find((line) =>
+      /경품|상품|혜택|증정|추첨|당첨|기프티콘|쿠폰|상품권|네이버페이|포인트/.test(line),
+    );
+  const source = prizeLine || text;
+  const keywordMatch = source.match(
+    /(스타벅스|커피|상품권|네이버페이|포인트|치킨|편의점|쿠폰|기프티콘|배민|올리브영|백화점|문화상품권|모바일상품권|캐시|적립금)[^,\]\n。.]*/,
+  );
+
+  if (keywordMatch) {
+    return keywordMatch[0].replace(/\s+/g, ' ').trim().slice(0, 48);
+  }
+
+  const amountMatch = source.match(/(?:\d{1,3}(?:,\d{3})+|\d+)\s*(?:원|만원|P|포인트)/i);
+  return amountMatch ? amountMatch[0].trim().slice(0, 32) : '';
 }
 
 function findDeadlineLine(text) {

@@ -71,6 +71,7 @@ function printCrawlQualitySummary(events) {
       `deadline ${count((event) => event.deadlineDate || event.deadlineText)}/${total}`,
       `announcement-date ${count((event) => event.resultAnnouncementDate)}/${total}`,
       `announcement-text ${count((event) => event.resultAnnouncementText)}/${total}`,
+      `prize ${count((event) => event.prizeText)}/${total}`,
       `external-links ${count((event) => (event.externalLinks ?? []).length > 0)}/${total}`,
       `youtube-script ${count((event) => hasYoutubeTranscript(event))}/${total}`,
       `mode ${JSON.stringify(byMode)}`,

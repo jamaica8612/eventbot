@@ -45,15 +45,14 @@
 - 참여한 이벤트의 결과를 `결과 미확인`, `당첨`, `미당첨`으로 관리하도록 UI와 localStorage를 확장했습니다.
 - 프로젝트 인계 문서를 만들었습니다.
 
-## 다음에 해야 할 작업
+## 다음 개발 우선순위
 
-1. Supabase 프로젝트를 만들고 `supabase/schema.sql`을 실행합니다 (RLS + 컬럼 단위 grant 포함).
-2. `.env.local`에 `.env.example` 기준으로 Supabase URL과 키를 넣습니다.
-3. `npm run crawl:suto`로 슈퍼투데이 이벤트가 DB에 upsert되는지 확인합니다.
-4. 웹앱이 DB에서 이벤트를 읽고 상태 변경을 저장하는지 확인합니다.
-5. GitHub Actions Secrets에 `VITE_SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`를 등록합니다.
-   - 시크릿이 없으면 워크플로우는 자동으로 JSON 폴백을 commit/push합니다.
-6. 모바일 실제 화면을 확인하고 글자 크기와 버튼 크기를 조정합니다.
+1. GitHub Actions로 crawler 자동 실행을 안정화합니다.
+2. Supabase 저장/동기화를 확실히 고정합니다.
+3. 저장 실패 재시도 기능을 추가합니다.
+4. 필터 설정을 코드가 아니라 화면에서 조절하게 만듭니다.
+5. 이벤트 상세 분석 품질을 개선합니다.
+6. PWA 설치/알림 기능을 추가합니다.
 
 ## 2026-05-04 자동 개선 적용 사항
 
@@ -66,6 +65,23 @@
 - `normalizeContentLines`: O(n²) `indexOf` 중복 제거를 `Set` 기반 O(n)으로 교체.
 - "지금" 카드: 액션 버튼 4개 → 큰 `참여하기` 1개 + 보조 3개로 재구성.
 - `.github/workflows/crawl-suto.yml`: Supabase 미설정 시 JSON 자동 commit/push 단계 추가, `permissions: contents: write` 부여.
+
+## 2026-05-08 자동 실행 안정화 적용 사항
+
+- `scripts/crawlFull.js`: Supabase 환경 변수가 있으면 목록 upsert → 본문 보강 → Supabase 검증을 실행하고, 없으면 JSON fallback 저장만 실행하도록 분기했습니다.
+- `scripts/crawlFull.js`: Windows 로컬 실행 안정성을 위해 `npm` 재호출 대신 Node 스크립트를 직접 실행합니다.
+- `scripts/verifySupabase.js`: GitHub Actions 서버 검증에는 anon key가 필요 없으므로 `VITE_SUPABASE_ANON_KEY` 필수 조건을 제거했습니다.
+- `scripts/verifySupabase.js`: 저장 확인 로그에 전체 이벤트 수와 최신 `last_seen_at`을 함께 출력합니다.
+- 로컬 `npm.cmd run crawl:full` 확인 기준 80개 이벤트가 Supabase에 upsert됐고, 최신 `last_seen_at` 검증까지 통과했습니다.
+
+## 2026-05-08 앱 운영 기능 적용 사항
+
+- 상태/결과/당첨 저장이 Supabase에 실패하면 `event-click-sync-queue` localStorage 대기열에 보관하고, 온라인 복구 또는 10초 간격으로 자동 재시도합니다.
+- 재시도 중/실패/복구 완료 상태를 상단 안내로 표시합니다.
+- `필터설정` 패널에서 `지금` 점수 기준, `집에서` 점수 기준, 제외 키워드, 숨길 플랫폼을 조절할 수 있습니다.
+- 필터 설정은 `event-click-filter-settings` localStorage에 저장합니다.
+- 경품 추출 규칙에 배민/올리브영/문화상품권/모바일상품권/금액 패턴을 보강했고, 크롤러 품질 로그에 `prize` 추출률을 추가했습니다.
+- `public/sw.js` 서비스 워커를 추가하고, 앱 설치 버튼과 알림 권한 요청 UI를 붙였습니다.
 
 ## 중요한 파일 위치
 
@@ -127,17 +143,14 @@ npm run build
 ## 아직 구현하지 않은 기능
 
 - 로그인
-- 데이터베이스
 - 알림
-- AI 댓글 생성
-- 유튜브 스크립트 보기
 - 이벤트 삭제/수정
-- 크롤링 스케줄러
 - 관리자 기능
 
 ## 주의해야 할 설계 결정
 
-- AI 댓글 생성 앱으로 만들지 않습니다.
+- AI 참여는 유튜브 이벤트의 댓글 후보 생성에만 한정합니다.
+- 당첨 판별, 오늘마감, 검색, 응모함 정렬, 딸깍 판단은 규칙 기반으로 유지합니다.
 - 모바일 앱과 PC 앱을 따로 만들지 않습니다.
 - 웹앱, 크롤러, 알림은 강하게 얽히지 않게 분리합니다.
 - 처음부터 완성형 서비스를 만들지 않습니다.

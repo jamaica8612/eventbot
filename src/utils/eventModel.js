@@ -38,10 +38,13 @@ function getFallbackAnnouncement(event) {
   };
 }
 
-export function matchesFilter(event, filter) {
-  if (filter === 'now') return event.status === 'ready' && event.actionType === 'now';
+export function matchesFilter(event, filter, filterSettings) {
+  if (isHiddenByFilterSettings(event, filterSettings)) return false;
+  const actionType = getConfiguredActionType(event, filterSettings);
+
+  if (filter === 'now') return event.status === 'ready' && actionType === 'now';
   if (filter === 'home') {
-    return event.status === 'later' || (event.status === 'ready' && event.actionType === 'home');
+    return event.status === 'later' || (event.status === 'ready' && actionType === 'home');
   }
   if (filter === 'todayDeadline') return getTodayDeadlineMatch(event).isMatch;
   if (filter === 'search') return event.status !== 'skipped';
@@ -50,6 +53,41 @@ export function matchesFilter(event, filter) {
   if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
   return event.status === filter;
+}
+
+export function getConfiguredActionType(event, filterSettings) {
+  if (!filterSettings || !Number.isFinite(event.clickScore)) {
+    return event.actionType;
+  }
+
+  if (event.clickScore >= filterSettings.nowScore) return 'now';
+  if (event.clickScore >= filterSettings.homeScore) return 'home';
+  return 'skip';
+}
+
+export function isHiddenByFilterSettings(event, filterSettings) {
+  if (!filterSettings) return false;
+
+  const hiddenPlatforms = new Set(filterSettings.hiddenPlatforms ?? []);
+  if (hiddenPlatforms.has(event.platform)) return true;
+
+  const text = normalizeSearchText(
+    [
+      event.title,
+      event.originalTitle,
+      event.platform,
+      event.source,
+      event.prizeText,
+      event.deadlineText,
+      event.decisionReason,
+      event.originalText,
+      ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return (filterSettings.excludedKeywords ?? []).some((keyword) =>
+    text.includes(normalizeSearchText(keyword)),
+  );
 }
 
 export function matchesSearchQuery(event, query) {
