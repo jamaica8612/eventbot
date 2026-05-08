@@ -48,31 +48,6 @@ export function ApplyLink({ className, url, label = '참여하기' }) {
       clickEvent.preventDefault();
       return;
     }
-
-    if (isAndroidDevice()) {
-      clickEvent.preventDefault();
-      window.location.href = buildSamsungInternetIntentUrl(url);
-      return;
-    }
-
-    if (
-      clickEvent.defaultPrevented ||
-      clickEvent.metaKey ||
-      clickEvent.ctrlKey ||
-      clickEvent.shiftKey ||
-      clickEvent.altKey ||
-      clickEvent.button !== 0
-    ) {
-      return;
-    }
-
-    clickEvent.preventDefault();
-    const openedWindow = window.open(url, '_blank');
-    if (openedWindow) {
-      openedWindow.opener = null;
-    } else {
-      window.location.href = url;
-    }
   }
 
   return (
@@ -86,23 +61,6 @@ export function ApplyLink({ className, url, label = '참여하기' }) {
       {label}
     </a>
   );
-}
-
-function isAndroidDevice() {
-  return /Android/i.test(window.navigator.userAgent);
-}
-
-function buildSamsungInternetIntentUrl(url) {
-  try {
-    const parsedUrl = new URL(url);
-    if (!['http:', 'https:'].includes(parsedUrl.protocol)) return url;
-    const path = `${parsedUrl.host}${parsedUrl.pathname}${parsedUrl.search}${parsedUrl.hash}`;
-    return `intent://${path}#Intent;scheme=${parsedUrl.protocol.replace(':', '')};package=com.sec.android.app.sbrowser;S.browser_fallback_url=${encodeURIComponent(
-      url,
-    )};end`;
-  } catch {
-    return url;
-  }
 }
 
 async function copyTextToClipboard(text) {
