@@ -10,6 +10,8 @@ const supabase = hasSupabaseConfig
   ? createClient(supabaseUrl, supabaseAnonKey)
   : null;
 
+const FILTER_SETTINGS_KEY = 'filter_settings';
+
 const effortLabels = {
   quick: '현장 딸각',
   home: '집에서 처리',
@@ -65,6 +67,54 @@ export async function updateSupabaseEventState(eventId, patch) {
 
     throw new Error(error.message);
   }
+}
+
+export async function loadSupabaseFilterSettings() {
+  if (!supabase) {
+    return null;
+  }
+
+  const { data, error } = await supabase
+    .from('app_settings')
+    .select('value')
+    .eq('key', FILTER_SETTINGS_KEY)
+    .maybeSingle();
+
+  if (error) {
+    if (isMissingSettingsTableError(error)) {
+      return null;
+    }
+    throw new Error(error.message);
+  }
+
+  return data?.value ?? null;
+}
+
+export async function saveSupabaseFilterSettings(settings) {
+  if (!supabase) {
+    return;
+  }
+
+  const { error } = await supabase
+    .from('app_settings')
+    .upsert({ key: FILTER_SETTINGS_KEY, value: settings }, { onConflict: 'key' });
+
+  if (error) {
+    if (isMissingSettingsTableError(error)) {
+      return;
+    }
+    throw new Error(error.message);
+  }
+}
+
+function isMissingSettingsTableError(error) {
+  return (
+    error?.code === '42P01' ||
+    error?.code === 'PGRST205' ||
+    /app_settings|schema cache|relation .* does not exist|could not find the table/i.test(
+      error?.message ?? '',
+    )
+  );
 }
 
 function isMissingWinningColumnError(error) {

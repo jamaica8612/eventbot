@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   manageFilters,
   primaryFilters,
@@ -21,6 +21,11 @@ import {
   parseKeywordInput,
   saveFilterSettings,
 } from './storage/filterSettingsStorage.js';
+import {
+  hasSupabaseConfig,
+  loadSupabaseFilterSettings,
+  saveSupabaseFilterSettings,
+} from './storage/supabaseEventStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
@@ -39,6 +44,7 @@ function App() {
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
+  const didLoadFilterSettings = useRef(false);
   const [installPrompt, setInstallPrompt] = useState(null);
   const [notificationState, setNotificationState] = useState(() =>
     typeof Notification === 'undefined' ? 'unsupported' : Notification.permission,
@@ -66,6 +72,41 @@ function App() {
   }, [filter]);
 
   useEffect(() => {
+    if (!hasSupabaseConfig) {
+      didLoadFilterSettings.current = true;
+      return;
+    }
+
+    loadSupabaseFilterSettings()
+      .then((remoteSettings) => {
+        if (remoteSettings) {
+          setFilterSettings(normalizeFilterSettings(remoteSettings));
+        }
+      })
+      .catch((error) => {
+        setSyncNotice({
+          type: 'warning',
+          message: `필터 설정을 DB에서 불러오지 못했습니다. (${error.message})`,
+        });
+      })
+      .finally(() => {
+        didLoadFilterSettings.current = true;
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!didLoadFilterSettings.current) return;
+
+    if (hasSupabaseConfig) {
+      saveSupabaseFilterSettings(filterSettings).catch((error) => {
+        setSyncNotice({
+          type: 'warning',
+          message: `필터 설정 DB 저장 실패. (${error.message})`,
+        });
+      });
+      return;
+    }
+
     saveFilterSettings(filterSettings);
   }, [filterSettings]);
 

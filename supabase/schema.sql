@@ -68,6 +68,12 @@ create index if not exists events_result_status_idx on public.events (result_sta
 create index if not exists events_last_seen_at_idx on public.events (last_seen_at desc);
 create index if not exists events_effort_idx on public.events (effort);
 
+create table if not exists public.app_settings (
+  key text primary key,
+  value jsonb not null default '{}'::jsonb,
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.set_updated_at()
 returns trigger
 language plpgsql
@@ -85,11 +91,22 @@ before update on public.events
 for each row
 execute function public.set_updated_at();
 
+drop trigger if exists set_app_settings_updated_at on public.app_settings;
+
+create trigger set_app_settings_updated_at
+before update on public.app_settings
+for each row
+execute function public.set_updated_at();
+
 alter table public.events enable row level security;
+alter table public.app_settings enable row level security;
 
 drop policy if exists "Public can read events" on public.events;
 drop policy if exists "Public can update events" on public.events;
 drop policy if exists "Anon can update event state" on public.events;
+drop policy if exists "Public can read app settings" on public.app_settings;
+drop policy if exists "Anon can insert app settings" on public.app_settings;
+drop policy if exists "Anon can update app settings" on public.app_settings;
 
 -- 단일 사용자 도구이므로 anon 키로 읽기/상태 업데이트는 허용한다.
 -- 단, anon이 갱신할 수 있는 컬럼을 사용자 상태 컬럼으로만 제한해서
@@ -101,6 +118,24 @@ using (true);
 
 create policy "Anon can update event state"
 on public.events
+for update
+to anon
+using (true)
+with check (true);
+
+create policy "Public can read app settings"
+on public.app_settings
+for select
+using (true);
+
+create policy "Anon can insert app settings"
+on public.app_settings
+for insert
+to anon
+with check (true);
+
+create policy "Anon can update app settings"
+on public.app_settings
 for update
 to anon
 using (true)
@@ -120,3 +155,5 @@ grant update (
   receipt_status,
   winning_memo
 ) on public.events to anon;
+
+grant select, insert, update on public.app_settings to anon;

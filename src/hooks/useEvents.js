@@ -27,7 +27,10 @@ export function useEvents() {
       if (!isMounted) return;
       const nextEvents =
         remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents);
-      setEvents(nextEvents.map(applyExcludedStatus).map(enrichEvent));
+      const normalizedEvents = hasSupabaseConfig
+        ? nextEvents
+        : nextEvents.map(applyExcludedStatus);
+      setEvents(normalizedEvents.map(enrichEvent));
       setIsLoading(false);
     });
     return () => {
