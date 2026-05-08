@@ -11,6 +11,10 @@ const CHROME_PATHS = [
   'C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe',
   'C:\\Program Files\\Microsoft\\Edge\\Application\\msedge.exe',
   'C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe',
+  '/usr/bin/google-chrome',
+  '/usr/bin/google-chrome-stable',
+  '/usr/bin/chromium',
+  '/usr/bin/chromium-browser',
 ];
 const DEBUG_PORT = Number(process.env.SUTO_BROWSER_PORT ?? 9223);
 const PROFILE_DIR = path.join(process.cwd(), '.crawler-chrome-profile');
@@ -336,6 +340,9 @@ async function launchChrome() {
     [
       `--remote-debugging-port=${DEBUG_PORT}`,
       `--user-data-dir=${PROFILE_DIR}`,
+      ...(process.env.CI === 'true' || process.env.SUTO_BODY_HEADLESS === '1'
+        ? ['--headless=new', '--disable-gpu', '--no-sandbox']
+        : []),
       '--no-first-run',
       '--no-default-browser-check',
       '--disable-popup-blocking',

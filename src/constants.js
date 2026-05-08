@@ -26,29 +26,23 @@ export const statusActions = [
 export const primaryFilters = [
   { value: 'now', label: '지금', countKey: 'now' },
   { value: 'home', label: '집에서', countKey: 'home' },
-  { value: 'done', label: '완료', countKey: 'done' },
-  { value: 'todayAnnouncement', label: '발표예정', countKey: 'todayAnnouncement' },
-  { value: 'won', label: '당첨', countKey: 'won' },
+  { value: 'todayDeadline', label: '오늘마감', countKey: 'todayDeadline' },
+  { value: 'inbox', label: '응모함', countKey: 'inbox' },
 ];
 
-export const manageFilters = new Set(['done', 'todayAnnouncement', 'won']);
+export const manageFilters = new Set(['inbox']);
 
 export const filterTitles = {
   now: '지금 바로 딸깍',
   home: '집에서 처리할 이벤트',
-  done: '참여완료한 이벤트',
-  todayAnnouncement: '발표 예정 이벤트',
-  won: '당첨 관리',
+  todayDeadline: '오늘 마감 이벤트',
+  inbox: '응모함',
 };
 
 export function getFilterLabel(item) {
-  if (item.value === 'todayAnnouncement') return '발표';
   return item.label;
 }
 
 export function getFilterTitle(filter) {
-  if (filter === 'todayAnnouncement') return '발표 예정';
-  if (filter === 'done') return '참여완료 관리';
-  if (filter === 'won') return '당첨 장부';
   return filterTitles[filter];
 }

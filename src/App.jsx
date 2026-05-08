@@ -8,23 +8,20 @@ import {
   buildPlatformOptions,
   matchesFilter,
   matchesTodayAnnouncement,
+  sortInboxEvents,
+  sortTodayDeadlineEvents,
   sortTodayAnnouncements,
 } from './utils/eventModel.js';
-import { formatCompactWon, parsePrizeAmount } from './utils/format.js';
+import { parsePrizeAmount } from './utils/format.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
   BottomNav,
   DesktopNav,
-  ManageMetrics,
   SummaryItem,
 } from './components/Navigation.jsx';
 import { EventCard } from './components/EventCards.jsx';
-import { WinningLedger } from './components/WinningLedger.jsx';
-import {
-  CompletedManagementList,
-  ResultManagementList,
-} from './components/ManagementLists.jsx';
+import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
 
 function App() {
   const { events, setEvents, isLoading } = useEvents();
@@ -35,6 +32,13 @@ function App() {
 
   const { updateStatus, updateResult, updateAnnouncement, updateWinningMeta } =
     useEventActions({ events, setEvents, setSyncError });
+
+  function updateDeadlineStatus(eventId, status) {
+    updateStatus(eventId, status);
+    if (status === 'done') {
+      setFilter('inbox');
+    }
+  }
 
   useEffect(() => {
     setPlatformFilter('all');
@@ -57,6 +61,8 @@ function App() {
       platformFilter === 'all'
         ? filteredByTabEvents
         : filteredByTabEvents.filter((event) => event.platform === platformFilter);
+    if (filter === 'todayDeadline') return sortTodayDeadlineEvents(platformEvents);
+    if (filter === 'inbox') return sortInboxEvents(platformEvents);
     return filter === 'todayAnnouncement'
       ? sortTodayAnnouncements(platformEvents)
       : platformEvents;
@@ -79,8 +85,8 @@ function App() {
           <div className="hero-top">
             <div className="hero-copy">
               <p className="app-kicker">EVENT CLICK</p>
-              <h1 id="page-title">지금 딸깍</h1>
-              <p className="overview-copy">한 손으로 보고 바로 누를 것만 남깁니다.</p>
+              <h1 id="page-title">이벤트 딸깍</h1>
+              <p className="overview-copy">마감 전에는 빠르게 응모하고, 참여 후에는 응모함에서 정리합니다.</p>
             </div>
             <button
               type="button"
@@ -108,22 +114,18 @@ function App() {
               onClick={() => setFilter('home')}
             />
             <SummaryItem
-              active={filter === 'todayAnnouncement'}
-              label="발표예정"
-              value={counts.todayAnnouncement}
-              onClick={() => setFilter('todayAnnouncement')}
+              active={filter === 'todayDeadline'}
+              label="오늘마감"
+              value={counts.todayDeadline}
+              onClick={() => setFilter('todayDeadline')}
             />
             <SummaryItem
-              active={filter === 'won'}
-              label="당첨금"
-              value={formatCompactWon(winningTotal)}
-              onClick={() => setFilter('won')}
+              active={filter === 'inbox'}
+              label="응모함"
+              value={counts.inbox}
+              onClick={() => setFilter('inbox')}
             />
           </div>
-
-          {isManageMode ? (
-            <ManageMetrics events={visibleEvents} totalAmount={winningTotal} />
-          ) : null}
 
           <DesktopNav
             counts={counts}
@@ -144,7 +146,7 @@ function App() {
 
           {syncError ? <p className="sync-error">{syncError}</p> : null}
 
-          {filter !== 'won' && platformOptions.length > 1 ? (
+          {['now', 'home'].includes(filter) && platformOptions.length > 1 ? (
             <div className="filter-chips" aria-label="이벤트 종류별 보기">
               <button
                 type="button"
@@ -166,24 +168,20 @@ function App() {
             </div>
           ) : null}
 
-          {filter === 'won' ? (
-            <WinningLedger
+          {filter === 'todayDeadline' ? (
+            <TodayDeadlineList
               events={visibleEvents}
+              isLoading={isLoading}
+              onStatusChange={updateDeadlineStatus}
+            />
+          ) : filter === 'inbox' ? (
+            <EventInbox
+              events={visibleEvents}
+              isLoading={isLoading}
               totalAmount={winningTotal}
-              onMetaChange={updateWinningMeta}
-            />
-          ) : filter === 'done' ? (
-            <CompletedManagementList
-              events={visibleEvents}
-              isLoading={isLoading}
-              onResultChange={updateResult}
-            />
-          ) : filter === 'todayAnnouncement' ? (
-            <ResultManagementList
-              events={visibleEvents}
-              isLoading={isLoading}
               onAnnouncementChange={updateAnnouncement}
               onResultChange={updateResult}
+              onMetaChange={updateWinningMeta}
             />
           ) : (
             <div className="event-list">
@@ -237,9 +235,11 @@ function buildCounts(events) {
         acc.home += 1;
       }
       if (event.status === 'done') acc.done += 1;
+      if (event.status === 'done') acc.inbox += 1;
       if (event.status === 'done' && event.resultStatus === 'unknown') {
         acc.resultUnknown += 1;
       }
+      if (matchesFilter(event, 'todayDeadline')) acc.todayDeadline += 1;
       if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
       if (event.resultStatus === 'won') acc.won += 1;
       if (event.resultStatus === 'lost') acc.lost += 1;
@@ -251,6 +251,8 @@ function buildCounts(events) {
       now: 0,
       home: 0,
       done: 0,
+      inbox: 0,
+      todayDeadline: 0,
       resultUnknown: 0,
       todayAnnouncement: 0,
       won: 0,

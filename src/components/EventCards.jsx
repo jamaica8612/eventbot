@@ -41,17 +41,41 @@ export function EventCard({ event, filter, onResultChange, onAnnouncementChange,
 export function ApplyLink({ className, url, label = '참여하기' }) {
   function handleApplyClick(clickEvent) {
     clickEvent.stopPropagation();
+    if (!url) {
+      clickEvent.preventDefault();
+      return;
+    }
 
     if (isAndroidDevice()) {
       clickEvent.preventDefault();
       window.location.href = buildSamsungInternetIntentUrl(url);
+      return;
+    }
+
+    if (
+      clickEvent.defaultPrevented ||
+      clickEvent.metaKey ||
+      clickEvent.ctrlKey ||
+      clickEvent.shiftKey ||
+      clickEvent.altKey ||
+      clickEvent.button !== 0
+    ) {
+      return;
+    }
+
+    clickEvent.preventDefault();
+    const openedWindow = window.open(url, '_blank');
+    if (openedWindow) {
+      openedWindow.opener = null;
+    } else {
+      window.location.href = url;
     }
   }
 
   return (
     <a
       className={className}
-      href={url}
+      href={url || '#'}
       target="_blank"
       rel="noopener noreferrer"
       onClick={handleApplyClick}

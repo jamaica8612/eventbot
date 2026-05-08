@@ -323,9 +323,23 @@ h3 {
   gap: 12px;
 }
 
+.deadline-board,
+.inbox-board {
+  display: grid;
+  gap: 12px;
+}
+
+.deadline-list,
+.inbox-list {
+  display: grid;
+  gap: 10px;
+}
+
 .event-card,
 .manage-row,
-.ledger-row {
+.ledger-row,
+.deadline-row,
+.inbox-row {
   display: grid;
   gap: 12px;
   min-width: 0;
@@ -334,6 +348,158 @@ h3 {
   background: var(--surface);
   padding: 16px;
   box-shadow: var(--shadow-card);
+}
+
+.deadline-row {
+  gap: 9px;
+  border-radius: 12px;
+  padding: 13px 14px;
+}
+
+.deadline-row-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: start;
+}
+
+.deadline-row-head strong {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.96rem;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.deadline-row-head span {
+  color: var(--wanted-blue);
+  font-size: 0.82rem;
+  font-weight: 900;
+}
+
+.deadline-row p {
+  display: -webkit-box;
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  font-weight: 700;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.deadline-meta,
+.inbox-winning-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.deadline-meta span,
+.inbox-winning-meta span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  background: var(--soft-panel);
+  color: var(--text-muted);
+  padding: 0 9px;
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.deadline-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.deadline-actions button,
+.deadline-actions .manage-link {
+  min-width: 0;
+  min-height: 38px;
+  border-radius: 10px;
+  padding: 0 4px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.inbox-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.inbox-summary div {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 10px;
+}
+
+.inbox-summary span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.inbox-summary strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  color: var(--text-strong);
+  font-size: 1rem;
+  line-height: 1.1;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.inbox-row {
+  position: relative;
+  gap: 10px;
+  padding-top: 42px;
+}
+
+.inbox-row.is-check-target {
+  border-color: rgba(255, 82, 82, 0.34);
+  box-shadow: 0 2px 16px rgba(255, 82, 82, 0.12);
+}
+
+.inbox-announcement-today.is-check-target {
+  border-color: var(--accent-border);
+  box-shadow: 0 2px 16px rgba(255, 210, 74, 0.14);
+}
+
+.inbox-attention {
+  border: 1px solid rgba(255, 82, 82, 0.22);
+  border-radius: 10px;
+  background: rgba(255, 82, 82, 0.09);
+  color: var(--danger);
+  padding: 9px 10px;
+  font-size: 0.84rem;
+  font-weight: 900;
+}
+
+.inbox-announcement-today .inbox-attention {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
+.inbox-winning-meta span:first-child {
+  color: var(--warning);
+}
+
+.inbox-edit-panel {
+  grid-template-columns: 1fr 1fr;
+}
+
+.inbox-edit-panel .announcement-panel,
+.inbox-edit-panel .prize-title-field,
+.inbox-edit-panel .winning-memo-field {
+  grid-column: 1 / -1;
 }
 
 .now-card {
@@ -1368,6 +1534,12 @@ h3 {
   color: var(--danger);
 }
 
+.announcement-state-today {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
 .ledger-prize,
 .ledger-amount,
 .ledger-receipt {
@@ -1442,7 +1614,7 @@ h3 {
   left: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 4px;
   border-top: 1px solid var(--border);
   background: var(--nav-bg);
@@ -1702,10 +1874,16 @@ h3 {
      이전 가짜 테이블 레이아웃은 좁고 한 줄짜리 박스가 만들어져 가독성이 나빴다. */
   .manage-mode .event-list,
   .manage-mode .manage-list,
-  .manage-mode .ledger-table {
+  .manage-mode .ledger-table,
+  .manage-mode .inbox-list,
+  .deadline-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 14px;
+  }
+
+  .inbox-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   /* 단, 월별 그룹 안의 .ledger-table은 그룹 박스 안에서 단일 열로 유지한다(시각적 위계). */

@@ -43,10 +43,57 @@ export function matchesFilter(event, filter) {
   if (filter === 'home') {
     return event.status === 'later' || (event.status === 'ready' && event.actionType === 'home');
   }
+  if (filter === 'todayDeadline') return getTodayDeadlineMatch(event).isMatch;
+  if (filter === 'inbox') return event.status === 'done';
   if (filter === 'done') return event.status === 'done';
   if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
   return event.status === filter;
+}
+
+export function getTodayDeadlineMatch(event) {
+  if (event.status === 'done' || event.status === 'skipped') {
+    return { isMatch: false, isExact: false };
+  }
+
+  const deadline = parseLocalDate(event.deadlineDate);
+  const today = getLocalToday();
+  if (deadline) {
+    return {
+      isMatch: deadline.getTime() === today.getTime(),
+      isExact: true,
+    };
+  }
+
+  const todayHints = buildTodayTextHints(today);
+  const text = [
+    event.deadlineText,
+    event.due,
+    event.memo,
+    event.originalText,
+    ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+    ...(Array.isArray(event.raw?.originalLines) ? event.raw.originalLines : []),
+  ]
+    .filter(Boolean)
+    .join(' ');
+  const hasTodayText =
+    /오늘\s*마감|금일\s*마감|마감\s*오늘|오늘\s*종료|금일\s*종료/.test(text) ||
+    todayHints.some((hint) => text.includes(hint));
+
+  return { isMatch: hasTodayText, isExact: false };
+}
+
+function buildTodayTextHints(today) {
+  const month = today.getMonth() + 1;
+  const day = today.getDate();
+  return [
+    `${month}.${day}`,
+    `${String(month).padStart(2, '0')}.${String(day).padStart(2, '0')}`,
+    `${month}/${day}`,
+    `${String(month).padStart(2, '0')}/${String(day).padStart(2, '0')}`,
+    `${month}월 ${day}일`,
+    `${month}월${day}일`,
+  ];
 }
 
 export function matchesTodayAnnouncement(event) {
@@ -83,6 +130,52 @@ export function sortTodayAnnouncements(events) {
     if (statusDiff !== 0) return statusDiff;
     return getAnnouncementTime(first) - getAnnouncementTime(second);
   });
+}
+
+export function sortTodayDeadlineEvents(events) {
+  return [...events].sort((first, second) => {
+    const firstMatch = getTodayDeadlineMatch(first);
+    const secondMatch = getTodayDeadlineMatch(second);
+    if (firstMatch.isExact !== secondMatch.isExact) {
+      return firstMatch.isExact ? -1 : 1;
+    }
+    return (
+      getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+      getNumber(second.clickScore) - getNumber(first.clickScore) ||
+      getNumber(first.estimatedSeconds) - getNumber(second.estimatedSeconds) ||
+      getNumber(first.rank) - getNumber(second.rank)
+    );
+  });
+}
+
+export function sortInboxEvents(events) {
+  const priority = { overdue: 0, today: 1, future: 3, unknown: 4 };
+  return [...events].sort((first, second) => {
+    const firstStatus = getAnnouncementStatus(first);
+    const secondStatus = getAnnouncementStatus(second);
+    const firstScore = getInboxPriority(first, firstStatus, priority);
+    const secondScore = getInboxPriority(second, secondStatus, priority);
+    if (firstScore !== secondScore) return firstScore - secondScore;
+    return getInboxTime(second) - getInboxTime(first);
+  });
+}
+
+function getInboxPriority(event, announcement, priority) {
+  if (event.resultStatus === 'unknown') return priority[announcement.state] ?? 4;
+  if (event.resultStatus === 'won' && event.receiptStatus !== 'received') return 2;
+  if (event.resultStatus === 'won') return 5;
+  if (event.resultStatus === 'lost') return 6;
+  return 7;
+}
+
+function getInboxTime(event) {
+  const value = event.participatedAt ?? event.resultCheckedAt ?? event.lastSeenAt ?? '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getNumber(value) {
+  return Number.isFinite(value) ? value : 0;
 }
 
 export function buildPlatformOptions(events) {

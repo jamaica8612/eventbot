@@ -25,7 +25,7 @@ export async function loadSupabaseEvents() {
     .from('events')
     .select('*')
     .order('last_seen_at', { ascending: false })
-    .limit(80);
+    .limit(240);
 
   if (error || !Array.isArray(data)) {
     return [];
@@ -97,6 +97,7 @@ function toAppEvent(row) {
     originalTitle: raw.originalTitle ?? row.title,
     originalUrl: row.url,
     applyUrl: row.apply_url ?? raw.applyUrl ?? row.url,
+    lastSeenAt: row.last_seen_at,
     source: `${row.source_name} · ${row.platform}`,
     platform: row.platform,
     rank: row.rank,

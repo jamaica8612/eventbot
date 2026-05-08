@@ -36,10 +36,12 @@ jobs:
 
       - name: Crawl events
         # Supabase 시크릿이 있으면 DB upsert, 없으면 public/crawled-events.json 저장.
-        run: npm run crawl:suto
+        run: npm run crawl:full
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          SUTO_BODY_LIMIT: "80"
+          SUTO_BODY_HEADLESS: "1"
 
       - name: Commit JSON fallback if Supabase is not configured
         # Supabase 미설정 시 JSON 파일이 갱신된다. 변경분이 있으면 자동 커밋한다.
