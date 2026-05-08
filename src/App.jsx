@@ -22,6 +22,7 @@ import {
 } from './components/Navigation.jsx';
 import { EventCard } from './components/EventCards.jsx';
 import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
+import { EventSearch } from './components/EventSearch.jsx';
 
 function App() {
   const { events, setEvents, isLoading } = useEvents();
@@ -174,6 +175,12 @@ function App() {
               isLoading={isLoading}
               onStatusChange={updateDeadlineStatus}
             />
+          ) : filter === 'search' ? (
+            <EventSearch
+              events={visibleEvents}
+              isLoading={isLoading}
+              onStatusChange={updateStatus}
+            />
           ) : filter === 'inbox' ? (
             <EventInbox
               events={visibleEvents}
@@ -240,6 +247,7 @@ function buildCounts(events) {
         acc.resultUnknown += 1;
       }
       if (matchesFilter(event, 'todayDeadline')) acc.todayDeadline += 1;
+      if (matchesFilter(event, 'search')) acc.searchable += 1;
       if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
       if (event.resultStatus === 'won') acc.won += 1;
       if (event.resultStatus === 'lost') acc.lost += 1;
@@ -253,6 +261,7 @@ function buildCounts(events) {
       done: 0,
       inbox: 0,
       todayDeadline: 0,
+      searchable: 0,
       resultUnknown: 0,
       todayAnnouncement: 0,
       won: 0,

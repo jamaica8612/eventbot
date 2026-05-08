@@ -27,6 +27,7 @@ export const primaryFilters = [
   { value: 'now', label: '지금', countKey: 'now' },
   { value: 'home', label: '집에서', countKey: 'home' },
   { value: 'todayDeadline', label: '오늘마감', countKey: 'todayDeadline' },
+  { value: 'search', label: '검색', countKey: 'searchable' },
   { value: 'inbox', label: '응모함', countKey: 'inbox' },
 ];
 
@@ -36,6 +37,7 @@ export const filterTitles = {
   now: '지금 바로 딸깍',
   home: '집에서 처리할 이벤트',
   todayDeadline: '오늘 마감 이벤트',
+  search: '이벤트 검색',
   inbox: '응모함',
 };
 

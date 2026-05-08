@@ -10,6 +10,7 @@ import {
 } from '../utils/eventModel.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
+const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   if (filter === 'now') {
@@ -190,7 +191,7 @@ function EventBodyToggle({ event, lines, facts }) {
     const abortController = new AbortController();
     const timeoutId = window.setTimeout(() => abortController.abort(), YOUTUBE_CONTEXT_TIMEOUT_MS);
     try {
-      const response = await fetch('/api/youtube-transcript', {
+      const response = await fetch(`${API_BASE_URL}/api/youtube-transcript`, {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         signal: abortController.signal,
@@ -205,7 +206,7 @@ function EventBodyToggle({ event, lines, facts }) {
           },
         }),
       });
-      const payload = await response.json();
+      const payload = await readJsonResponse(response);
       if (!response.ok) {
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
       }
@@ -395,6 +396,28 @@ function EventBodyToggle({ event, lines, facts }) {
       )}
     </div>
   );
+}
+
+async function readJsonResponse(response) {
+  const contentType = response.headers.get('content-type') ?? '';
+  const rawText = await response.text();
+  if (contentType.includes('application/json')) {
+    try {
+      return rawText ? JSON.parse(rawText) : {};
+    } catch {
+      throw new Error('댓글 후보 API 응답을 읽지 못했습니다.');
+    }
+  }
+
+  const isStaticFallback =
+    rawText.trim().startsWith('<') || contentType.includes('text/html');
+  if (isStaticFallback) {
+    throw new Error(
+      '댓글 후보 API가 연결되지 않았습니다. 로컬 dev 서버나 Vercel API 배포에서 사용해 주세요.',
+    );
+  }
+
+  throw new Error(rawText.slice(0, 160) || '댓글 후보 API 응답 형식이 올바르지 않습니다.');
 }
 
 function buildYoutubeLinks(event) {

@@ -44,11 +44,62 @@ export function matchesFilter(event, filter) {
     return event.status === 'later' || (event.status === 'ready' && event.actionType === 'home');
   }
   if (filter === 'todayDeadline') return getTodayDeadlineMatch(event).isMatch;
+  if (filter === 'search') return event.status !== 'skipped';
   if (filter === 'inbox') return event.status === 'done';
   if (filter === 'done') return event.status === 'done';
   if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
   return event.status === filter;
+}
+
+export function matchesSearchQuery(event, query) {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const haystack = normalizeSearchText(
+    [
+      event.title,
+      event.originalTitle,
+      event.platform,
+      event.source,
+      event.prizeText,
+      event.prizeTitle,
+      event.deadlineText,
+      event.resultAnnouncementText,
+      event.memo,
+      event.decisionReason,
+      event.originalText,
+      ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+      ...(Array.isArray(event.raw?.originalLines) ? event.raw.originalLines : []),
+      ...(Array.isArray(event.raw?.detailMetaLines) ? event.raw.detailMetaLines : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return normalizedQuery
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((token) => haystack.includes(token));
+}
+
+export function sortSearchEvents(events) {
+  return [...events].sort(
+    (first, second) =>
+      getSearchStatusPriority(first) - getSearchStatusPriority(second) ||
+      getNumber(second.clickScore) - getNumber(first.clickScore) ||
+      getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+      getNumber(first.rank) - getNumber(second.rank),
+  );
+}
+
+function normalizeSearchText(value) {
+  return String(value ?? '').toLocaleLowerCase('ko-KR').replace(/\s+/g, ' ').trim();
+}
+
+function getSearchStatusPriority(event) {
+  if (event.status === 'ready') return 0;
+  if (event.status === 'later') return 1;
+  if (event.status === 'done') return 2;
+  return 3;
 }
 
 export function getTodayDeadlineMatch(event) {
