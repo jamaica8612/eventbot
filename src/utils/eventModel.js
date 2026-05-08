@@ -40,6 +40,7 @@ function getFallbackAnnouncement(event) {
 
 export function matchesFilter(event, filter, filterSettings) {
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
+  if (shouldHideExpiredEvent(event, filter)) return false;
   const actionType = getConfiguredActionType(event, filterSettings);
 
   if (filter === 'now') return event.status === 'ready' && actionType === 'now';
@@ -53,6 +54,18 @@ export function matchesFilter(event, filter, filterSettings) {
   if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
   return event.status === filter;
+}
+
+export function isExpiredEvent(event) {
+  const deadline = parseLocalDate(event.deadlineDate);
+  if (!deadline) return false;
+  return deadline.getTime() < getLocalToday().getTime();
+}
+
+function shouldHideExpiredEvent(event, filter) {
+  if (!isExpiredEvent(event)) return false;
+  if (event.status === 'done') return false;
+  return ['now', 'home', 'todayDeadline', 'search', 'skipped'].includes(filter);
 }
 
 export function getConfiguredActionType(event, filterSettings) {

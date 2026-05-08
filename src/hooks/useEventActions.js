@@ -4,7 +4,9 @@ import {
   saveEventResult,
   saveEventStatus,
   saveWinningMeta,
+  removeEventState,
 } from '../storage/eventStatusStorage.js';
+import { saveExcludedEvent } from '../storage/excludedEventStorage.js';
 import { updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 import {
   enqueueSyncPatch,
@@ -101,6 +103,9 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
       const changedAt = new Date().toISOString();
       const currentEvent = events.find((event) => event.id === eventId);
       saveEventStatus(eventId, status);
+      if (status === 'skipped') {
+        saveExcludedEvent(currentEvent);
+      }
       persistRemote(eventId, buildStatusPatch(currentEvent, status, changedAt), setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -214,5 +219,51 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     [setEvents, setSyncNotice],
   );
 
-  return { updateStatus, updateResult, updateAnnouncement, updateWinningMeta };
+  const deleteInboxEvent = useCallback(
+    (eventId) => {
+      const patch = {
+        status: 'ready',
+        resultStatus: 'unknown',
+        participatedAt: null,
+        resultCheckedAt: null,
+        resultAnnouncementDate: null,
+        resultAnnouncementText: '',
+        prizeTitle: '',
+        prizeAmount: '',
+        receiptStatus: 'unclaimed',
+        winningMemo: '',
+      };
+
+      removeEventState(eventId);
+      persistRemote(eventId, patch, setSyncNotice);
+      setEvents((currentEvents) =>
+        currentEvents.map((event) =>
+          event.id === eventId
+            ? {
+                ...event,
+                status: 'ready',
+                resultStatus: 'unknown',
+                participatedAt: null,
+                resultCheckedAt: null,
+                resultAnnouncementDate: '',
+                resultAnnouncementText: '',
+                prizeTitle: '',
+                prizeAmount: '',
+                receiptStatus: 'unclaimed',
+                winningMemo: '',
+              }
+            : event,
+        ),
+      );
+    },
+    [setEvents, setSyncNotice],
+  );
+
+  return {
+    updateStatus,
+    updateResult,
+    updateAnnouncement,
+    updateWinningMeta,
+    deleteInboxEvent,
+  };
 }

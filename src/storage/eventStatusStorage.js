@@ -128,6 +128,12 @@ export function saveWinningMeta(eventId, meta) {
   writeStateMap(stateMap);
 }
 
+export function removeEventState(eventId) {
+  const stateMap = readStateMap();
+  delete stateMap[eventId];
+  writeStateMap(stateMap);
+}
+
 function readStateMap() {
   if (typeof window === 'undefined') {
     return {};

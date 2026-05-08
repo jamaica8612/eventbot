@@ -408,8 +408,7 @@ function getYoutubeContextEndpoint() {
 }
 
 function shouldUseSupabaseFunction() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY || typeof window === 'undefined') return false;
-  return !['localhost', '127.0.0.1'].includes(window.location.hostname);
+  return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
 function getYoutubeContextHeaders(endpoint) {

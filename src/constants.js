@@ -31,6 +31,10 @@ export const primaryFilters = [
   { value: 'inbox', label: '응모함', countKey: 'inbox' },
 ];
 
+export const utilityFilters = [
+  { value: 'skipped', label: '제외', countKey: 'skipped' },
+];
+
 export const manageFilters = new Set(['inbox']);
 
 export const filterTitles = {
@@ -39,6 +43,7 @@ export const filterTitles = {
   todayDeadline: '오늘 마감 이벤트',
   search: '이벤트 검색',
   inbox: '응모함',
+  skipped: '제외한 이벤트',
 };
 
 export function getFilterLabel(item) {

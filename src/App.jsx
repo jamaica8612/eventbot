@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   manageFilters,
   primaryFilters,
+  utilityFilters,
   getFilterTitle,
 } from './constants.js';
 import {
@@ -44,7 +45,13 @@ function App() {
   );
   const [theme, setTheme] = useTheme();
 
-  const { updateStatus, updateResult, updateAnnouncement, updateWinningMeta } =
+  const {
+    updateStatus,
+    updateResult,
+    updateAnnouncement,
+    updateWinningMeta,
+    deleteInboxEvent,
+  } =
     useEventActions({ events, setEvents, setSyncNotice });
 
   function updateDeadlineStatus(eventId, status) {
@@ -219,6 +226,19 @@ function App() {
             />
           ) : null}
 
+          <div className="filter-chips utility-filter-chips" aria-label="보조 보기">
+            {utilityFilters.map((item) => (
+              <button
+                key={item.value}
+                type="button"
+                className={filter === item.value ? 'is-active' : ''}
+                onClick={() => setFilter(item.value)}
+              >
+                {item.label} <strong>{counts[item.countKey]}</strong>
+              </button>
+            ))}
+          </div>
+
           {['now', 'home'].includes(filter) && platformOptions.length > 1 ? (
             <div className="filter-chips" aria-label="이벤트 종류별 보기">
               <button
@@ -261,6 +281,7 @@ function App() {
               onAnnouncementChange={updateAnnouncement}
               onResultChange={updateResult}
               onMetaChange={updateWinningMeta}
+              onDelete={deleteInboxEvent}
             />
           ) : (
             <div className="event-list">

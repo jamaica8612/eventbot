@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { initialEvents } from '../data/events.js';
 import { loadCrawledEvents } from '../storage/crawledEventStorage.js';
 import { applyStoredStatuses } from '../storage/eventStatusStorage.js';
+import { applyExcludedStatus } from '../storage/excludedEventStorage.js';
 import { hasSupabaseConfig, loadSupabaseEvents } from '../storage/supabaseEventStorage.js';
 import { enrichEvent } from '../utils/eventModel.js';
 
@@ -26,7 +27,7 @@ export function useEvents() {
       if (!isMounted) return;
       const nextEvents =
         remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents);
-      setEvents(nextEvents.map(enrichEvent));
+      setEvents(nextEvents.map(applyExcludedStatus).map(enrichEvent));
       setIsLoading(false);
     });
     return () => {

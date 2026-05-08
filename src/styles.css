@@ -466,6 +466,22 @@ h3 {
   color: var(--cta-text);
 }
 
+.utility-filter-chips {
+  justify-content: flex-end;
+}
+
+.utility-filter-chips button {
+  border-color: rgba(240, 68, 82, 0.24);
+  background: rgba(251, 113, 133, 0.08);
+  color: var(--danger);
+}
+
+.utility-filter-chips button.is-active {
+  border-color: rgba(240, 68, 82, 0.38);
+  background: rgba(251, 113, 133, 0.16);
+  color: var(--danger);
+}
+
 .filter-chips strong {
   color: inherit;
   font-size: 0.8rem;
@@ -488,6 +504,19 @@ h3 {
 .search-list {
   display: grid;
   gap: 10px;
+}
+
+.inbox-list {
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.inbox-list-head {
+  display: none;
 }
 
 .event-card,
@@ -613,8 +642,17 @@ h3 {
 
 .inbox-row {
   position: relative;
-  gap: 10px;
-  padding-top: 42px;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 9px;
+  border: 0;
+  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  padding: 13px 14px;
+}
+
+.inbox-row:last-child {
+  border-bottom: 0;
 }
 
 .inbox-row.is-check-target {
@@ -628,12 +666,12 @@ h3 {
 }
 
 .inbox-attention {
-  border: 1px solid rgba(255, 82, 82, 0.22);
-  border-radius: 10px;
-  background: rgba(255, 82, 82, 0.09);
+  width: fit-content;
+  border-radius: 999px;
+  background: rgba(255, 82, 82, 0.12);
   color: var(--danger);
-  padding: 9px 10px;
-  font-size: 0.84rem;
+  padding: 3px 8px;
+  font-size: 0.76rem;
   font-weight: 900;
 }
 
@@ -645,6 +683,48 @@ h3 {
 
 .inbox-winning-meta span:first-child {
   color: var(--warning);
+}
+
+.inbox-date-cell,
+.inbox-title-cell,
+.inbox-state-cell,
+.inbox-prize-cell,
+.inbox-action-cell {
+  min-width: 0;
+}
+
+.inbox-date-cell,
+.inbox-prize-cell,
+.inbox-state-cell {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+}
+
+.inbox-date-cell time,
+.inbox-date-cell span,
+.inbox-prize-cell > span {
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.inbox-title-cell {
+  display: grid;
+  gap: 6px;
+}
+
+.inbox-prize-cell > span {
+  display: -webkit-box;
+  overflow: hidden;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.inbox-action-cell {
+  display: grid;
+  gap: 7px;
 }
 
 .inbox-edit-panel {
@@ -1771,6 +1851,33 @@ h3 {
   transform: none;
 }
 
+.inbox-top-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.inbox-top-actions .manage-edit-text-button,
+.inbox-delete-button {
+  position: static;
+  min-height: 24px;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  padding: 0;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.inbox-top-actions .manage-edit-text-button {
+  color: var(--text-muted);
+}
+
+.inbox-delete-button {
+  color: var(--danger);
+}
+
 .manage-edit-panel,
 .ledger-edit-panel {
   display: grid;
@@ -2140,12 +2247,64 @@ h3 {
   .manage-mode .event-list,
   .manage-mode .manage-list,
   .manage-mode .ledger-table,
-  .manage-mode .inbox-list,
   .deadline-list,
   .search-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 14px;
+  }
+
+  .inbox-list {
+    gap: 0;
+  }
+
+  .inbox-list-head,
+  .inbox-row {
+    display: grid;
+    grid-template-columns: 92px minmax(220px, 1.5fr) minmax(130px, 0.8fr) minmax(180px, 1fr) 220px;
+    gap: 12px;
+    align-items: center;
+  }
+
+  .inbox-list-head {
+    min-height: 38px;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface-raised);
+    padding: 0 14px;
+  }
+
+  .inbox-list-head span {
+    color: var(--text-muted);
+    font-size: 0.74rem;
+    font-weight: 900;
+  }
+
+  .inbox-row {
+    min-height: 76px;
+  }
+
+  .inbox-date-cell,
+  .inbox-state-cell,
+  .inbox-prize-cell {
+    display: grid;
+    gap: 4px;
+    align-content: center;
+  }
+
+  .inbox-action-cell {
+    gap: 6px;
+  }
+
+  .inbox-action-cell .manage-result-actions {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .inbox-action-cell .ledger-quick-receipt {
+    justify-content: flex-end;
+  }
+
+  .inbox-row .manage-edit-panel {
+    grid-column: 1 / -1;
   }
 
   .inbox-summary {

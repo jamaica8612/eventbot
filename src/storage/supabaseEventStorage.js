@@ -93,6 +93,7 @@ function toAppEvent(row) {
 
   return {
     id: row.id,
+    sourceEventId: row.source_event_id,
     title: row.title,
     originalTitle: raw.originalTitle ?? row.title,
     originalUrl: row.url,
