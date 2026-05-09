@@ -207,20 +207,23 @@ export function sortTodayAnnouncements(events) {
 }
 
 export function sortInboxEvents(events) {
-  const priority = { overdue: 0, today: 1, future: 3, unknown: 4 };
   return [...events].sort((first, second) => {
-    const firstStatus = getAnnouncementStatus(first);
-    const secondStatus = getAnnouncementStatus(second);
-    const firstScore = getInboxPriority(first, firstStatus, priority);
-    const secondScore = getInboxPriority(second, secondStatus, priority);
+    const firstScore = getInboxPriority(first);
+    const secondScore = getInboxPriority(second);
     if (firstScore !== secondScore) return firstScore - secondScore;
+    const announcementDiff = getAnnouncementTime(first) - getAnnouncementTime(second);
+    if (announcementDiff !== 0) return announcementDiff;
     return getInboxTime(second) - getInboxTime(first);
   });
 }
 
-function getInboxPriority(event, announcement, priority) {
-  if (event.resultStatus === 'unknown') return priority[announcement.state] ?? 4;
-  if (event.resultStatus === 'won' && event.receiptStatus !== 'received') return 2;
+function getInboxPriority(event) {
+  const announcement = getAnnouncementStatus(event);
+  if (event.resultStatus === 'unknown' && announcement.state === 'overdue') return 0;
+  if (event.resultStatus === 'unknown' && announcement.state === 'today') return 1;
+  if (event.resultStatus === 'unknown' && announcement.state === 'future') return 2;
+  if (event.resultStatus === 'unknown') return 3;
+  if (event.resultStatus === 'won' && event.receiptStatus !== 'received') return 4;
   if (event.resultStatus === 'won') return 5;
   if (event.resultStatus === 'lost') return 6;
   return 7;
