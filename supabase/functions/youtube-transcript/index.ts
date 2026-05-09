@@ -1,5 +1,6 @@
 const MODEL = 'gemini-2.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'access-control-allow-origin': '*',
@@ -125,10 +126,16 @@ async function fetchYoutubeContext({
   }
 
   const playerResponse = extractPlayerResponse(html);
-  const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
+  const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY') || '';
+  const apiVideo = youtubeApiKey ? await fetchYoutubeApiVideoSafe(videoId, youtubeApiKey) : null;
+  const metadata = {
+    ...extractVideoMetadata(playerResponse, html, watchUrl),
+    ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
+  };
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
   const transcript = await fetchTranscriptSafe(tracks);
-  const comments = await fetchCommentsSafe({ html, playerResponse, videoId });
+  const apiComments = youtubeApiKey ? await fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey) : [];
+  const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe({ html, playerResponse, videoId });
 
   let commentCandidates: Array<{ style: string; text: string }> = [];
   let commentCandidatesError = '';
@@ -155,6 +162,98 @@ async function fetchYoutubeContext({
     commentCandidates,
     commentCandidatesError,
   };
+}
+
+async function fetchYoutubeApiVideoSafe(videoId: string, apiKey: string) {
+  try {
+    const url = new URL(`${YOUTUBE_API_ENDPOINT}/videos`);
+    url.searchParams.set('part', 'snippet,contentDetails,statistics');
+    url.searchParams.set('id', videoId);
+    url.searchParams.set('key', apiKey);
+    url.searchParams.set('hl', 'ko');
+    const response = await fetch(url.toString());
+    if (!response.ok) return null;
+    const payload = await response.json();
+    return Array.isArray(payload.items) ? payload.items[0] ?? null : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchYoutubeApiCommentsSafe(videoId: string, apiKey: string) {
+  try {
+    const url = new URL(`${YOUTUBE_API_ENDPOINT}/commentThreads`);
+    url.searchParams.set('part', 'snippet');
+    url.searchParams.set('videoId', videoId);
+    url.searchParams.set('maxResults', '30');
+    url.searchParams.set('order', 'relevance');
+    url.searchParams.set('textFormat', 'plainText');
+    url.searchParams.set('key', apiKey);
+    const response = await fetch(url.toString());
+    if (!response.ok) return [];
+    const payload = await response.json();
+    const items = Array.isArray(payload.items) ? payload.items : [];
+    return items
+      .map((item: Record<string, any>) => {
+        const snippet = item.snippet?.topLevelComment?.snippet ?? {};
+        const text = String(snippet.textDisplay ?? snippet.textOriginal ?? '').replace(/\s+/g, ' ').trim();
+        if (!text) return null;
+        return {
+          author: String(snippet.authorDisplayName ?? ''),
+          text,
+          likes: Number(snippet.likeCount ?? 0),
+          pinned: false,
+          byUploader: Boolean(snippet.authorChannelId?.value && snippet.channelId === snippet.authorChannelId.value),
+          publishedAt: String(snippet.publishedAt ?? ''),
+        };
+      })
+      .filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+function toApiVideoMetadata(item: Record<string, any>, watchUrl: string) {
+  const snippet = item.snippet ?? {};
+  const statistics = item.statistics ?? {};
+  const contentDetails = item.contentDetails ?? {};
+  const thumbnailUrl =
+    snippet.thumbnails?.maxres?.url ||
+    snippet.thumbnails?.standard?.url ||
+    snippet.thumbnails?.high?.url ||
+    snippet.thumbnails?.medium?.url ||
+    snippet.thumbnails?.default?.url ||
+    '';
+  return {
+    title: snippet.title || '',
+    channelName: snippet.channelTitle || '',
+    channelId: snippet.channelId || '',
+    channelUrl: snippet.channelId ? `https://www.youtube.com/channel/${snippet.channelId}` : '',
+    description: snippet.description || '',
+    publishDate: snippet.publishedAt || '',
+    lengthSeconds: parseIsoDurationSeconds(contentDetails.duration),
+    viewCount: toNumberOrNull(statistics.viewCount),
+    likeCount: toNumberOrNull(statistics.likeCount),
+    commentCount: toNumberOrNull(statistics.commentCount),
+    keywords: Array.isArray(snippet.tags) ? snippet.tags.slice(0, 20) : [],
+    category: snippet.categoryId || '',
+    thumbnailUrl,
+    captionAvailable: contentDetails.caption === 'true',
+    sourceApi: 'youtube-data-api',
+    url: watchUrl,
+  };
+}
+
+function parseIsoDurationSeconds(value: string) {
+  const match = String(value ?? '').match(/^P(?:(\d+)D)?T?(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?$/);
+  if (!match) return null;
+  const [, days = '0', hours = '0', minutes = '0', seconds = '0'] = match;
+  return Number(days) * 86400 + Number(hours) * 3600 + Number(minutes) * 60 + Number(seconds);
+}
+
+function toNumberOrNull(value: unknown) {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : null;
 }
 
 async function fetchTranscriptSafe(tracks: Array<Record<string, any>>) {
