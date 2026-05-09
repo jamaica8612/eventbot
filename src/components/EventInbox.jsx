@@ -15,8 +15,6 @@ const deadlineFilters = [
   { value: 'homepage', label: '홈페이지' },
   { value: 'youtube', label: '유튜브' },
   { value: 'instagram', label: '인스타' },
-  { value: 'efficient', label: '고효율' },
-  { value: 'home', label: '집에서' },
 ];
 
 const inboxFilters = [
@@ -95,17 +93,12 @@ function TodayDeadlineRow({ event, onStatusChange }) {
       <p>{prize}</p>
       <div className="deadline-meta">
         <span>{event.platform}</span>
-        <span>{event.clickScore ?? 0}점</span>
-        <span>{event.estimatedSeconds ?? '-'}초</span>
         <span>{match.isExact ? '오늘 마감' : '마감 확인 필요'}</span>
       </div>
       <div className="deadline-actions">
         {applyHref ? <ApplyLink className="manage-link" url={applyHref} label="참여하기" /> : null}
         <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
           참여완료
-        </button>
-        <button type="button" onClick={() => onStatusChange(event.id, 'later')}>
-          집에서
         </button>
         <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
           제외
@@ -120,8 +113,6 @@ function matchesDeadlineView(event, view) {
   if (view === 'homepage') return /홈페이지|home|web/.test(platform);
   if (view === 'youtube') return /유튜브|youtube/.test(platform);
   if (view === 'instagram') return /인스타|instagram/.test(platform);
-  if (view === 'efficient') return (event.clickScore ?? 0) >= 70;
-  if (view === 'home') return event.actionType === 'home';
   return true;
 }
 

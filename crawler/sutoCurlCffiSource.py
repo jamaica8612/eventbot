@@ -109,11 +109,7 @@ def parse_list(html: str, seen_ids: set[str] | None = None, start_rank: int = 0)
         seen_ids.add(event_id)
 
         title = first_text(tr.select("td.td_subject a[href^='/cpevent/']"))
-        platform_icon = tr.select_one("td.td_subject img.site_icon")
-        platform = ((platform_icon.get("title") or platform_icon.get("alt") or "").strip() if platform_icon else "")
-        if platform not in ALLOWED_PLATFORMS:
-            continue
-
+        platform = extract_platform_from_icons(tr)
         deadline_cells = tr.select("td.td_datetime")
         deadline_date_text = deadline_cells[0].get_text(strip=True) if len(deadline_cells) >= 1 else ""
         deadline_time_text = deadline_cells[1].get_text(strip=True) if len(deadline_cells) >= 2 else ""
@@ -173,6 +169,19 @@ def select_detail_targets(events: list[dict]) -> list[dict]:
         selected_ids.add(event["id"])
 
     return selected[:DETAIL_LIMIT]
+
+
+def extract_platform_from_icons(row) -> str:
+    subject = row.select_one("td.td_subject") or row
+    for icon in subject.find_all("img"):
+        value = (icon.get("title") or icon.get("alt") or "").strip()
+        if value:
+            return normalize_platform_label(value)
+    return ""
+
+
+def normalize_platform_label(value: str) -> str:
+    return re.sub(r"\s+", " ", value).strip()
 
 
 def fetch_detail(s, url: str) -> dict:

@@ -264,7 +264,7 @@ h3 {
 
 .summary-grid {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
 }
 
@@ -719,7 +719,7 @@ h3 {
 
 .deadline-actions {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 7px;
 }
 
@@ -1340,15 +1340,11 @@ h3 {
 
 .quick-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
 }
 
 .now-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
-.home-actions {
   grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
@@ -2543,7 +2539,7 @@ h3 {
   }
 
   .now-actions {
-    grid-template-columns: repeat(3, minmax(72px, 1fr));
+    grid-template-columns: repeat(2, minmax(96px, 1fr));
   }
 
   .bottom-nav {

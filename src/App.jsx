@@ -67,7 +67,7 @@ function App() {
 
 function EventBotApp({ theme, setTheme, onLock }) {
   const { events, setEvents, isLoading } = useEvents();
-  const [filter, setFilter] = useState('now');
+  const [filter, setFilter] = useState('ready');
   const [platformFilter, setPlatformFilter] = useState('all');
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
@@ -247,16 +247,10 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
           <div className="summary-grid" aria-label="핵심 현황">
             <SummaryItem
-              active={filter === 'now'}
-              label="지금"
-              value={counts.now}
-              onClick={() => setFilter('now')}
-            />
-            <SummaryItem
-              active={filter === 'home'}
-              label="집에서"
-              value={counts.home}
-              onClick={() => setFilter('home')}
+              active={filter === 'ready'}
+              label="대기"
+              value={counts.ready}
+              onClick={() => setFilter('ready')}
             />
             <SummaryItem
               active={filter === 'todayDeadline'}
@@ -335,7 +329,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
             ))}
           </div>
 
-          {['now', 'home'].includes(filter) && platformOptions.length > 1 ? (
+          {filter === 'ready' && platformOptions.length > 1 ? (
             <div className="filter-chips" aria-label="이벤트 종류별 보기">
               <button
                 type="button"
@@ -535,8 +529,7 @@ function formatDateTime(value) {
 }
 
 function getEmptyMessage(filter) {
-  if (filter === 'now') return '지금 바로 처리할 이벤트가 없습니다.';
-  if (filter === 'home') return '집에서 처리할 이벤트가 없습니다.';
+  if (filter === 'ready') return '응모 대기 이벤트가 없습니다.';
   if (filter === 'skipped') return '제외한 이벤트가 없습니다.';
   return '표시할 이벤트가 없습니다.';
 }
@@ -567,29 +560,6 @@ function FilterSettingsPanel({ events, settings, onChange, onReset }) {
 
   return (
     <section className="settings-panel" aria-label="필터 설정">
-      <div className="settings-grid">
-        <label>
-          <span>지금 기준</span>
-          <input
-            type="number"
-            min="0"
-            max="100"
-            value={settings.nowScore}
-            onChange={(event) => updateSettings({ nowScore: event.target.value })}
-          />
-        </label>
-        <label>
-          <span>집에서 기준</span>
-          <input
-            type="number"
-            min="0"
-            max={settings.nowScore}
-            value={settings.homeScore}
-            onChange={(event) => updateSettings({ homeScore: event.target.value })}
-          />
-        </label>
-      </div>
-
       <label className="keyword-field">
         <span>제외 키워드</span>
         <textarea
@@ -631,13 +601,7 @@ function buildCounts(events, filterSettings) {
   return events.reduce(
     (acc, event) => {
       if (event.status === 'ready') acc.allReady += 1;
-      if (matchesFilter(event, 'now', filterSettings)) acc.now += 1;
-      if (
-        event.status === 'later' ||
-        matchesFilter(event, 'home', filterSettings)
-      ) {
-        acc.home += 1;
-      }
+      if (matchesFilter(event, 'ready', filterSettings)) acc.ready += 1;
       if (event.status === 'done') acc.done += 1;
       if (event.status === 'done') acc.inbox += 1;
       if (event.status === 'done' && event.resultStatus === 'unknown') {
@@ -653,8 +617,7 @@ function buildCounts(events, filterSettings) {
     },
     {
       allReady: 0,
-      now: 0,
-      home: 0,
+      ready: 0,
       done: 0,
       inbox: 0,
       todayDeadline: 0,

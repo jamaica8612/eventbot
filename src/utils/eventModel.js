@@ -41,12 +41,8 @@ function getFallbackAnnouncement(event) {
 export function matchesFilter(event, filter, filterSettings) {
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
   if (shouldHideExpiredEvent(event, filter)) return false;
-  const actionType = getConfiguredActionType(event, filterSettings);
 
-  if (filter === 'now') return event.status === 'ready' && actionType === 'now';
-  if (filter === 'home') {
-    return event.status === 'later' || (event.status === 'ready' && actionType === 'home');
-  }
+  if (filter === 'ready') return event.status === 'ready' || event.status === 'later';
   if (filter === 'todayDeadline') return getTodayDeadlineMatch(event).isMatch;
   if (filter === 'search') return event.status !== 'skipped';
   if (filter === 'inbox') return event.status === 'done';
@@ -65,17 +61,7 @@ export function isExpiredEvent(event) {
 function shouldHideExpiredEvent(event, filter) {
   if (!isExpiredEvent(event)) return false;
   if (event.status === 'done') return false;
-  return ['now', 'home', 'todayDeadline', 'search', 'skipped'].includes(filter);
-}
-
-export function getConfiguredActionType(event, filterSettings) {
-  if (!filterSettings || !Number.isFinite(event.clickScore)) {
-    return event.actionType;
-  }
-
-  if (event.clickScore >= filterSettings.nowScore) return 'now';
-  if (event.clickScore >= filterSettings.homeScore) return 'home';
-  return 'skip';
+  return ['ready', 'todayDeadline', 'search', 'skipped'].includes(filter);
 }
 
 export function isHiddenByFilterSettings(event, filterSettings) {
@@ -136,7 +122,6 @@ export function sortSearchEvents(events) {
   return [...events].sort(
     (first, second) =>
       getSearchStatusPriority(first) - getSearchStatusPriority(second) ||
-      getNumber(second.clickScore) - getNumber(first.clickScore) ||
       getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
       getNumber(first.rank) - getNumber(second.rank),
   );
@@ -243,8 +228,6 @@ export function sortTodayDeadlineEvents(events) {
     }
     return (
       getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
-      getNumber(second.clickScore) - getNumber(first.clickScore) ||
-      getNumber(first.estimatedSeconds) - getNumber(second.estimatedSeconds) ||
       getNumber(first.rank) - getNumber(second.rank)
     );
   });

@@ -69,7 +69,6 @@ function SearchResultRow({ event, onStatusChange }) {
     <article className="search-row">
       <header className="search-row-meta">
         <span>{event.platform}</span>
-        <span>{event.clickScore ?? 0}점</span>
         <span>{statusLabels[event.status] ?? event.status}</span>
         {event.status === 'done' ? <span>{resultLabels[resultStatus]}</span> : null}
       </header>
@@ -82,9 +81,9 @@ function SearchResultRow({ event, onStatusChange }) {
             참여완료
           </button>
         ) : null}
-        {event.status !== 'later' && event.status !== 'done' ? (
-          <button type="button" onClick={() => onStatusChange(event.id, 'later')}>
-            집에서
+        {event.status !== 'done' ? (
+          <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
+            제외
           </button>
         ) : null}
       </div>
@@ -95,16 +94,18 @@ function SearchResultRow({ event, onStatusChange }) {
 function buildSearchScopes(events) {
   return [
     { value: 'all', label: '전체', count: events.length },
-    { value: 'ready', label: '대기', count: events.filter((event) => event.status === 'ready').length },
-    { value: 'later', label: '집에서', count: events.filter((event) => event.status === 'later').length },
+    {
+      value: 'ready',
+      label: '대기',
+      count: events.filter((event) => event.status === 'ready' || event.status === 'later').length,
+    },
     { value: 'done', label: '응모함', count: events.filter((event) => event.status === 'done').length },
     { value: 'won', label: '당첨', count: events.filter((event) => event.resultStatus === 'won').length },
   ];
 }
 
 function matchesSearchScope(event, scope) {
-  if (scope === 'ready') return event.status === 'ready';
-  if (scope === 'later') return event.status === 'later';
+  if (scope === 'ready') return event.status === 'ready' || event.status === 'later';
   if (scope === 'done') return event.status === 'done';
   if (scope === 'won') return event.resultStatus === 'won';
   return true;

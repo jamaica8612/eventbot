@@ -15,11 +15,8 @@ const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/
 const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '');
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
-  if (filter === 'now') {
-    return <NowEventCard event={event} onStatusChange={onStatusChange} />;
-  }
-  if (filter === 'home') {
-    return <HomeEventCard event={event} onStatusChange={onStatusChange} />;
+  if (filter === 'ready') {
+    return <ReadyEventCard event={event} onStatusChange={onStatusChange} />;
   }
   if (filter === 'todayAnnouncement') {
     return (
@@ -545,7 +542,7 @@ function EventSourceSummary({ event }) {
   );
 }
 
-function NowEventCard({ event, onStatusChange }) {
+function ReadyEventCard({ event, onStatusChange }) {
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
   const applyHref = event.applyUrl ?? event.url;
@@ -554,7 +551,7 @@ function NowEventCard({ event, onStatusChange }) {
     <article className="event-card now-card">
       <div className="score-row">
         <span>{event.platform}</span>
-        <strong>{event.clickScore}점</strong>
+        <strong>{Number.isFinite(event.bookmarkCount) ? `${event.bookmarkCount}명` : '대기'}</strong>
       </div>
 
       <h3>{event.title}</h3>
@@ -566,43 +563,7 @@ function NowEventCard({ event, onStatusChange }) {
         <ApplyLink className="apply-link primary-apply" url={applyHref} label="참여하기" />
       ) : null}
 
-      <div className="quick-actions now-actions" aria-label={`${event.title} 빠른 처리`}>
-        <button type="button" onClick={() => onStatusChange(event.id, 'later')}>
-          집에서
-        </button>
-        <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
-          참여완료
-        </button>
-        <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
-          제외
-        </button>
-      </div>
-    </article>
-  );
-}
-
-function HomeEventCard({ event, onStatusChange }) {
-  const userContentLines = buildUserContentLines(event);
-  const sourceFacts = buildSourceFacts(event);
-  const applyHref = event.applyUrl ?? event.url;
-
-  return (
-    <article className="event-card home-card">
-      <div className="score-row">
-        <span>{event.platform}</span>
-        <strong>{event.clickScore}점</strong>
-      </div>
-
-      <h3>{event.title}</h3>
-      <EventScheduleMeta event={event} />
-      <p className="decision-reason">{event.decisionReason}</p>
-      <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
-
-      {applyHref ? (
-        <ApplyLink className="apply-link primary-apply" url={applyHref} label="참여하기" />
-      ) : null}
-
-      <div className="quick-actions home-actions" aria-label={`${event.title} 집 처리`}>
+      <div className="quick-actions now-actions" aria-label={`${event.title} 처리`}>
         <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
           참여완료
         </button>
@@ -672,13 +633,11 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
   return (
     <article className="event-card">
       <div className="card-topline">
-        <span className={`tag tag-${event.effort}`}>{event.effortLabel}</span>
         <span className={`status status-${event.status}`}>{statusLabels[event.status]}</span>
       </div>
 
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
-      <p className="decision-reason">{event.decisionReason}</p>
       <EventSourceSummary event={event} />
 
       {event.status === 'done' ? (

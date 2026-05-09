@@ -247,7 +247,7 @@ function parseSutoHotEvents(html) {
 
   return anchorMatches
     .map((match) => parseEventAnchor(match[1], match[2]))
-    .filter((event) => event && shouldKeepEvent(event));
+    .filter(Boolean);
 }
 
 async function hydrateEventDetails(events) {
@@ -316,7 +316,7 @@ function parseEventAnchor(href, innerHtml) {
     return null;
   }
 
-  const platform = extractImageTitle(innerHtml) || '이벤트';
+  const platform = extractEventCategory(innerHtml) || '이벤트';
   const eventId = href.match(/\/cpevent\/(\d+)/)?.[1] ?? slugify(href);
   const originalUrl = normalizeUrl(href);
   const applyUrl = buildApplyUrl(eventId);
@@ -367,9 +367,26 @@ function extractTextByClass(html, className) {
   return match ? cleanText(match[1]) : '';
 }
 
-function extractImageTitle(html) {
-  const match = html.match(/<img\b[^>]*title=["']([^"']+)["'][^>]*>/i);
+function extractEventCategory(html) {
+  const imageMatches = [...html.matchAll(/<img\b[^>]*>/gi)];
+  for (const [imageHtml] of imageMatches) {
+    const title = getHtmlAttribute(imageHtml, 'title') || getHtmlAttribute(imageHtml, 'alt');
+    const category = normalizeEventCategory(title);
+    if (category) return category;
+  }
+  return '';
+}
+
+function getHtmlAttribute(html, name) {
+  const match = html.match(new RegExp(`\\b${name}=["']([^"']+)["']`, 'i'));
   return match ? decodeHtml(match[1]) : '';
+}
+
+function normalizeEventCategory(value) {
+  return String(value ?? '')
+    .replace(/\s+/g, ' ')
+    .replace(/^\[[^\]]+\]\s*/, '')
+    .trim();
 }
 
 function extractNumberByClass(html, className) {
@@ -446,11 +463,6 @@ function decodeHtml(value) {
     .replaceAll('&gt;', '>')
     .replaceAll('&quot;', '"')
     .replaceAll('&#39;', "'");
-}
-
-function shouldKeepEvent(event) {
-  const text = `${event.title} ${event.platform}`;
-  return event.platform !== '인스타그램 이벤트';
 }
 
 function normalizeUrl(href) {

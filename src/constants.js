@@ -18,14 +18,12 @@ export const receiptLabels = {
 };
 
 export const statusActions = [
-  { value: 'later', label: '나중에' },
   { value: 'done', label: '참여완료' },
   { value: 'skipped', label: '제외' },
 ];
 
 export const primaryFilters = [
-  { value: 'now', label: '지금', countKey: 'now' },
-  { value: 'home', label: '집에서', countKey: 'home' },
+  { value: 'ready', label: '대기', countKey: 'ready' },
   { value: 'todayDeadline', label: '오늘마감', countKey: 'todayDeadline' },
   { value: 'search', label: '검색', countKey: 'searchable' },
   { value: 'inbox', label: '응모함', countKey: 'inbox' },
@@ -38,8 +36,7 @@ export const utilityFilters = [
 export const manageFilters = new Set(['inbox']);
 
 export const filterTitles = {
-  now: '지금 바로 딸깍',
-  home: '집에서 처리할 이벤트',
+  ready: '응모 대기 이벤트',
   todayDeadline: '오늘 마감 이벤트',
   search: '이벤트 검색',
   inbox: '응모함',
