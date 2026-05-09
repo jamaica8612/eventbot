@@ -7,6 +7,7 @@ import {
 } from './constants.js';
 import {
   buildPlatformOptions,
+  isInstagramEvent,
   matchesFilter,
   matchesTodayAnnouncement,
   sortInboxEvents,
@@ -183,11 +184,13 @@ function EventBotApp({ theme, setTheme, onLock }) {
     setNotificationState(permission);
   }
 
-  const counts = useMemo(() => buildCounts(events, filterSettings), [events, filterSettings]);
+  const appEvents = useMemo(() => events.filter((event) => !isInstagramEvent(event)), [events]);
+
+  const counts = useMemo(() => buildCounts(appEvents, filterSettings), [appEvents, filterSettings]);
 
   const filteredByTabEvents = useMemo(
-    () => events.filter((event) => matchesFilter(event, filter, filterSettings)),
-    [events, filter, filterSettings],
+    () => appEvents.filter((event) => matchesFilter(event, filter, filterSettings)),
+    [appEvents, filter, filterSettings],
   );
 
   const platformOptions = useMemo(
@@ -209,10 +212,10 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
   const winningTotal = useMemo(
     () =>
-      events
+      appEvents
         .filter((event) => event.resultStatus === 'won')
         .reduce((total, event) => total + parsePrizeAmount(event.prizeAmount), 0),
-    [events],
+    [appEvents],
   );
 
   const isManageMode = manageFilters.has(filter);
@@ -312,7 +315,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
           {isSettingsOpen ? (
             <FilterSettingsPanel
-              events={events}
+              events={appEvents}
               settings={filterSettings}
               onChange={setFilterSettings}
               onReset={() => setFilterSettings(defaultFilterSettings)}

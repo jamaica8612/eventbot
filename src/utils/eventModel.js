@@ -41,6 +41,7 @@ function getFallbackAnnouncement(event) {
 }
 
 export function matchesFilter(event, filter, filterSettings) {
+  if (isInstagramEvent(event)) return false;
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
   if (shouldHideExpiredEvent(event, filter)) return false;
 
@@ -52,6 +53,35 @@ export function matchesFilter(event, filter, filterSettings) {
   if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
   if (filter === 'won') return event.resultStatus === 'won';
   return event.status === filter;
+}
+
+export function isInstagramEvent(event) {
+  const raw = event?.raw ?? {};
+  const text = normalizeSearchText(
+    [
+      event?.title,
+      event?.originalTitle,
+      event?.platform,
+      event?.source,
+      event?.originalText,
+      event?.url,
+      event?.originalUrl,
+      event?.applyUrl,
+      raw.title,
+      raw.originalTitle,
+      raw.platform,
+      raw.source,
+      raw.originalText,
+      raw.url,
+      raw.originalUrl,
+      raw.applyUrl,
+      ...(Array.isArray(event?.originalLines) ? event.originalLines : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines : []),
+      ...(Array.isArray(raw.externalLinks) ? raw.externalLinks : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return /instagram|insta|인스타|인스타그램/.test(text);
 }
 
 export function isExpiredEvent(event) {

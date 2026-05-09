@@ -59,7 +59,10 @@ def main() -> None:
             if index > 0:
                 time.sleep(DETAIL_DELAY_SECONDS)
             detail = fetch_detail_with_fallbacks(event["originalUrl"])
-            payload.append({**event, **detail})
+            hydrated_event = {**event, **detail}
+            if is_instagram_event(hydrated_event):
+                continue
+            payload.append(hydrated_event)
     print(json.dumps(payload, ensure_ascii=False))
 
 
@@ -117,6 +120,8 @@ def parse_list(html: str, seen_ids: set[str] | None = None, start_rank: int = 0)
 
         title = first_text(tr.select("td.td_subject a[href^='/cpevent/']"))
         platform = extract_platform_from_icons(tr)
+        if is_instagram_event({"title": title, "platform": platform}):
+            continue
         deadline_cells = tr.select("td.td_datetime")
         deadline_date_text = deadline_cells[0].get_text(strip=True) if len(deadline_cells) >= 1 else ""
         deadline_time_text = deadline_cells[1].get_text(strip=True) if len(deadline_cells) >= 2 else ""
@@ -189,6 +194,23 @@ def extract_platform_from_icons(row) -> str:
 
 def normalize_platform_label(value: str) -> str:
     return re.sub(r"\s+", " ", value).strip()
+
+
+def is_instagram_event(event: dict) -> bool:
+    text_parts = [
+        event.get("title"),
+        event.get("originalTitle"),
+        event.get("platform"),
+        event.get("source"),
+        event.get("originalText"),
+        event.get("url"),
+        event.get("originalUrl"),
+        event.get("applyUrl"),
+        *(event.get("externalLinks") or []),
+        *(event.get("originalLines") or []),
+    ]
+    text = " ".join(str(part) for part in text_parts if part).lower()
+    return bool(re.search(r"instagram|insta|인스타|인스타그램", text))
 
 
 def fetch_detail(s, url: str) -> dict:

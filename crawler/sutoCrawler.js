@@ -37,13 +37,13 @@ async function loadSutoEvents() {
   });
 
   if (curlCffiEvents.length > 0) {
-    const events = curlCffiEvents.map(hydrateCurlCffiEvent);
+    const events = curlCffiEvents.map(hydrateCurlCffiEvent).filter((event) => !isInstagramEvent(event));
     printCrawlQualitySummary(events);
     return events;
   }
 
   const html = await fetchHtml(SOURCE_URL);
-  return hydrateEventDetails(parseSutoHotEvents(html));
+  return hydrateEventDetails(parseSutoHotEvents(html)).filter((event) => !isInstagramEvent(event));
 }
 
 function printCrawlQualitySummary(events) {
@@ -86,6 +86,25 @@ function printCrawlQualitySummary(events) {
 
 function hasYoutubeTranscript(event) {
   return (event.youtubeTranscripts ?? []).some((transcript) => transcript.status === 'ok' && transcript.text);
+}
+
+function isInstagramEvent(event) {
+  const text = [
+    event.title,
+    event.originalTitle,
+    event.platform,
+    event.source,
+    event.originalText,
+    event.url,
+    event.originalUrl,
+    event.applyUrl,
+    ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+    ...(Array.isArray(event.externalLinks) ? event.externalLinks : []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+  return /instagram|insta|인스타|인스타그램/.test(text);
 }
 
 async function saveJsonPayload(payload) {
