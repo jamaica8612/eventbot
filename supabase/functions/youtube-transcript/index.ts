@@ -4,12 +4,23 @@ const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, OPTIONS',
-  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type, x-eventbot-token',
 };
+const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
+  }
+
+  const passcodeSecret = Deno.env.get('EVENTBOT_PASSCODE');
+  if (!passcodeSecret) {
+    return json({ error: '비밀번호 secret이 설정되지 않았습니다.' }, 500);
+  }
+
+  const token = request.headers.get('x-eventbot-token') ?? '';
+  if (!(await verifyToken(token, passcodeSecret))) {
+    return json({ error: '잠금 해제가 필요합니다.' }, 401);
   }
 
   try {
@@ -28,6 +39,46 @@ Deno.serve(async (request) => {
     );
   }
 });
+
+async function verifyToken(token: string, secret: string) {
+  const [issuedAt, signature] = token.split('.');
+  const issuedAtNumber = Number(issuedAt);
+  if (!issuedAt || !signature || !Number.isFinite(issuedAtNumber)) return false;
+  if (Date.now() - issuedAtNumber > TOKEN_TTL_MS) return false;
+  return constantTimeEqual(signature, await sign(issuedAt, secret));
+}
+
+function constantTimeEqual(left: string, right: string) {
+  const leftBytes = new TextEncoder().encode(left);
+  const rightBytes = new TextEncoder().encode(right);
+  const length = Math.max(leftBytes.length, rightBytes.length);
+  let diff = leftBytes.length ^ rightBytes.length;
+
+  for (let index = 0; index < length; index += 1) {
+    diff |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
+  }
+
+  return diff === 0;
+}
+
+async function sign(value: string, secret: string) {
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign'],
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
+  return toBase64Url(new Uint8Array(signature));
+}
+
+function toBase64Url(bytes: Uint8Array) {
+  let text = '';
+  for (const byte of bytes) text += String.fromCharCode(byte);
+  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+}
 
 function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: JSON_HEADERS });

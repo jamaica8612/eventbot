@@ -1,0 +1,8 @@
+[functions.verify-passcode]
+verify_jwt = false
+
+[functions.eventbot-data]
+verify_jwt = false
+
+[functions.youtube-transcript]
+verify_jwt = false

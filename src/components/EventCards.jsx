@@ -8,6 +8,7 @@ import {
   getPrizeDisplay,
   hasCrawledBody,
 } from '../utils/eventModel.js';
+import { getAuthToken } from '../storage/passcodeAuthStorage.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
@@ -368,6 +369,7 @@ function getYoutubeContextHeaders(endpoint) {
   if (SUPABASE_URL && endpoint.startsWith(`${SUPABASE_URL}/functions/v1/`)) {
     headers.apikey = SUPABASE_ANON_KEY;
     headers.authorization = `Bearer ${SUPABASE_ANON_KEY}`;
+    headers['x-eventbot-token'] = getAuthToken();
   }
   return headers;
 }
