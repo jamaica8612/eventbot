@@ -400,9 +400,7 @@ function buildYoutubeCommentMaterialText(event, context) {
   const commentLines = (context.comments ?? [])
     .slice(0, 20)
     .map((comment) => `- 좋아요 ${comment.likes ?? 0}: ${comment.text}`);
-  const transcriptLines = Array.isArray(context.transcript?.lines)
-    ? context.transcript.lines
-    : [];
+  const transcriptLines = getYoutubeTranscriptLines(event, context);
   const candidateLines = (context.commentCandidates ?? []).map(
     (candidate, index) => `${index + 1}. ${candidate.style ? `${candidate.style}: ` : ''}${candidate.text}`,
   );
@@ -450,6 +448,38 @@ function buildYoutubeCommentMaterialText(event, context) {
     '[생성된 댓글 후보]',
     candidateLines.join('\n') || '-',
   ].join('\n');
+}
+
+function getYoutubeTranscriptLines(event, context) {
+  if (Array.isArray(context?.transcript?.lines) && context.transcript.lines.length > 0) {
+    return context.transcript.lines;
+  }
+
+  const transcripts = [
+    ...(Array.isArray(event?.youtubeTranscripts) ? event.youtubeTranscripts : []),
+    ...(Array.isArray(event?.raw?.youtubeTranscripts) ? event.raw.youtubeTranscripts : []),
+  ];
+  const crawledTranscript = transcripts.find(
+    (transcript) =>
+      transcript?.status === 'ok' &&
+      (Array.isArray(transcript.lines) ? transcript.lines.length > 0 : transcript.text),
+  );
+  if (Array.isArray(crawledTranscript?.lines) && crawledTranscript.lines.length > 0) {
+    return crawledTranscript.lines;
+  }
+  if (crawledTranscript?.text) {
+    return String(crawledTranscript.text)
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  if (context?.transcript?.text) {
+    return String(context.transcript.text)
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [];
 }
 
 function buildCommentEventInfo(event) {

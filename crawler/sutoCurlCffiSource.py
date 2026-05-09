@@ -1,10 +1,13 @@
 from __future__ import annotations
 
+import html
 import json
 import os
 import re
 import sys
 import time
+import urllib.request
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 
 from bs4 import BeautifulSoup
@@ -13,6 +16,10 @@ try:
     from youtube_transcript_api import YouTubeTranscriptApi
 except Exception:  # pragma: no cover - optional at runtime
     YouTubeTranscriptApi = None
+try:
+    from yt_dlp import YoutubeDL
+except Exception:  # pragma: no cover - optional at runtime
+    YoutubeDL = None
 
 if hasattr(sys.stdout, "reconfigure"):
     sys.stdout.reconfigure(encoding="utf-8")
@@ -387,63 +394,219 @@ def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) 
 
 def fetch_youtube_transcripts(links: list[str]) -> list[dict]:
     global YOUTUBE_TRANSCRIPT_BLOCKED
-    if YOUTUBE_TRANSCRIPT_LIMIT <= 0 or YOUTUBE_TRANSCRIPT_BLOCKED:
+    if YOUTUBE_TRANSCRIPT_LIMIT <= 0:
         return []
 
     video_refs = unique_youtube_video_refs(links)
     if not video_refs:
         return []
 
-    if YouTubeTranscriptApi is None:
-        return [
+    api = YouTubeTranscriptApi() if YouTubeTranscriptApi is not None and not YOUTUBE_TRANSCRIPT_BLOCKED else None
+    transcripts = []
+    for ref in video_refs[:YOUTUBE_TRANSCRIPT_LIMIT]:
+        if transcripts:
+            time.sleep(YOUTUBE_TRANSCRIPT_DELAY_SECONDS)
+
+        transcript = fetch_transcript_with_api(None if YOUTUBE_TRANSCRIPT_BLOCKED else api, ref)
+        if transcript.get("status") != "ok":
+            fallback = fetch_transcript_with_ytdlp(ref)
+            if fallback.get("status") == "ok":
+                transcript = fallback
+            elif transcript.get("status") in {"unavailable", "failed", "empty"}:
+                transcript["fallbackMessage"] = fallback.get("message", "")
+                transcript["fallbackStatus"] = fallback.get("status", "unavailable")
+
+        transcripts.append(transcript)
+    return transcripts
+
+
+def fetch_transcript_with_api(api, ref: dict) -> dict:
+    global YOUTUBE_TRANSCRIPT_BLOCKED
+    if api is None:
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "unavailable",
+            "source": "youtube-transcript-api",
+            "message": "youtube-transcript-api is not available or is blocked.",
+            "lines": [],
+            "text": "",
+        }
+
+    try:
+        fetched = api.fetch(ref["videoId"], languages=["ko", "en"])
+        snippets = list(fetched)
+        lines = compact_transcript_lines([snippet.text for snippet in snippets])
+        text = "\n".join(lines)[:YOUTUBE_TRANSCRIPT_TEXT_LIMIT].strip()
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "ok" if text else "empty",
+            "source": "youtube-transcript-api",
+            "language": getattr(fetched, "language_code", ""),
+            "isGenerated": bool(getattr(fetched, "is_generated", False)),
+            "lineCount": len(lines),
+            "text": text,
+            "lines": lines,
+        }
+    except Exception as exc:
+        message = first_error_line(str(exc))
+        if "IpBlocked" in type(exc).__name__ or "blocking requests from your IP" in str(exc):
+            YOUTUBE_TRANSCRIPT_BLOCKED = True
+            message = "YouTube transcript requests are blocked by the current IP."
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "failed",
+            "source": "youtube-transcript-api",
+            "message": message,
+            "lines": [],
+            "text": "",
+        }
+
+
+def fetch_transcript_with_ytdlp(ref: dict) -> dict:
+    if YoutubeDL is None:
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "unavailable",
+            "source": "yt-dlp",
+            "message": "yt-dlp is not installed.",
+            "lines": [],
+            "text": "",
+        }
+
+    try:
+        with YoutubeDL(
             {
-                "videoId": video_refs[0]["videoId"],
-                "url": video_refs[0]["url"],
+                "quiet": True,
+                "no_warnings": True,
+                "skip_download": True,
+                "extract_flat": False,
+                "noplaylist": True,
+            }
+        ) as ydl:
+            info = ydl.extract_info(ref["url"], download=False)
+        track = pick_ytdlp_caption_track(info)
+        if not track:
+            return {
+                "videoId": ref["videoId"],
+                "url": ref["url"],
                 "status": "unavailable",
-                "message": "youtube-transcript-api is not installed.",
+                "source": "yt-dlp",
+                "message": "No YouTube subtitles or automatic captions were found.",
                 "lines": [],
                 "text": "",
             }
-        ]
 
-    api = YouTubeTranscriptApi()
-    transcripts = []
-    for ref in video_refs[:YOUTUBE_TRANSCRIPT_LIMIT]:
-        try:
-            if transcripts:
-                time.sleep(YOUTUBE_TRANSCRIPT_DELAY_SECONDS)
-            fetched = api.fetch(ref["videoId"], languages=["ko", "en"])
-            snippets = list(fetched)
-            lines = compact_transcript_lines([snippet.text for snippet in snippets])
-            text = "\n".join(lines)[:YOUTUBE_TRANSCRIPT_TEXT_LIMIT].strip()
-            transcripts.append(
-                {
-                    "videoId": ref["videoId"],
-                    "url": ref["url"],
-                    "status": "ok" if text else "empty",
-                    "language": getattr(fetched, "language_code", ""),
-                    "isGenerated": bool(getattr(fetched, "is_generated", False)),
-                    "lineCount": len(lines),
-                    "text": text,
-                    "lines": lines,
-                }
-            )
-        except Exception as exc:
-            message = first_error_line(str(exc))
-            if "IpBlocked" in type(exc).__name__ or "blocking requests from your IP" in str(exc):
-                YOUTUBE_TRANSCRIPT_BLOCKED = True
-                message = "YouTube transcript requests are blocked by the current IP."
-            transcripts.append(
-                {
-                    "videoId": ref["videoId"],
-                    "url": ref["url"],
-                    "status": "failed",
-                    "message": message,
-                    "lines": [],
-                    "text": "",
-                }
-            )
-    return transcripts
+        raw_caption = download_caption_track(track["url"])
+        lines = compact_transcript_lines(parse_caption_text(raw_caption, track.get("ext", "")))
+        text = "\n".join(lines)[:YOUTUBE_TRANSCRIPT_TEXT_LIMIT].strip()
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "ok" if text else "empty",
+            "source": "yt-dlp",
+            "language": track.get("language", ""),
+            "isGenerated": bool(track.get("isGenerated")),
+            "lineCount": len(lines),
+            "text": text,
+            "lines": lines,
+        }
+    except Exception as exc:
+        return {
+            "videoId": ref["videoId"],
+            "url": ref["url"],
+            "status": "failed",
+            "source": "yt-dlp",
+            "message": first_error_line(str(exc)),
+            "lines": [],
+            "text": "",
+        }
+
+
+def pick_ytdlp_caption_track(info: dict | None) -> dict | None:
+    if not info:
+        return None
+
+    preferred_languages = ["ko", "ko-orig", "en", "en-orig"]
+    groups = [
+        (info.get("subtitles") or {}, False),
+        (info.get("automatic_captions") or {}, True),
+    ]
+    for captions, is_generated in groups:
+        for language in [*preferred_languages, *captions.keys()]:
+            tracks = captions.get(language)
+            if not tracks:
+                continue
+            track = pick_best_caption_format(tracks)
+            if track and track.get("url"):
+                return {**track, "language": language, "isGenerated": is_generated}
+    return None
+
+
+def pick_best_caption_format(tracks: list[dict]) -> dict | None:
+    preferred_exts = ["json3", "srv3", "ttml", "vtt"]
+    for ext in preferred_exts:
+        for track in tracks:
+            if track.get("ext") == ext and track.get("url"):
+                return track
+    for track in tracks:
+        if track.get("url"):
+            return track
+    return None
+
+
+def download_caption_track(url: str) -> str:
+    request = urllib.request.Request(url, headers={"User-Agent": MOBILE_UA})
+    with urllib.request.urlopen(request, timeout=20) as response:
+        return response.read().decode("utf-8", errors="replace")
+
+
+def parse_caption_text(value: str, ext: str) -> list[str]:
+    if not value:
+        return []
+    if ext == "json3" or value.lstrip().startswith("{"):
+        return parse_json3_caption(value)
+    if ext in {"srv3", "ttml"} or value.lstrip().startswith("<"):
+        return parse_xml_caption(value)
+    return parse_vtt_caption(value)
+
+
+def parse_json3_caption(value: str) -> list[str]:
+    payload = json.loads(value)
+    lines = []
+    for event in payload.get("events", []):
+        text = "".join(segment.get("utf8", "") for segment in event.get("segs", []))
+        if text.strip():
+            lines.append(text)
+    return lines
+
+
+def parse_xml_caption(value: str) -> list[str]:
+    root = ET.fromstring(value)
+    lines = []
+    for element in root.iter():
+        if element.text and element.text.strip():
+            lines.append(html.unescape(element.text))
+    return lines
+
+
+def parse_vtt_caption(value: str) -> list[str]:
+    lines = []
+    for line in value.splitlines():
+        stripped = line.strip()
+        if (
+            not stripped
+            or stripped == "WEBVTT"
+            or stripped.startswith(("Kind:", "Language:", "NOTE"))
+            or "-->" in stripped
+            or re.fullmatch(r"\d+", stripped)
+        ):
+            continue
+        lines.append(re.sub(r"<[^>]+>", "", html.unescape(stripped)))
+    return lines
 
 
 def unique_youtube_video_refs(links: list[str]) -> list[dict]:
