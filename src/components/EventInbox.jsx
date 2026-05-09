@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react';
 import { receiptLabels, resultLabels } from '../constants.js';
 import {
   getAnnouncementStatus,
+  getPrizeDisplay,
   sortInboxEvents,
 } from '../utils/eventModel.js';
 import { getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from '../utils/deadlineModel.js';
