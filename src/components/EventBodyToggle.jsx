@@ -3,6 +3,7 @@ import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
 import { getAuthToken, requireUnlock } from '../storage/passcodeAuthStorage.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
+const YOUTUBE_INFO_TIMEOUT_MS = 45000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '');
@@ -34,6 +35,7 @@ export function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
   const [youtubeContext, setYoutubeContext] = useState(null);
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
+  const [infoStatus, setInfoStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
   const [copyStatus, setCopyStatus] = useState('idle');
   const [copiedCandidateIndex, setCopiedCandidateIndex] = useState(-1);
@@ -44,6 +46,66 @@ export function EventBodyToggle({ event, lines, facts }) {
   const canFetchYoutubeTranscript = isYoutubeEvent(event) && Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
+
+  async function fetchYoutubeContextPayload({ mode, signal }) {
+    const endpoint = getYoutubeContextEndpoint();
+    const response = await fetch(endpoint, {
+      method: 'POST',
+      headers: getYoutubeContextHeaders(endpoint),
+      signal,
+      body: JSON.stringify({
+        mode,
+        url: youtubeLink,
+        eventInfo: buildCommentEventInfo(event),
+      }),
+    });
+    const payload = await readJsonResponse(response);
+    if (!response.ok) {
+      if (response.status === 401) {
+        requireUnlock();
+      }
+      throw new Error(payload.error || '유튜브 자료를 가져오지 못했습니다.');
+    }
+    return payload;
+  }
+
+  async function handleYoutubeInfoFetch(clickEvent) {
+    clickEvent.stopPropagation();
+    if (!youtubeLink || infoStatus === 'loading') return;
+
+    setInfoStatus('loading');
+    setTranscriptError('');
+    const abortController = new AbortController();
+    const timeoutId = window.setTimeout(() => abortController.abort(), YOUTUBE_INFO_TIMEOUT_MS);
+    try {
+      const payload = await fetchYoutubeContextPayload({
+        mode: 'context',
+        signal: abortController.signal,
+      });
+      setYoutubeContext(payload);
+      setAreCandidatesVisible(false);
+      const materialText = buildYoutubeCommentMaterialText(event, payload);
+      try {
+        await copyTextToClipboard(materialText);
+        setManualCopyText('');
+        setCopyStatus('copied');
+        window.setTimeout(() => setCopyStatus('idle'), 1600);
+      } catch {
+        setManualCopyText(materialText);
+        setCopyStatus('failed');
+      }
+      setInfoStatus('done');
+    } catch (error) {
+      const message =
+        error.name === 'AbortError'
+          ? '유튜브 정보수집이 너무 오래 걸려 중단했습니다. 잠시 뒤 다시 시도하세요.'
+          : error.message || '유튜브 자료를 가져오지 못했습니다.';
+      setTranscriptError(message);
+      setInfoStatus('failed');
+    } finally {
+      window.clearTimeout(timeoutId);
+    }
+  }
 
   async function handleYoutubeTranscriptFetch(clickEvent) {
     clickEvent.stopPropagation();
@@ -59,23 +121,10 @@ export function EventBodyToggle({ event, lines, facts }) {
     const abortController = new AbortController();
     const timeoutId = window.setTimeout(() => abortController.abort(), YOUTUBE_CONTEXT_TIMEOUT_MS);
     try {
-      const endpoint = getYoutubeContextEndpoint();
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: getYoutubeContextHeaders(endpoint),
+      const payload = await fetchYoutubeContextPayload({
+        mode: 'candidates',
         signal: abortController.signal,
-        body: JSON.stringify({
-          url: youtubeLink,
-          eventInfo: buildCommentEventInfo(event),
-        }),
       });
-      const payload = await readJsonResponse(response);
-      if (!response.ok) {
-        if (response.status === 401) {
-          requireUnlock();
-        }
-        throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
-      }
       setYoutubeContext(payload);
       setAreCandidatesVisible(true);
       setTranscriptError('');
@@ -161,20 +210,32 @@ export function EventBodyToggle({ event, lines, facts }) {
             <p key={line}>{line}</p>
           ))}
           {canFetchYoutubeTranscript ? (
-            <button
-              type="button"
-              className="youtube-transcript-button"
-              onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-              onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-              onClick={handleYoutubeTranscriptFetch}
-              disabled={transcriptStatus === 'loading'}
-            >
-              {transcriptStatus === 'loading'
-                ? '댓글 후보 생성 중'
-                : hasCommentCandidates
-                  ? '댓글 후보 보기'
-                  : '댓글 후보 만들기'}
-            </button>
+            <>
+              <button
+                type="button"
+                className="youtube-transcript-button"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={handleYoutubeInfoFetch}
+                disabled={infoStatus === 'loading' || transcriptStatus === 'loading'}
+              >
+                {infoStatus === 'loading' ? '유튜브 정보수집 중' : '유튜브 정보수집'}
+              </button>
+              <button
+                type="button"
+                className="youtube-transcript-button"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={handleYoutubeTranscriptFetch}
+                disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
+              >
+                {transcriptStatus === 'loading'
+                  ? '댓글 후보 생성 중'
+                  : hasCommentCandidates
+                    ? '댓글 후보 보기'
+                    : '댓글 후보 만들기'}
+              </button>
+            </>
           ) : null}
           {transcriptError ? <p className="youtube-transcript-error">{transcriptError}</p> : null}
           {youtubeContext ? (
@@ -339,12 +400,15 @@ function buildYoutubeCommentMaterialText(event, context) {
   const commentLines = (context.comments ?? [])
     .slice(0, 20)
     .map((comment) => `- 좋아요 ${comment.likes ?? 0}: ${comment.text}`);
+  const transcriptLines = Array.isArray(context.transcript?.lines)
+    ? context.transcript.lines
+    : [];
   const candidateLines = (context.commentCandidates ?? []).map(
     (candidate, index) => `${index + 1}. ${candidate.style ? `${candidate.style}: ` : ''}${candidate.text}`,
   );
 
   return [
-    '[댓글 후보 생성용 유튜브 이벤트 자료]',
+    '[유튜브 이벤트 자료]',
     '',
     '아래 정보를 바탕으로 이벤트 댓글 후보를 만들어줘.',
     'AI가 쓴 설명문처럼 쓰지 말고, 영상과 이벤트 조건을 이해한 사람이 바로 댓글창에 남기는 말투로 작성해줘.',
@@ -370,6 +434,9 @@ function buildYoutubeCommentMaterialText(event, context) {
     '',
     '[영상 설명]',
     context.description || '-',
+    '',
+    '[영상 스크립트]',
+    transcriptLines.length ? transcriptLines.join('\n') : context.transcript?.text || '-',
     '',
     '[이벤트 본문]',
     originalLines.join('\n') || '-',

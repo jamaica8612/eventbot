@@ -30,7 +30,8 @@ Deno.serve(async (request) => {
       body.videoId ||
       requestUrl.searchParams.get('videoId') ||
       extractVideoId(body.url || requestUrl.searchParams.get('url') || '');
-    const context = await fetchYoutubeContext({ videoId, eventInfo: body.eventInfo ?? {} });
+    const mode = body.mode === 'context' ? 'context' : 'candidates';
+    const context = await fetchYoutubeContext({ videoId, eventInfo: body.eventInfo ?? {}, mode });
     return json(context);
   } catch (error) {
     return json(
@@ -99,7 +100,15 @@ function extractVideoId(value = '') {
   return '';
 }
 
-async function fetchYoutubeContext({ videoId, eventInfo }: { videoId: string; eventInfo: Record<string, unknown> }) {
+async function fetchYoutubeContext({
+  videoId,
+  eventInfo,
+  mode,
+}: {
+  videoId: string;
+  eventInfo: Record<string, unknown>;
+  mode: 'context' | 'candidates';
+}) {
   if (!videoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
@@ -118,13 +127,17 @@ async function fetchYoutubeContext({ videoId, eventInfo }: { videoId: string; ev
   const playerResponse = extractPlayerResponse(html);
   const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const transcript = await fetchTranscriptSafe(tracks);
+  const comments = await fetchCommentsSafe({ html, playerResponse, videoId });
 
   let commentCandidates: Array<{ style: string; text: string }> = [];
   let commentCandidatesError = '';
-  try {
-    commentCandidates = await generateCommentCandidates({ videoUrl: watchUrl, eventInfo });
-  } catch (error) {
-    commentCandidatesError = error instanceof Error ? error.message : 'Gemini 댓글 생성에 실패했습니다.';
+  if (mode === 'candidates') {
+    try {
+      commentCandidates = await generateCommentCandidates({ videoUrl: watchUrl, eventInfo });
+    } catch (error) {
+      commentCandidatesError = error instanceof Error ? error.message : 'Gemini 댓글 생성에 실패했습니다.';
+    }
   }
 
   return {
@@ -136,12 +149,191 @@ async function fetchYoutubeContext({ videoId, eventInfo }: { videoId: string; ev
       name: getText(track.name),
       isGenerated: track.kind === 'asr',
     })),
-    transcript: null,
-    transcriptError: '',
-    comments: [],
+    transcript,
+    transcriptError: transcript ? '' : '사용 가능한 공개 자막을 찾지 못했습니다.',
+    comments,
     commentCandidates,
     commentCandidatesError,
   };
+}
+
+async function fetchTranscriptSafe(tracks: Array<Record<string, any>>) {
+  try {
+    const track = chooseCaptionTrack(tracks);
+    if (!track?.baseUrl) return null;
+    const url = new URL(String(track.baseUrl));
+    url.searchParams.set('fmt', 'json3');
+    const response = await fetch(url.toString());
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const lines = (Array.isArray(payload.events) ? payload.events : [])
+      .map((event: Record<string, any>) =>
+        (Array.isArray(event.segs) ? event.segs : [])
+          .map((segment: Record<string, unknown>) => String(segment.utf8 ?? ''))
+          .join(''),
+      )
+      .map((line: string) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    const compactLines = dedupeAdjacentLines(lines).slice(0, 160);
+    return {
+      languageCode: String(track.languageCode ?? ''),
+      isGenerated: track.kind === 'asr',
+      lines: compactLines,
+      text: compactLines.join('\n'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function chooseCaptionTrack(tracks: Array<Record<string, any>>) {
+  if (!Array.isArray(tracks) || tracks.length === 0) return null;
+  return (
+    tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('ko')) ??
+    tracks.find((track) => /korean|한국|한글/i.test(getText(track.name))) ??
+    tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('en')) ??
+    tracks[0]
+  );
+}
+
+function dedupeAdjacentLines(lines: string[]) {
+  const result: string[] = [];
+  for (const line of lines) {
+    if (line && line !== result.at(-1)) result.push(line);
+  }
+  return result;
+}
+
+async function fetchCommentsSafe({
+  html,
+  playerResponse,
+  videoId,
+}: {
+  html: string;
+  playerResponse: Record<string, any>;
+  videoId: string;
+}) {
+  try {
+    const initialData = extractInitialData(html);
+    const continuation = findFirstContinuation(initialData);
+    const apiKey = getQuotedValue(html, 'INNERTUBE_API_KEY');
+    if (!continuation || !apiKey) return [];
+    const clientVersion =
+      getQuotedValue(html, 'INNERTUBE_CLIENT_VERSION') ||
+      playerResponse?.responseContext?.serviceTrackingParams
+        ?.flatMap((item: Record<string, any>) => item.params ?? [])
+        ?.find((param: Record<string, unknown>) => param.key === 'cver')?.value ||
+      '2.20240501.00.00';
+    const visitorData =
+      getQuotedValue(html, 'VISITOR_DATA') ||
+      playerResponse?.responseContext?.visitorData ||
+      '';
+    const response = await fetch(`https://www.youtube.com/youtubei/v1/next?key=${encodeURIComponent(apiKey)}`, {
+      method: 'POST',
+      headers: {
+        'content-type': 'application/json',
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'accept-language': 'ko-KR,ko;q=0.9,en;q=0.8',
+      },
+      body: JSON.stringify({
+        context: {
+          client: {
+            clientName: 'WEB',
+            clientVersion,
+            hl: 'ko',
+            gl: 'KR',
+            visitorData,
+          },
+        },
+        videoId,
+        continuation,
+      }),
+    });
+    if (!response.ok) return [];
+    const payload = await response.json();
+    return extractCommentRenderers(payload).slice(0, 30);
+  } catch {
+    return [];
+  }
+}
+
+function extractInitialData(html: string) {
+  for (const marker of ['var ytInitialData = ', 'ytInitialData = ']) {
+    const start = html.indexOf(marker);
+    if (start >= 0) return JSON.parse(readBalancedJson(html, start + marker.length));
+  }
+  return null;
+}
+
+function findFirstContinuation(value: any): string {
+  if (!value || typeof value !== 'object') return '';
+  const token =
+    value?.continuationEndpoint?.continuationCommand?.token ||
+    value?.button?.buttonRenderer?.command?.continuationCommand?.token ||
+    value?.continuationCommand?.token;
+  if (typeof token === 'string' && token) return token;
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const found = findFirstContinuation(item);
+      if (found) return found;
+    }
+    return '';
+  }
+  for (const item of Object.values(value)) {
+    const found = findFirstContinuation(item);
+    if (found) return found;
+  }
+  return '';
+}
+
+function extractCommentRenderers(value: any) {
+  const comments: Array<{ author: string; text: string; likes: number; pinned: boolean; byUploader: boolean }> = [];
+  visit(value, (node) => {
+    const renderer = node.commentRenderer;
+    if (!renderer) return;
+    const text = getText(renderer.contentText).replace(/\s+/g, ' ').trim();
+    if (!text) return;
+    comments.push({
+      author: getText(renderer.authorText),
+      text,
+      likes: parseLikeCount(getText(renderer.voteCount)),
+      pinned: Boolean(renderer.pinnedCommentBadge),
+      byUploader: Boolean(renderer.authorIsChannelOwner),
+    });
+  });
+  const seen = new Set<string>();
+  return comments.filter((comment) => {
+    const key = `${comment.author}\n${comment.text}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function visit(value: any, callback: (node: any) => void) {
+  if (!value || typeof value !== 'object') return;
+  callback(value);
+  if (Array.isArray(value)) {
+    for (const item of value) visit(item, callback);
+    return;
+  }
+  for (const item of Object.values(value)) visit(item, callback);
+}
+
+function parseLikeCount(value: string) {
+  const text = String(value ?? '').replace(/,/g, '').trim();
+  const match = text.match(/(\d+(?:\.\d+)?)/);
+  if (!match) return 0;
+  const number = Number(match[1]);
+  if (/만/.test(text)) return Math.round(number * 10000);
+  if (/천/.test(text)) return Math.round(number * 1000);
+  return Number.isFinite(number) ? number : 0;
+}
+
+function getQuotedValue(html: string, key: string) {
+  const pattern = new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`);
+  return decodeHtml(html.match(pattern)?.[1] ?? '');
 }
 
 async function generateCommentCandidates({

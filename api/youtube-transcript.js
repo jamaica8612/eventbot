@@ -8,7 +8,11 @@ export default async function handler(request, response) {
       body.videoId ||
       requestUrl.searchParams.get('videoId') ||
       extractVideoId(body.url || requestUrl.searchParams.get('url') || '');
-    const context = await fetchYoutubeContext({ videoId, eventInfo: body.eventInfo });
+    const context = await fetchYoutubeContext({
+      videoId,
+      eventInfo: body.eventInfo,
+      mode: body.mode === 'context' ? 'context' : 'candidates',
+    });
     response.status(200).json(context);
   } catch (error) {
     response.status(400).json({

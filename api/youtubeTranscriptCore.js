@@ -35,7 +35,7 @@ export async function fetchYoutubeTranscript(input) {
   };
 }
 
-export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
+export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'candidates' }) {
   const resolvedVideoId = videoId || extractVideoId(url);
   if (!resolvedVideoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
@@ -49,24 +49,27 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
   const playerResponse = extractPlayerResponse(html);
   const metadata = extractVideoMetadata(playerResponse, html, watchUrl);
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const transcript = await fetchTranscriptSafe(tracks);
 
   const comments = await fetchCommentsSafe(resolvedVideoId);
 
   let commentCandidates = [];
   let commentCandidatesError = '';
-  try {
-    commentCandidates = await withTimeout(
-      generateCommentCandidates({
-        videoUrl: watchUrl,
-        eventInfo: eventInfo ?? {},
-        comments,
-        timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
-      }),
-      COMMENT_CANDIDATES_TIMEOUT_MS + 5000,
-      'Gemini 댓글 생성 시간이 너무 오래 걸렸습니다.',
-    );
-  } catch (error) {
-    commentCandidatesError = error.message || 'Gemini 댓글 생성에 실패했습니다.';
+  if (mode !== 'context') {
+    try {
+      commentCandidates = await withTimeout(
+        generateCommentCandidates({
+          videoUrl: watchUrl,
+          eventInfo: eventInfo ?? {},
+          comments,
+          timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
+        }),
+        COMMENT_CANDIDATES_TIMEOUT_MS + 5000,
+        'Gemini 댓글 생성 시간이 너무 오래 걸렸습니다.',
+      );
+    } catch (error) {
+      commentCandidatesError = error.message || 'Gemini 댓글 생성에 실패했습니다.';
+    }
   }
 
   return {
@@ -78,8 +81,8 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo }) {
       name: getText(track.name),
       isGenerated: track.kind === 'asr',
     })),
-    transcript: null,
-    transcriptError: '',
+    transcript,
+    transcriptError: transcript ? '' : '사용 가능한 공개 자막을 찾지 못했습니다.',
     comments,
     commentCandidates,
     commentCandidatesError,
@@ -95,6 +98,53 @@ async function fetchCommentsSafe(videoId) {
   } catch {
     return [];
   }
+}
+
+async function fetchTranscriptSafe(tracks) {
+  try {
+    const track = chooseCaptionTrack(tracks);
+    if (!track?.baseUrl) return null;
+    const url = new URL(String(track.baseUrl));
+    url.searchParams.set('fmt', 'json3');
+    const response = await fetch(url.toString(), { headers: WATCH_HEADERS });
+    if (!response.ok) return null;
+    const payload = await response.json();
+    const lines = (Array.isArray(payload.events) ? payload.events : [])
+      .map((event) =>
+        (Array.isArray(event.segs) ? event.segs : [])
+          .map((segment) => String(segment.utf8 ?? ''))
+          .join(''),
+      )
+      .map((line) => line.replace(/\s+/g, ' ').trim())
+      .filter(Boolean);
+    const compactLines = dedupeAdjacentLines(lines).slice(0, 160);
+    return {
+      languageCode: String(track.languageCode ?? ''),
+      isGenerated: track.kind === 'asr',
+      lines: compactLines,
+      text: compactLines.join('\n'),
+    };
+  } catch {
+    return null;
+  }
+}
+
+function chooseCaptionTrack(tracks) {
+  if (!Array.isArray(tracks) || tracks.length === 0) return null;
+  return (
+    tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('ko')) ??
+    tracks.find((track) => /korean|한국|한글/i.test(getText(track.name))) ??
+    tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('en')) ??
+    tracks[0]
+  );
+}
+
+function dedupeAdjacentLines(lines) {
+  const result = [];
+  for (const line of lines) {
+    if (line && line !== result.at(-1)) result.push(line);
+  }
+  return result;
 }
 
 function runPythonJson(args, options = {}) {
