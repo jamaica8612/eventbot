@@ -2,13 +2,12 @@ import { useMemo, useState } from 'react';
 import { receiptLabels, resultLabels } from '../constants.js';
 import {
   getAnnouncementStatus,
-  getPrizeDisplay,
   getUpcomingDeadlineMatch,
   sortInboxEvents,
   sortTodayDeadlineEvents,
 } from '../utils/eventModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
-import { AnnouncementPanel, ApplyLink } from './EventCards.jsx';
+import { AnnouncementPanel, ApplyLink, EventCard } from './EventCards.jsx';
 
 const deadlineFilters = [
   { value: 'all', label: '전체' },
@@ -70,42 +69,18 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
       <div className="deadline-list">
         {visibleEvents.length > 0 ? (
           visibleEvents.map((event) => (
-            <TodayDeadlineRow key={event.id} event={event} onStatusChange={onStatusChange} />
+            <EventCard
+              key={event.id}
+              event={event}
+              filter="todayDeadline"
+              onStatusChange={onStatusChange}
+            />
           ))
         ) : (
           <p className="empty-message">이 조건에 맞는 마감 이벤트가 없습니다.</p>
         )}
       </div>
     </div>
-  );
-}
-
-function TodayDeadlineRow({ event, onStatusChange }) {
-  const match = getUpcomingDeadlineMatch(event);
-  const applyHref = event.applyUrl ?? event.url;
-  const prize = getPrizeDisplay(event);
-
-  return (
-    <article className="deadline-row">
-      <header className="deadline-row-head">
-        <strong>{event.title}</strong>
-        <span>{event.bookmarkCount ?? 0}명</span>
-      </header>
-      <p>{prize}</p>
-      <div className="deadline-meta">
-        <span>{event.platform}</span>
-        <span>{match.label}</span>
-      </div>
-      <div className="deadline-actions">
-        {applyHref ? <ApplyLink className="manage-link" url={applyHref} label="참여하기" /> : null}
-        <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
-          참여완료
-        </button>
-        <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
-          제외
-        </button>
-      </div>
-    </article>
   );
 }
 

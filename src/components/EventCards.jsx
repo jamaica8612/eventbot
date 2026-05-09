@@ -16,7 +16,7 @@ const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/
 const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '');
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
-  if (filter === 'ready') {
+  if (filter === 'ready' || filter === 'todayDeadline') {
     return <ReadyEventCard event={event} onStatusChange={onStatusChange} />;
   }
   if (filter === 'todayAnnouncement') {
