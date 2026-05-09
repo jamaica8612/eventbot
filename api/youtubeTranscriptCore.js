@@ -207,19 +207,8 @@ async function fetchTranscriptSafe(tracks) {
   try {
     const track = chooseCaptionTrack(tracks);
     if (!track?.baseUrl) return null;
-    const url = new URL(String(track.baseUrl));
-    url.searchParams.set('fmt', 'json3');
-    const response = await fetch(url.toString(), { headers: WATCH_HEADERS });
-    if (!response.ok) return null;
-    const payload = await response.json();
-    const lines = (Array.isArray(payload.events) ? payload.events : [])
-      .map((event) =>
-        (Array.isArray(event.segs) ? event.segs : [])
-          .map((segment) => String(segment.utf8 ?? ''))
-          .join(''),
-      )
-      .map((line) => line.replace(/\s+/g, ' ').trim())
-      .filter(Boolean);
+    const lines = await fetchCaptionLines(String(track.baseUrl));
+    if (lines.length === 0) return null;
     const compactLines = dedupeAdjacentLines(lines).slice(0, 160);
     return {
       languageCode: String(track.languageCode ?? ''),
@@ -230,6 +219,63 @@ async function fetchTranscriptSafe(tracks) {
   } catch {
     return null;
   }
+}
+
+async function fetchCaptionLines(baseUrl) {
+  for (const format of ['json3', 'vtt', 'xml']) {
+    const url = new URL(baseUrl);
+    if (format !== 'xml') url.searchParams.set('fmt', format);
+    else url.searchParams.delete('fmt');
+    try {
+      const response = await fetch(url.toString(), { headers: WATCH_HEADERS });
+      if (!response.ok) continue;
+      const text = await response.text();
+      const lines =
+        format === 'json3'
+          ? parseJson3CaptionLines(text)
+          : format === 'vtt'
+            ? parseVttCaptionLines(text)
+            : parseXmlCaptionLines(text);
+      if (lines.length > 0) return lines;
+    } catch {
+      // Try the next caption format.
+    }
+  }
+  return [];
+}
+
+function parseJson3CaptionLines(text) {
+  const payload = JSON.parse(text);
+  return normalizeCaptionLines(
+    (Array.isArray(payload.events) ? payload.events : []).map((event) =>
+      (Array.isArray(event.segs) ? event.segs : [])
+        .map((segment) => String(segment.utf8 ?? ''))
+        .join(''),
+    ),
+  );
+}
+
+function parseVttCaptionLines(text) {
+  return normalizeCaptionLines(
+    text
+      .split(/\r?\n/)
+      .filter((line) => line && !/^WEBVTT|Kind:|Language:|\d+$|[\d:.]+\s+-->/i.test(line))
+      .map((line) => line.replace(/<[^>]+>/g, '')),
+  );
+}
+
+function parseXmlCaptionLines(text) {
+  return normalizeCaptionLines(
+    [...text.matchAll(/<text[^>]*>([\s\S]*?)<\/text>/g)].map((match) =>
+      decodeHtml(match[1].replace(/<[^>]+>/g, '')),
+    ),
+  );
+}
+
+function normalizeCaptionLines(lines) {
+  return lines
+    .map((line) => decodeHtml(String(line)).replace(/\s+/g, ' ').trim())
+    .filter(Boolean);
 }
 
 function chooseCaptionTrack(tracks) {
