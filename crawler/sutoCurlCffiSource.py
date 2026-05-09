@@ -198,13 +198,14 @@ def fetch_detail(s, url: str) -> dict:
         if response is None:
             raise RuntimeError("No response returned.")
         response.raise_for_status()
-        body, links, metadata_lines = parse_detail(response.text)
+        body, links, metadata_lines, metadata = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
         youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),
             "originalLines": lines,
             "detailMetaLines": metadata_lines,
+            **metadata,
             "externalLinks": links,
             "youtubeTranscripts": youtube_transcripts,
             "detailCrawlStatus": "ok" if lines else "empty",
@@ -250,7 +251,7 @@ def fetch_detail_with_fallbacks(url: str) -> dict:
     return max(results, key=lambda item: len(item["originalLines"]))
 
 
-def parse_detail(html: str) -> tuple[str, list[str], list[str]]:
+def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
     soup = BeautifulSoup(html, "lxml")
     body_scopes = unique_nodes(
         soup.select("#bo_v_con")
@@ -264,6 +265,7 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str]]:
     metadata_lines = []
     for scope in unique_nodes(soup.select(".item-box")):
         metadata_lines.extend(normalize_lines(scope.get_text("\n", strip=True).splitlines()))
+    metadata = extract_detail_metadata(soup)
 
     link_pattern = re.compile(
         "|".join(
@@ -302,7 +304,67 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str]]:
     for match in re.finditer(r"https?://[^\s\"'<>)]+", body_text):
         add_link(links, seen, match.group(0), link_pattern)
 
-    return body_text, links, metadata_lines
+    return body_text, links, metadata_lines, metadata
+
+
+def extract_detail_metadata(soup: BeautifulSoup) -> dict:
+    metadata = {
+        "resultAnnouncementDate": "",
+        "resultAnnouncementText": "",
+        "prizeText": "",
+    }
+
+    for item in soup.select(".item-box li"):
+        label_node = item.select_one(".item_option")
+        if not label_node:
+            continue
+        label = label_node.get_text(" ", strip=True)
+        value = item.get_text(" ", strip=True).replace(label, "", 1).strip()
+        if not label or not value:
+            continue
+
+        if is_announcement_label(label):
+            metadata["resultAnnouncementDate"] = normalize_detail_date(value)
+            metadata["resultAnnouncementText"] = f"{label} {value}".strip()[:100]
+        elif "경품태그" in label:
+            prize_tags = unique_texts(item.select("a"))
+            metadata["prizeText"] = ", ".join(prize_tags) or value[:50]
+
+    return {key: value for key, value in metadata.items() if value}
+
+
+def is_announcement_label(label: str) -> bool:
+    return "발표" in label and ("일" in label or "예정" in label)
+
+
+def normalize_detail_date(value: str) -> str:
+    today = datetime.now()
+    text = re.sub(r"\s+", " ", value).strip()
+
+    full = re.search(r"(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
+    if full:
+        return format_date_parts(int(full.group(1)), int(full.group(2)), int(full.group(3)))
+
+    short_year = re.search(r"(?<!\d)(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})", text)
+    if short_year:
+        return format_date_parts(2000 + int(short_year.group(1)), int(short_year.group(2)), int(short_year.group(3)))
+
+    month_day = re.search(r"(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
+    if month_day:
+        month = int(month_day.group(1))
+        day = int(month_day.group(2))
+        year = today.year + (1 if today.month >= 11 and month <= 2 else 0)
+        return format_date_parts(year, month, day)
+
+    return ""
+
+
+def format_date_parts(year: int, month: int, day: int) -> str:
+    try:
+        date = datetime(year, month, day)
+    except ValueError:
+        return ""
+    return date.strftime("%Y-%m-%d")
 
 
 def unique_nodes(nodes) -> list:

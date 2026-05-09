@@ -51,27 +51,35 @@ function findAnnouncementLine(text) {
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, ' ').trim())
     .filter(Boolean)
-    .filter((line) => !/앱으로|내 발표현황|최신인기|오늘발표|미입력/.test(line))
-    .filter((line) => !isAnnouncementLabelOnly(line));
+    .filter((line) => !/앱으로|내 발표현황|최신인기|오늘발표|미입력/.test(line));
+  const windows = lines.map((line, index) =>
+    [line, lines[index + 1], lines[index + 2]].filter(Boolean).join(' '),
+  );
 
   return (
-    lines.find(
+    windows.find(
       (line) =>
-        /당첨자?\s*발표|발표\s*일|결과\s*발표|당첨\s*확인|수상작\s*발표/i.test(line) &&
+        isAnnouncementLine(line) &&
         /(20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}|\d{1,2}\s*[.\-/월]\s*\d{1,2})/.test(line),
     ) ??
-    lines.find(
+    windows.find(
       (line) =>
-        /당첨자?\s*발표\s*일|발표\s*일/i.test(line) &&
+        /당첨자?\s*발표\s*일|발표\s*일|당첨\s*발표\s*일|발표\s*예정/i.test(line) &&
         /[:：]|공지|예정|추후|커뮤니티|개별|문자|홈페이지|발송/i.test(line),
     ) ??
-    lines.find((line) => /당첨자?\s*발표|결과\s*발표|당첨\s*확인|수상작\s*발표/i.test(line)) ??
+    lines.find((line) => !isAnnouncementLabelOnly(line) && isAnnouncementLine(line)) ??
     ''
   );
 }
 
+function isAnnouncementLine(line) {
+  return /당첨자?\s*발표|발표\s*일|발표\s*예정|결과\s*발표|당첨\s*확인|수상작\s*발표|선정자?\s*발표|당첨\s*안내/i.test(
+    line,
+  );
+}
+
 function isAnnouncementLabelOnly(line) {
-  return /^(?:당첨자?\s*)?(?:발표\s*일|당첨\s*발표\s*일|당첨자\s*발표일)$/.test(line);
+  return /^(?:당첨자?\s*)?(?:발표\s*일|발표\s*예정|당첨\s*발표\s*일|당첨자\s*발표일)$/.test(line);
 }
 
 function extractAnnouncementDate(text) {
