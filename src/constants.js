@@ -24,7 +24,7 @@ export const statusActions = [
 
 export const primaryFilters = [
   { value: 'ready', label: '대기', countKey: 'ready' },
-  { value: 'todayDeadline', label: '오늘마감', countKey: 'todayDeadline' },
+  { value: 'todayDeadline', label: '마감순', countKey: 'todayDeadline' },
   { value: 'search', label: '검색', countKey: 'searchable' },
   { value: 'inbox', label: '응모함', countKey: 'inbox' },
 ];
@@ -37,7 +37,7 @@ export const manageFilters = new Set(['inbox']);
 
 export const filterTitles = {
   ready: '응모 대기 이벤트',
-  todayDeadline: '오늘 마감 이벤트',
+  todayDeadline: '마감일순 이벤트',
   search: '이벤트 검색',
   inbox: '응모함',
   skipped: '제외한 이벤트',

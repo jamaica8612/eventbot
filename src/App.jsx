@@ -30,6 +30,7 @@ import {
 import {
   clearSavedAuth,
   hasSavedAuth,
+  onAuthRequired,
   verifyPasscode,
 } from './storage/passcodeAuthStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
@@ -46,6 +47,8 @@ import { EventSearch } from './components/EventSearch.jsx';
 function App() {
   const [theme, setTheme] = useTheme();
   const [isUnlocked, setIsUnlocked] = useState(hasSavedAuth);
+
+  useEffect(() => onAuthRequired(() => setIsUnlocked(false)), []);
 
   function lockApp() {
     clearSavedAuth();
@@ -254,7 +257,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
             />
             <SummaryItem
               active={filter === 'todayDeadline'}
-              label="오늘마감"
+              label="마감순"
               value={counts.todayDeadline}
               onClick={() => setFilter('todayDeadline')}
             />

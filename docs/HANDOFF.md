@@ -166,7 +166,7 @@ npm run build
 - 로컬 `npm.cmd run verify:supabase`로 Supabase 연결과 이벤트 수를 확인할 수 있습니다.
 - GitHub Actions `Crawl Suto Events`는 한국 시간 `09:00`, `15:00`, `21:00`에 실행됩니다.
 - 슈퍼투데이 공개 AJAX는 현재 50개를 받아온 뒤 인스타그램/출석류를 제외하며, 최근 확인 기준 DB에는 29개가 저장됐습니다.
-- 배포 준비는 `vercel.json`과 `docs/DEPLOYMENT.md`에 정리했습니다.
+- 배포 준비는 GitHub Pages 기준으로 `docs/DEPLOYMENT.md`에 정리했습니다.
 
 ## 이어받을 때 읽을 순서
 

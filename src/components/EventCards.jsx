@@ -8,7 +8,7 @@ import {
   getPrizeDisplay,
   hasCrawledBody,
 } from '../utils/eventModel.js';
-import { getAuthToken } from '../storage/passcodeAuthStorage.js';
+import { getAuthToken, requireUnlock } from '../storage/passcodeAuthStorage.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
@@ -161,6 +161,9 @@ function EventBodyToggle({ event, lines, facts }) {
       });
       const payload = await readJsonResponse(response);
       if (!response.ok) {
+        if (response.status === 401) {
+          requireUnlock();
+        }
         throw new Error(payload.error || '유튜브 댓글자료를 가져오지 못했습니다.');
       }
       setYoutubeContext(payload);
@@ -389,7 +392,7 @@ async function readJsonResponse(response) {
     rawText.trim().startsWith('<') || contentType.includes('text/html');
   if (isStaticFallback) {
     throw new Error(
-      '댓글 후보 API가 연결되지 않았습니다. 로컬 dev 서버나 Vercel API 배포에서 사용해 주세요.',
+      '댓글 후보 API가 연결되지 않았습니다. 로컬 dev 서버나 Supabase Edge Function 설정을 확인해 주세요.',
     );
   }
 

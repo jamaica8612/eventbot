@@ -6,8 +6,6 @@
 
 ## GitHub Pages 배포
 
-Vercel에서 Pro 팀 생성/카드 입력 흐름이 나와서 GitHub Pages 배포를 우선 사용합니다.
-
 GitHub Actions의 `Deploy GitHub Pages` 워크플로가 `main` 브랜치 push마다 앱을 빌드하고 배포합니다.
 
 필요한 GitHub Secrets:
@@ -22,22 +20,6 @@ VITE_SUPABASE_ANON_KEY
 ```text
 https://jamaica8612.github.io/eventbot/
 ```
-
-## Vercel 배포
-
-1. Vercel에서 `jamaica8612/eventbot` GitHub 저장소를 import합니다.
-2. Framework Preset은 `Vite`를 사용합니다.
-3. Build Command는 `npm run build`입니다.
-4. Output Directory는 `dist`입니다.
-5. Environment Variables에 다음 값을 추가합니다.
-
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-GEMINI_API_KEY
-```
-
-`SUPABASE_SERVICE_ROLE_KEY`는 Vercel에 넣지 않습니다. 이 키는 크롤러와 GitHub Actions에서만 사용합니다.
 
 GitHub Pages에서 댓글 후보 만들기는 Supabase Edge Function으로 실행합니다. Function Secret에 다음 값을 추가합니다.
 

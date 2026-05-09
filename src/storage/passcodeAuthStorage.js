@@ -2,6 +2,7 @@ const SUPABASE_URL = import.meta.env.VITE_SUPABASE_URL;
 const SUPABASE_ANON_KEY = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AUTH_STORAGE_KEY = 'event-click-passcode-unlocked';
 const AUTH_TOKEN_KEY = 'event-click-passcode-token';
+const AUTH_REQUIRED_EVENT = 'eventbot-auth-required';
 const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 
 export function hasSavedAuth() {
@@ -22,6 +23,19 @@ export function clearSavedAuth() {
   if (typeof localStorage === 'undefined') return;
   localStorage.removeItem(AUTH_STORAGE_KEY);
   localStorage.removeItem(AUTH_TOKEN_KEY);
+}
+
+export function requireUnlock() {
+  clearSavedAuth();
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
+  }
+}
+
+export function onAuthRequired(handler) {
+  if (typeof window === 'undefined') return () => {};
+  window.addEventListener(AUTH_REQUIRED_EVENT, handler);
+  return () => window.removeEventListener(AUTH_REQUIRED_EVENT, handler);
 }
 
 export async function verifyPasscode(passcode) {

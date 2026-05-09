@@ -1,5 +1,5 @@
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
-import { getAuthToken } from './passcodeAuthStorage.js';
+import { getAuthToken, requireUnlock } from './passcodeAuthStorage.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -92,6 +92,9 @@ async function callDataFunction(method, resource, body) {
 
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
+    if (response.status === 401) {
+      requireUnlock();
+    }
     throw new Error(payload.error || 'DB 요청에 실패했습니다.');
   }
   return payload;

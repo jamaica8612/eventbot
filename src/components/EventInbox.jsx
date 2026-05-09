@@ -3,7 +3,7 @@ import { receiptLabels, resultLabels } from '../constants.js';
 import {
   getAnnouncementStatus,
   getPrizeDisplay,
-  getTodayDeadlineMatch,
+  getUpcomingDeadlineMatch,
   sortInboxEvents,
   sortTodayDeadlineEvents,
 } from '../utils/eventModel.js';
@@ -12,9 +12,10 @@ import { AnnouncementPanel, ApplyLink } from './EventCards.jsx';
 
 const deadlineFilters = [
   { value: 'all', label: '전체' },
-  { value: 'homepage', label: '홈페이지' },
-  { value: 'youtube', label: '유튜브' },
-  { value: 'instagram', label: '인스타' },
+  { value: 'today', label: '오늘' },
+  { value: 'tomorrow', label: '내일' },
+  { value: 'week', label: '7일 이내' },
+  { value: 'unknown', label: '확인 필요' },
 ];
 
 const inboxFilters = [
@@ -46,14 +47,14 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
   if (events.length === 0) {
     return (
       <p className="empty-message">
-        {isLoading ? '이벤트를 불러오는 중입니다.' : '오늘 마감 이벤트가 없습니다.'}
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '마감일을 확인할 이벤트가 없습니다.'}
       </p>
     );
   }
 
   return (
     <div className="deadline-board">
-      <div className="filter-chips" aria-label="오늘마감 보기">
+      <div className="filter-chips" aria-label="마감일순 보기">
         {deadlineFilters.map((filter) => (
           <button
             type="button"
@@ -72,7 +73,7 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
             <TodayDeadlineRow key={event.id} event={event} onStatusChange={onStatusChange} />
           ))
         ) : (
-          <p className="empty-message">이 조건에 맞는 오늘 마감 이벤트가 없습니다.</p>
+          <p className="empty-message">이 조건에 맞는 마감 이벤트가 없습니다.</p>
         )}
       </div>
     </div>
@@ -80,7 +81,7 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
 }
 
 function TodayDeadlineRow({ event, onStatusChange }) {
-  const match = getTodayDeadlineMatch(event);
+  const match = getUpcomingDeadlineMatch(event);
   const applyHref = event.applyUrl ?? event.url;
   const prize = getPrizeDisplay(event);
 
@@ -93,7 +94,7 @@ function TodayDeadlineRow({ event, onStatusChange }) {
       <p>{prize}</p>
       <div className="deadline-meta">
         <span>{event.platform}</span>
-        <span>{match.isExact ? '오늘 마감' : '마감 확인 필요'}</span>
+        <span>{match.label}</span>
       </div>
       <div className="deadline-actions">
         {applyHref ? <ApplyLink className="manage-link" url={applyHref} label="참여하기" /> : null}
@@ -109,11 +110,12 @@ function TodayDeadlineRow({ event, onStatusChange }) {
 }
 
 function matchesDeadlineView(event, view) {
-  const platform = String(event.platform ?? '').toLowerCase();
-  if (view === 'homepage') return /홈페이지|home|web/.test(platform);
-  if (view === 'youtube') return /유튜브|youtube/.test(platform);
-  if (view === 'instagram') return /인스타|instagram/.test(platform);
-  return true;
+  const match = getUpcomingDeadlineMatch(event);
+  if (view === 'today') return match.bucket === 'today';
+  if (view === 'tomorrow') return match.bucket === 'tomorrow';
+  if (view === 'week') return ['today', 'tomorrow', 'week'].includes(match.bucket);
+  if (view === 'unknown') return match.bucket === 'unknown';
+  return match.isMatch;
 }
 
 export function EventInbox({
