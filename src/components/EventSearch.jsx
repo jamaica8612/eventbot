@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { resultLabels, statusLabels } from '../constants.js';
 import { getPrizeDisplay, matchesSearchQuery, sortSearchEvents } from '../utils/eventModel.js';
-import { ApplyLink } from './EventCards.jsx';
+import { ApplyLink } from './EventShared.jsx';
 
 export function EventSearch({ events, isLoading, onStatusChange }) {
   const [query, setQuery] = useState('');

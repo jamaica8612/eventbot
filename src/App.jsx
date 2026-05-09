@@ -10,9 +10,9 @@ import {
   matchesFilter,
   matchesTodayAnnouncement,
   sortInboxEvents,
-  sortTodayDeadlineEvents,
   sortTodayAnnouncements,
 } from './utils/eventModel.js';
+import { sortTodayDeadlineEvents } from './utils/deadlineModel.js';
 import { parsePrizeAmount } from './utils/format.js';
 import {
   defaultFilterSettings,

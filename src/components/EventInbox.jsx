@@ -2,12 +2,12 @@ import { useMemo, useState } from 'react';
 import { receiptLabels, resultLabels } from '../constants.js';
 import {
   getAnnouncementStatus,
-  getUpcomingDeadlineMatch,
   sortInboxEvents,
-  sortTodayDeadlineEvents,
 } from '../utils/eventModel.js';
+import { getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
-import { AnnouncementPanel, ApplyLink, EventCard } from './EventCards.jsx';
+import { EventCard } from './EventCards.jsx';
+import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
 
 const deadlineFilters = [
   { value: 'all', label: '전체' },
