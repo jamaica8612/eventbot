@@ -74,11 +74,10 @@ function ReadyEventCard({ event, onStatusChange }) {
 
       <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
-      {applyHref ? (
-        <ApplyLink className="apply-link primary-apply" url={applyHref} label="참여하기" />
-      ) : null}
-
       <div className="quick-actions now-actions" aria-label={`${event.title} 처리`}>
+        {applyHref ? (
+          <ApplyLink className="apply-link primary-apply" url={applyHref} label="참여하기" />
+        ) : null}
         <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
           참여완료
         </button>
@@ -123,14 +122,14 @@ function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) 
         <button
           type="button"
           className={resultStatus === 'won' ? 'is-won' : ''}
-          onClick={() => onResultChange(event.id, 'won')}
+          onClick={() => onResultChange(event.id, resultStatus === 'won' ? 'unknown' : 'won')}
         >
           당첨
         </button>
         <button
           type="button"
           className={resultStatus === 'lost' ? 'is-lost' : ''}
-          onClick={() => onResultChange(event.id, 'lost')}
+          onClick={() => onResultChange(event.id, resultStatus === 'lost' ? 'unknown' : 'lost')}
         >
           미당첨
         </button>
@@ -192,14 +191,14 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
           <button
             type="button"
             className={resultStatus === 'won' ? 'is-won' : ''}
-            onClick={() => onResultChange(event.id, 'won')}
+            onClick={() => onResultChange(event.id, resultStatus === 'won' ? 'unknown' : 'won')}
           >
             당첨
           </button>
           <button
             type="button"
             className={resultStatus === 'lost' ? 'is-lost' : ''}
-            onClick={() => onResultChange(event.id, 'lost')}
+            onClick={() => onResultChange(event.id, resultStatus === 'lost' ? 'unknown' : 'lost')}
           >
             미당첨
           </button>

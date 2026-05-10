@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
-import { resultLabels, statusLabels } from '../constants.js';
-import { getPrizeDisplay, matchesSearchQuery, sortSearchEvents } from '../utils/eventModel.js';
-import { ApplyLink } from './EventShared.jsx';
+import { matchesSearchQuery, sortSearchEvents } from '../utils/eventModel.js';
+import { EventCard } from './EventCards.jsx';
 
 export function EventSearch({ events, isLoading, onStatusChange }) {
   const [query, setQuery] = useState('');
@@ -49,7 +48,12 @@ export function EventSearch({ events, isLoading, onStatusChange }) {
       <div className="search-list">
         {matchingEvents.length > 0 ? (
           matchingEvents.map((event) => (
-            <SearchResultRow key={event.id} event={event} onStatusChange={onStatusChange} />
+            <EventCard
+              key={event.id}
+              event={event}
+              filter={event.status === 'done' ? 'search' : 'ready'}
+              onStatusChange={onStatusChange}
+            />
           ))
         ) : (
           <p className="empty-message">
@@ -58,36 +62,6 @@ export function EventSearch({ events, isLoading, onStatusChange }) {
         )}
       </div>
     </div>
-  );
-}
-
-function SearchResultRow({ event, onStatusChange }) {
-  const applyHref = event.applyUrl ?? event.url;
-  const resultStatus = event.resultStatus ?? 'unknown';
-
-  return (
-    <article className="search-row">
-      <header className="search-row-meta">
-        <span>{event.platform}</span>
-        <span>{statusLabels[event.status] ?? event.status}</span>
-        {event.status === 'done' ? <span>{resultLabels[resultStatus]}</span> : null}
-      </header>
-      <strong>{event.title}</strong>
-      <p>{getPrizeDisplay(event)}</p>
-      <div className="search-row-actions">
-        {applyHref ? <ApplyLink className="manage-link" url={applyHref} label="참여하기" /> : null}
-        {event.status !== 'done' ? (
-          <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
-            참여완료
-          </button>
-        ) : null}
-        {event.status !== 'done' ? (
-          <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
-            제외
-          </button>
-        ) : null}
-      </div>
-    </article>
   );
 }
 

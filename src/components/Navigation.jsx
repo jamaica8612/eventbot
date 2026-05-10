@@ -1,6 +1,34 @@
 import { getFilterLabel } from '../constants.js';
 import { formatWon } from '../utils/format.js';
 
+const navIcons = {
+  ready: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M5 5h14v14H5z" />
+      <path d="M8 9h8M8 13h5" />
+    </svg>
+  ),
+  todayDeadline: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M7 3v4M17 3v4M4 9h16" />
+      <path d="M5 5h14v15H5z" />
+      <path d="M12 12v4l3 1" />
+    </svg>
+  ),
+  search: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <circle cx="11" cy="11" r="6" />
+      <path d="m16 16 4 4" />
+    </svg>
+  ),
+  inbox: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 5h16v14H4z" />
+      <path d="M4 13h4l2 3h4l2-3h4" />
+    </svg>
+  ),
+};
+
 export function SummaryItem({ active, label, value, onClick }) {
   return (
     <button
@@ -44,6 +72,7 @@ export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
           className={selectedFilter === item.value ? 'is-active' : ''}
           onClick={() => onSelect(item.value)}
         >
+          <span className="nav-icon">{navIcons[item.value]}</span>
           <span>{getFilterLabel(item)}</span>
           <strong>{counts[item.countKey]}</strong>
         </button>

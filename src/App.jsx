@@ -2,7 +2,6 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   manageFilters,
   primaryFilters,
-  utilityFilters,
   getFilterTitle,
 } from './constants.js';
 import {
@@ -227,26 +226,16 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <FilterSettingsPanel
               events={appEvents}
               settings={filterSettings}
+              counts={counts}
+              selectedFilter={filter}
               theme={theme}
               onChange={setFilterSettings}
               onThemeChange={setTheme}
+              onSelectFilter={setFilter}
               onLock={onLock}
               onReset={() => setFilterSettings(defaultFilterSettings)}
             />
           ) : null}
-
-          <div className="filter-chips utility-filter-chips" aria-label="보조 보기">
-            {utilityFilters.map((item) => (
-              <button
-                key={item.value}
-                type="button"
-                className={filter === item.value ? 'is-active' : ''}
-                onClick={() => setFilter(item.value)}
-              >
-                {item.label} <strong>{counts[item.countKey]}</strong>
-              </button>
-            ))}
-          </div>
 
           {filter === 'ready' && platformOptions.length > 1 ? (
             <div className="filter-chips" aria-label="이벤트 종류별 보기">
@@ -429,9 +418,12 @@ function getEmptyMessage(filter) {
 function FilterSettingsPanel({
   events,
   settings,
+  counts,
+  selectedFilter,
   theme,
   onChange,
   onThemeChange,
+  onSelectFilter,
   onLock,
   onReset,
 }) {
@@ -472,6 +464,15 @@ function FilterSettingsPanel({
         </button>
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
+        </button>
+        <button
+          type="button"
+          className={`settings-action-button settings-excluded-button${
+            selectedFilter === 'skipped' ? ' is-active' : ''
+          }`}
+          onClick={() => onSelectFilter('skipped')}
+        >
+          제외 {counts.skipped}
         </button>
       </div>
 

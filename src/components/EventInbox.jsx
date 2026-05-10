@@ -252,14 +252,14 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
           <button
             type="button"
             className={resultStatus === 'won' ? 'is-won' : ''}
-            onClick={() => onResultChange(event.id, 'won')}
+            onClick={() => onResultChange(event.id, resultStatus === 'won' ? 'unknown' : 'won')}
           >
             당첨
           </button>
           <button
             type="button"
             className={resultStatus === 'lost' ? 'is-lost' : ''}
-            onClick={() => onResultChange(event.id, 'lost')}
+            onClick={() => onResultChange(event.id, resultStatus === 'lost' ? 'unknown' : 'lost')}
           >
             미당첨
           </button>
