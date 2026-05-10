@@ -8,20 +8,23 @@ const JSON_HEADERS = {
 const FILTER_SETTINGS_KEY = 'filter_settings';
 const CRAWL_STATUS_KEY = 'crawl_status';
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const PASSCODE_DISABLED = true;
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
   }
 
-  const passcodeSecret = Deno.env.get('EVENTBOT_PASSCODE');
-  if (!passcodeSecret) {
-    return json({ error: '비밀번호 secret이 설정되지 않았습니다.' }, 500);
-  }
+  if (!PASSCODE_DISABLED) {
+    const passcodeSecret = Deno.env.get('EVENTBOT_PASSCODE');
+    if (!passcodeSecret) {
+      return json({ error: '비밀번호 secret이 설정되지 않았습니다.' }, 500);
+    }
 
-  const token = request.headers.get('x-eventbot-token') ?? '';
-  if (!(await verifyToken(token, passcodeSecret))) {
-    return json({ error: '잠금 해제가 필요합니다.' }, 401);
+    const token = request.headers.get('x-eventbot-token') ?? '';
+    if (!(await verifyToken(token, passcodeSecret))) {
+      return json({ error: '잠금 해제가 필요합니다.' }, 401);
+    }
   }
 
   try {

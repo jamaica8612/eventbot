@@ -4,8 +4,10 @@ const AUTH_STORAGE_KEY = 'event-click-passcode-unlocked';
 const AUTH_TOKEN_KEY = 'event-click-passcode-token';
 const AUTH_REQUIRED_EVENT = 'eventbot-auth-required';
 const AUTH_TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
+const PASSCODE_DISABLED = true;
 
 export function hasSavedAuth() {
+  if (PASSCODE_DISABLED) return true;
   if (typeof localStorage === 'undefined') return false;
   const token = getAuthToken();
   const issuedAt = Number(token.split('.')[0]);
@@ -26,6 +28,7 @@ export function clearSavedAuth() {
 }
 
 export function requireUnlock() {
+  if (PASSCODE_DISABLED) return;
   clearSavedAuth();
   if (typeof window !== 'undefined') {
     window.dispatchEvent(new Event(AUTH_REQUIRED_EVENT));
@@ -39,6 +42,8 @@ export function onAuthRequired(handler) {
 }
 
 export async function verifyPasscode(passcode) {
+  if (PASSCODE_DISABLED) return;
+
   if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
     throw new Error('Supabase 인증 설정이 필요합니다.');
   }
