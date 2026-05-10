@@ -71,6 +71,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
   const { events, setEvents, isLoading } = useEvents();
   const [filter, setFilter] = useState('ready');
   const [platformFilter, setPlatformFilter] = useState('all');
+  const [sortMode, setSortMode] = useState('default');
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
@@ -91,6 +92,12 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
   useEffect(() => {
     setPlatformFilter('all');
+  }, [filter]);
+
+  useEffect(() => {
+    if (!isSortableFilter(filter)) {
+      setSortMode('default');
+    }
   }, [filter]);
 
   useEffect(() => {
@@ -168,12 +175,12 @@ function EventBotApp({ theme, setTheme, onLock }) {
       platformFilter === 'all'
         ? filteredByTabEvents
         : filteredByTabEvents.filter((event) => event.platform === platformFilter);
-    if (filter === 'todayDeadline') return sortTodayDeadlineEvents(platformEvents);
+    if (isSortableFilter(filter)) return sortEventsByMode(platformEvents, sortMode, filter);
     if (filter === 'inbox') return sortInboxEvents(platformEvents);
     return filter === 'todayAnnouncement'
       ? sortTodayAnnouncements(platformEvents)
       : platformEvents;
-  }, [filter, filteredByTabEvents, platformFilter]);
+  }, [filter, filteredByTabEvents, platformFilter, sortMode]);
 
   const winningTotal = useMemo(
     () =>
@@ -256,6 +263,10 @@ function EventBotApp({ theme, setTheme, onLock }) {
             </div>
           ) : null}
 
+          {isSortableFilter(filter) ? (
+            <SortChips selectedSort={sortMode} onSelectSort={setSortMode} />
+          ) : null}
+
           {filter === 'todayDeadline' ? (
             <TodayDeadlineList
               events={visibleEvents}
@@ -311,6 +322,68 @@ function EventBotApp({ theme, setTheme, onLock }) {
       />
     </>
   );
+}
+
+const sortOptions = [
+  { value: 'default', label: '기본순' },
+  { value: 'popular', label: '인원 많은순' },
+  { value: 'deadline', label: '마감임박순' },
+  { value: 'newest', label: '최신수집순' },
+];
+
+function SortChips({ selectedSort, onSelectSort }) {
+  return (
+    <div className="filter-chips sort-chips" aria-label="이벤트 정렬">
+      {sortOptions.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          className={selectedSort === option.value ? 'is-active' : ''}
+          onClick={() => onSelectSort(option.value)}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function isSortableFilter(filter) {
+  return filter === 'ready' || filter === 'todayDeadline';
+}
+
+function sortEventsByMode(events, sortMode, filter) {
+  if (sortMode === 'popular') {
+    return [...events].sort(
+      (first, second) =>
+        getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
+  if (sortMode === 'deadline') {
+    return sortTodayDeadlineEvents(events);
+  }
+
+  if (sortMode === 'newest') {
+    return [...events].sort(
+      (first, second) =>
+        getEventTime(second) - getEventTime(first) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
+  return filter === 'todayDeadline' ? sortTodayDeadlineEvents(events) : [...events];
+}
+
+function getNumber(value) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getEventTime(event) {
+  const value = event.lastSeenAt ?? event.createdAt ?? event.crawledAt ?? '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
 function PasscodeGate({ theme, setTheme, onUnlock }) {

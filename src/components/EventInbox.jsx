@@ -5,7 +5,7 @@ import {
   getPrizeDisplay,
   sortInboxEvents,
 } from '../utils/eventModel.js';
-import { getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from '../utils/deadlineModel.js';
+import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
 import { EventCard } from './EventCards.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
@@ -28,7 +28,7 @@ const inboxFilters = [
 
 export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
   const [selectedFilter, setSelectedFilter] = useState('all');
-  const sortedEvents = useMemo(() => sortTodayDeadlineEvents(events), [events]);
+  const sortedEvents = events;
   const filterCounts = useMemo(
     () =>
       Object.fromEntries(
