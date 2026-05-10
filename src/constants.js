@@ -1,6 +1,6 @@
 export const statusLabels = {
   ready: '대기',
-  later: '나중에',
+  later: '임시저장',
   done: '참여함',
   skipped: '제외',
 };
@@ -19,12 +19,14 @@ export const receiptLabels = {
 
 export const statusActions = [
   { value: 'done', label: '참여완료' },
+  { value: 'later', label: '임시저장' },
   { value: 'skipped', label: '제외' },
 ];
 
 export const primaryFilters = [
   { value: 'ready', label: '대기', countKey: 'ready' },
   { value: 'todayDeadline', label: '마감순', countKey: 'todayDeadline' },
+  { value: 'later', label: '임시저장', countKey: 'later' },
   { value: 'search', label: '검색', countKey: 'searchable' },
   { value: 'inbox', label: '응모함', countKey: 'inbox' },
 ];
@@ -38,6 +40,7 @@ export const manageFilters = new Set(['inbox']);
 export const filterTitles = {
   ready: '응모 대기 이벤트',
   todayDeadline: '마감일순 이벤트',
+  later: '임시저장 이벤트',
   search: '이벤트 검색',
   inbox: '응모함',
   skipped: '제외한 이벤트',

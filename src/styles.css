@@ -1418,7 +1418,7 @@ h3 {
 }
 
 .now-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
 }
 
 .quick-actions button,
@@ -2197,7 +2197,7 @@ h3 {
   left: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(5, minmax(0, 1fr));
   gap: 6px;
   border-top: 1px solid var(--border);
   background: var(--nav-bg);
@@ -2652,7 +2652,7 @@ h3 {
   }
 
   .now-actions {
-    grid-template-columns: repeat(3, minmax(88px, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .bottom-nav {

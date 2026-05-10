@@ -10,7 +10,7 @@ import { EventBodyToggle } from './EventBodyToggle.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
-  if (filter === 'ready' || filter === 'todayDeadline') {
+  if (filter === 'ready' || filter === 'todayDeadline' || filter === 'later') {
     return <ReadyEventCard event={event} onStatusChange={onStatusChange} />;
   }
   if (filter === 'todayAnnouncement') {
@@ -80,6 +80,12 @@ function ReadyEventCard({ event, onStatusChange }) {
         ) : null}
         <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
           참여완료
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange(event.id, event.status === 'later' ? 'ready' : 'later')}
+        >
+          {event.status === 'later' ? '대기로' : '임시저장'}
         </button>
         <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
           제외

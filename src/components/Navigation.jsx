@@ -15,6 +15,12 @@ const navIcons = {
       <path d="M12 12v4l3 1" />
     </svg>
   ),
+  later: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M6 4h12v16l-6-3-6 3z" />
+      <path d="M9 8h6M9 12h4" />
+    </svg>
+  ),
   search: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="11" cy="11" r="6" />

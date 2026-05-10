@@ -87,9 +87,6 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
   function updateDeadlineStatus(eventId, status) {
     updateStatus(eventId, status);
-    if (status === 'done') {
-      setFilter('inbox');
-    }
   }
 
   useEffect(() => {
@@ -411,6 +408,7 @@ function formatDateTime(value) {
 
 function getEmptyMessage(filter) {
   if (filter === 'ready') return '응모 대기 이벤트가 없습니다.';
+  if (filter === 'later') return '임시저장한 이벤트가 없습니다.';
   if (filter === 'skipped') return '제외한 이벤트가 없습니다.';
   return '표시할 이벤트가 없습니다.';
 }
@@ -520,6 +518,7 @@ function buildCounts(events, filterSettings) {
       if (matchesFilter(event, 'ready', filterSettings)) acc.ready += 1;
       if (event.status === 'done') acc.done += 1;
       if (event.status === 'done') acc.inbox += 1;
+      if (matchesFilter(event, 'later', filterSettings)) acc.later += 1;
       if (event.status === 'done' && event.resultStatus === 'unknown') {
         acc.resultUnknown += 1;
       }
@@ -536,6 +535,7 @@ function buildCounts(events, filterSettings) {
       ready: 0,
       done: 0,
       inbox: 0,
+      later: 0,
       todayDeadline: 0,
       searchable: 0,
       resultUnknown: 0,
