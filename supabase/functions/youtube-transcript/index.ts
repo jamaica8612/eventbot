@@ -113,6 +113,27 @@ async function fetchYoutubeContext({
   if (!videoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  if (mode === 'candidates') {
+    let commentCandidates: Array<{ style: string; text: string }> = [];
+    let commentCandidatesError = '';
+
+    try {
+      commentCandidates = await generateCommentCandidates({ videoUrl: watchUrl, eventInfo });
+    } catch (error) {
+      commentCandidatesError = error instanceof Error ? error.message : 'Gemini comment generation failed.';
+    }
+
+    return {
+      videoId,
+      url: watchUrl,
+      transcript: null,
+      transcriptError: '',
+      comments: [],
+      commentCandidates,
+      commentCandidatesError,
+    };
+  }
+
   const watchResponse = await fetch(watchUrl, {
     headers: {
       'user-agent':
@@ -146,16 +167,6 @@ async function fetchYoutubeContext({
   };
   const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe({ html, playerResponse, videoId });
 
-  let commentCandidates: Array<{ style: string; text: string }> = [];
-  let commentCandidatesError = '';
-  if (mode === 'candidates') {
-    try {
-      commentCandidates = await generateCommentCandidates({ videoUrl: watchUrl, eventInfo });
-    } catch (error) {
-      commentCandidatesError = error instanceof Error ? error.message : 'Gemini 댓글 생성에 실패했습니다.';
-    }
-  }
-
   return {
     videoId,
     url: watchUrl,
@@ -168,8 +179,8 @@ async function fetchYoutubeContext({
     transcript,
     transcriptError: transcript ? '' : '사용 가능한 공개 자막을 찾지 못했습니다.',
     comments,
-    commentCandidates,
-    commentCandidatesError,
+    commentCandidates: [],
+    commentCandidatesError: '',
   };
 }
 

@@ -41,6 +41,20 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
   if (!resolvedVideoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${resolvedVideoId}`;
+
+  if (mode !== 'context') {
+    const { commentCandidates, commentCandidatesError } = await generateFastCommentCandidates(watchUrl, eventInfo);
+    return {
+      videoId: resolvedVideoId,
+      url: watchUrl,
+      transcript: null,
+      transcriptError: '',
+      comments: [],
+      commentCandidates,
+      commentCandidatesError,
+    };
+  }
+
   const watchResponse = await fetch(watchUrl, { headers: WATCH_HEADERS });
   const html = await watchResponse.text();
   if (!watchResponse.ok) {
@@ -69,25 +83,6 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
 
   const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe(resolvedVideoId);
 
-  let commentCandidates = [];
-  let commentCandidatesError = '';
-  if (mode !== 'context') {
-    try {
-      commentCandidates = await withTimeout(
-        generateCommentCandidates({
-          videoUrl: watchUrl,
-          eventInfo: eventInfo ?? {},
-          comments,
-          timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
-        }),
-        COMMENT_CANDIDATES_TIMEOUT_MS + 5000,
-        'Gemini 댓글 생성 시간이 너무 오래 걸렸습니다.',
-      );
-    } catch (error) {
-      commentCandidatesError = error.message || 'Gemini 댓글 생성에 실패했습니다.';
-    }
-  }
-
   return {
     videoId: resolvedVideoId,
     url: watchUrl,
@@ -100,9 +95,31 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
     transcript,
     transcriptError: transcript ? '' : '사용 가능한 공개 자막을 찾지 못했습니다.',
     comments,
-    commentCandidates,
-    commentCandidatesError,
+    commentCandidates: [],
+    commentCandidatesError: '',
   };
+}
+
+async function generateFastCommentCandidates(watchUrl, eventInfo) {
+  let commentCandidates = [];
+  let commentCandidatesError = '';
+
+  try {
+    commentCandidates = await withTimeout(
+      generateCommentCandidates({
+        videoUrl: watchUrl,
+        eventInfo: eventInfo ?? {},
+        comments: [],
+        timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
+      }),
+      COMMENT_CANDIDATES_TIMEOUT_MS + 5000,
+      'Gemini comment generation took too long.',
+    );
+  } catch (error) {
+    commentCandidatesError = error.message || 'Gemini comment generation failed.';
+  }
+
+  return { commentCandidates, commentCandidatesError };
 }
 
 async function fetchYoutubeApiVideoSafe(videoId, apiKey) {
