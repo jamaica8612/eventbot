@@ -28,7 +28,11 @@ function youtubeTranscriptApi() {
             body.videoId ||
             requestUrl.searchParams.get('videoId') ||
             extractVideoId(body.url || requestUrl.searchParams.get('url') || '');
-          const context = await fetchYoutubeContext({ videoId, eventInfo: body.eventInfo });
+          const context = await fetchYoutubeContext({
+            videoId,
+            eventInfo: body.eventInfo,
+            mode: body.mode === 'context' ? 'context' : 'candidates',
+          });
           response.setHeader('content-type', 'application/json; charset=utf-8');
           response.end(JSON.stringify(context));
         } catch (error) {

@@ -127,14 +127,23 @@ async function fetchYoutubeContext({
 
   const playerResponse = extractPlayerResponse(html);
   const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY') || '';
-  const apiVideo = youtubeApiKey ? await fetchYoutubeApiVideoSafe(videoId, youtubeApiKey) : null;
+  const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const apiVideoPromise = youtubeApiKey
+    ? fetchYoutubeApiVideoSafe(videoId, youtubeApiKey)
+    : Promise.resolve(null);
+  const transcriptPromise = fetchTranscriptSafe(tracks);
+  const apiCommentsPromise = youtubeApiKey
+    ? fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey)
+    : Promise.resolve([]);
+  const [apiVideo, transcript, apiComments] = await Promise.all([
+    apiVideoPromise,
+    transcriptPromise,
+    apiCommentsPromise,
+  ]);
   const metadata = {
     ...extractVideoMetadata(playerResponse, html, watchUrl),
     ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
   };
-  const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  const transcript = await fetchTranscriptSafe(tracks);
-  const apiComments = youtubeApiKey ? await fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey) : [];
   const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe({ html, playerResponse, videoId });
 
   let commentCandidates: Array<{ style: string; text: string }> = [];

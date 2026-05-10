@@ -49,19 +49,24 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
 
   const playerResponse = extractPlayerResponse(html);
   const youtubeApiKey = process.env.YOUTUBE_API_KEY || '';
-  const apiVideo = youtubeApiKey
-    ? await fetchYoutubeApiVideoSafe(resolvedVideoId, youtubeApiKey)
-    : null;
+  const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+  const apiVideoPromise = youtubeApiKey
+    ? fetchYoutubeApiVideoSafe(resolvedVideoId, youtubeApiKey)
+    : Promise.resolve(null);
+  const transcriptPromise = fetchTranscriptSafe(tracks);
+  const apiCommentsPromise = youtubeApiKey
+    ? fetchYoutubeApiCommentsSafe(resolvedVideoId, youtubeApiKey)
+    : Promise.resolve([]);
+  const [apiVideo, transcript, apiComments] = await Promise.all([
+    apiVideoPromise,
+    transcriptPromise,
+    apiCommentsPromise,
+  ]);
   const metadata = {
     ...extractVideoMetadata(playerResponse, html, watchUrl),
     ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
   };
-  const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
-  const transcript = await fetchTranscriptSafe(tracks);
 
-  const apiComments = youtubeApiKey
-    ? await fetchYoutubeApiCommentsSafe(resolvedVideoId, youtubeApiKey)
-    : [];
   const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe(resolvedVideoId);
 
   let commentCandidates = [];
