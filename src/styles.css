@@ -63,11 +63,6 @@ html {
   overflow-x: hidden;
 }
 
-#root {
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
 body {
   margin: 0;
   min-width: 320px;
@@ -133,6 +128,9 @@ h3 {
 .ledger-title strong {
   display: -webkit-box;
   overflow: hidden;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  word-break: break-word;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -140,7 +138,6 @@ h3 {
 .app-shell {
   width: min(100%, 480px);
   max-width: 100%;
-  overflow-x: hidden;
   margin: 0 auto;
   padding: 18px 16px 104px;
 }
@@ -606,6 +603,22 @@ h3 {
   white-space: nowrap;
 }
 
+@media (max-width: 520px) {
+  .crawler-status-panel {
+    gap: 6px;
+    padding: 8px 10px;
+  }
+
+  .crawler-status-panel div {
+    flex: 0 1 auto;
+  }
+
+  .crawler-status-panel div:first-child span,
+  .crawler-status-panel div:last-child span:last-child {
+    display: none;
+  }
+}
+
 .filter-chips::-webkit-scrollbar {
   display: none;
 }
@@ -693,6 +706,15 @@ h3 {
   background: var(--surface);
   padding: 16px;
   box-shadow: var(--shadow-card);
+}
+
+.event-card > *,
+.now-card > *,
+.event-body-toggle > *,
+.event-body-preview,
+.event-body-expanded {
+  min-width: 0;
+  max-width: 100%;
 }
 
 .deadline-row {
@@ -1103,6 +1125,7 @@ h3 {
   display: grid;
   gap: 5px;
   min-width: 0;
+  width: 100%;
   max-width: 100%;
   border: 1px solid var(--border);
   border-radius: 14px;
@@ -1172,7 +1195,7 @@ h3 {
   font-weight: 700;
   line-height: 1.35;
   overflow-wrap: anywhere;
-  word-break: keep-all;
+  word-break: break-word;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
 }
@@ -1390,6 +1413,8 @@ h3 {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 7px;
+  min-width: 0;
+  width: 100%;
 }
 
 .now-actions {
@@ -1399,10 +1424,14 @@ h3 {
 .quick-actions button,
 .quick-actions .apply-link {
   min-width: 0;
+  max-width: 100%;
   min-height: 40px;
+  overflow: hidden;
   padding: 0 4px;
   font-size: 0.8rem;
   line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .quick-actions button {
