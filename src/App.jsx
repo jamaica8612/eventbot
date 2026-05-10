@@ -333,7 +333,7 @@ const sortOptions = [
 
 function SortChips({ selectedSort, onSelectSort }) {
   return (
-    <div className="filter-chips sort-chips" aria-label="이벤트 정렬">
+    <div className="sort-options" aria-label="이벤트 정렬">
       {sortOptions.map((option) => (
         <button
           key={option.value}

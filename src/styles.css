@@ -645,6 +645,31 @@ h3 {
   color: var(--cta-text);
 }
 
+.sort-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 12px;
+  align-items: center;
+  padding: 0 2px;
+}
+
+.sort-options button {
+  min-height: auto;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--text-muted);
+  padding: 0;
+  font-size: 0.75rem;
+  line-height: 1.25;
+}
+
+.sort-options button.is-active {
+  color: var(--warning);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
 .utility-filter-chips {
   justify-content: flex-end;
 }
@@ -2678,6 +2703,7 @@ input,
 select,
 textarea,
 .filter-chips button,
+.sort-options button,
 .settings-action-button,
 .settings-reset,
 .platform-settings button,
