@@ -2,9 +2,9 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, resolve } from 'node:path';
 
-const MODEL = 'gemini-2.5-flash';
-const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const DEFAULT_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 const SHOULD_ATTACH_VIDEO_FILE = process.env.GEMINI_ATTACH_VIDEO_FILE === '1';
+const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
 
 const PROMPT_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -74,30 +74,11 @@ export async function generateCommentCandidates({
     },
   };
 
-  const abortController = new AbortController();
-  const timeoutId = setTimeout(() => abortController.abort(), timeoutMs);
-  let response;
-
-  try {
-    response = await fetch(`${ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      signal: abortController.signal,
-      body: JSON.stringify(requestBody),
-    });
-  } catch (error) {
-    if (error.name === 'AbortError') {
-      throw new Error('Gemini 응답 시간이 너무 오래 걸렸습니다.');
-    }
-    throw error;
-  } finally {
-    clearTimeout(timeoutId);
-  }
-
-  const rawText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
-  }
+  const { rawText } = await fetchGeminiWithFallback({
+    apiKey,
+    requestBody,
+    timeoutMs,
+  });
 
   let payload;
   try {
@@ -127,6 +108,79 @@ export async function generateCommentCandidates({
       style: String(item.style || '').trim(),
       text: sanitizeCommentText(item.text),
     }));
+}
+
+async function fetchGeminiWithFallback({ apiKey, requestBody, timeoutMs }) {
+  const startedAt = Date.now();
+  const models = getGeminiModels();
+  const errors = [];
+
+  for (const model of models) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const remainingMs = timeoutMs - (Date.now() - startedAt);
+      if (remainingMs <= 1000) {
+        throw new Error('Gemini 응답 시간이 너무 오래 걸렸습니다.');
+      }
+
+      const abortController = new AbortController();
+      const timeoutId = setTimeout(() => abortController.abort(), remainingMs);
+      let response;
+      let rawText = '';
+
+      try {
+        response = await fetch(buildGeminiEndpoint(model, apiKey), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          signal: abortController.signal,
+          body: JSON.stringify(requestBody),
+        });
+        rawText = await response.text();
+      } catch (error) {
+        clearTimeout(timeoutId);
+        if (error.name === 'AbortError') {
+          throw new Error('Gemini 응답 시간이 너무 오래 걸렸습니다.');
+        }
+        errors.push(`${model}: ${error.message}`);
+        await sleep(backoffMs(attempt));
+        continue;
+      } finally {
+        clearTimeout(timeoutId);
+      }
+
+      if (response.ok) {
+        return { rawText, model };
+      }
+
+      errors.push(`${model}: ${response.status} ${rawText.slice(0, 180)}`);
+      if (!RETRYABLE_GEMINI_STATUSES.has(response.status)) {
+        throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
+      }
+      await sleep(backoffMs(attempt));
+    }
+  }
+
+  throw new Error(`Gemini가 일시적으로 혼잡합니다. 잠시 뒤 다시 시도해 주세요. (${errors.at(-1) ?? 'unavailable'})`);
+}
+
+function getGeminiModels() {
+  const configured = process.env.GEMINI_MODEL_FALLBACKS || process.env.GEMINI_MODEL || '';
+  const models = configured
+    .split(',')
+    .map((model) => model.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : DEFAULT_MODELS;
+}
+
+function buildGeminiEndpoint(model, apiKey) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+}
+
+function backoffMs(attempt) {
+  return attempt === 0 ? 700 : 1500;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildGeminiUserText(videoUrl, userPrompt) {

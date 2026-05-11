@@ -1,6 +1,6 @@
-const MODEL = 'gemini-2.5-flash';
-const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const DEFAULT_GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
 const SHOULD_ATTACH_VIDEO_FILE = Deno.env.get('GEMINI_ATTACH_VIDEO_FILE') === '1';
+const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
 const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -520,6 +520,39 @@ async function generateCommentCandidates({
     parts.unshift({ fileData: { fileUri: videoUrl, mimeType: 'video/*' } });
   }
 
+  const requestBody = {
+    systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
+    contents: [
+      {
+        role: 'user',
+        parts,
+      },
+    ],
+    generationConfig: {
+      mediaResolution: 'MEDIA_RESOLUTION_LOW',
+      responseMimeType: 'application/json',
+      responseSchema: {
+        type: 'object',
+        properties: {
+          candidates: {
+            type: 'array',
+            items: {
+              type: 'object',
+              properties: {
+                style: { type: 'string' },
+                text: { type: 'string' },
+              },
+              required: ['style', 'text'],
+            },
+          },
+        },
+        required: ['candidates'],
+      },
+    },
+  };
+
+  const rawText = await fetchGeminiWithFallback(apiKey, requestBody);
+  /*
   const response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -559,6 +592,7 @@ async function generateCommentCandidates({
   if (!response.ok) {
     throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
   }
+  */
 
   const payload = JSON.parse(rawText);
   const text = payload?.candidates?.[0]?.content?.parts?.find((part: Record<string, unknown>) => part.text)?.text;
@@ -575,6 +609,59 @@ async function generateCommentCandidates({
       style: String(item.style || '').trim(),
       text: sanitizeCommentText(String(item.text || '')),
     }));
+}
+
+async function fetchGeminiWithFallback(apiKey: string, requestBody: Record<string, unknown>) {
+  const errors: string[] = [];
+  for (const model of getGeminiModels()) {
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      let response: Response;
+      let rawText = '';
+      try {
+        response = await fetch(buildGeminiEndpoint(model, apiKey), {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(requestBody),
+        });
+        rawText = await response.text();
+      } catch (error) {
+        errors.push(`${model}: ${error instanceof Error ? error.message : String(error)}`);
+        await sleep(backoffMs(attempt));
+        continue;
+      }
+
+      if (response.ok) return rawText;
+
+      errors.push(`${model}: ${response.status} ${rawText.slice(0, 180)}`);
+      if (!RETRYABLE_GEMINI_STATUSES.has(response.status)) {
+        throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
+      }
+      await sleep(backoffMs(attempt));
+    }
+  }
+
+  throw new Error(`Gemini가 일시적으로 혼잡합니다. 잠시 뒤 다시 시도해 주세요. (${errors.at(-1) ?? 'unavailable'})`);
+}
+
+function getGeminiModels() {
+  const configured = Deno.env.get('GEMINI_MODEL_FALLBACKS') || Deno.env.get('GEMINI_MODEL') || '';
+  const models = configured
+    .split(',')
+    .map((model) => model.trim())
+    .filter(Boolean);
+  return models.length > 0 ? models : DEFAULT_GEMINI_MODELS;
+}
+
+function buildGeminiEndpoint(model: string, apiKey: string) {
+  return `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
+}
+
+function backoffMs(attempt: number) {
+  return attempt === 0 ? 700 : 1500;
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function buildUserPrompt(eventInfo: Record<string, unknown>) {
