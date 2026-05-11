@@ -1,5 +1,6 @@
 const MODEL = 'gemini-2.5-flash';
 const GEMINI_ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const SHOULD_ATTACH_VIDEO_FILE = Deno.env.get('GEMINI_ATTACH_VIDEO_FILE') === '1';
 const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
 const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
@@ -514,6 +515,11 @@ async function generateCommentCandidates({
   const apiKey = Deno.env.get('GEMINI_API_KEY');
   if (!apiKey) throw new Error('Supabase Function Secret GEMINI_API_KEY가 설정되지 않았습니다.');
 
+  const parts: Array<Record<string, unknown>> = [{ text: buildGeminiUserText(videoUrl, buildUserPrompt(eventInfo)) }];
+  if (SHOULD_ATTACH_VIDEO_FILE) {
+    parts.unshift({ fileData: { fileUri: videoUrl, mimeType: 'video/*' } });
+  }
+
   const response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -522,10 +528,7 @@ async function generateCommentCandidates({
       contents: [
         {
           role: 'user',
-          parts: [
-            { fileData: { fileUri: videoUrl, mimeType: 'video/*' } },
-            { text: buildUserPrompt(eventInfo) },
-          ],
+          parts,
         },
       ],
       generationConfig: {
@@ -612,6 +615,19 @@ function sanitizeCommentText(text: string) {
     .replace(/^[`'"“”‘’「」『』]+/, '')
     .replace(/[`'"“”‘’「」『』]+$/, '')
     .trim();
+}
+
+function buildGeminiUserText(videoUrl: string, userPrompt: string) {
+  return [
+    userPrompt,
+    '',
+    '[참고 영상 URL]',
+    videoUrl,
+    '',
+    SHOULD_ATTACH_VIDEO_FILE
+      ? '첨부된 영상과 위 이벤트 정보를 함께 참고해 댓글 후보를 작성해줘.'
+      : '영상 파일은 속도를 위해 첨부하지 않았다. 위 이벤트 본문과 조건을 기준으로 댓글 후보를 작성하고, 영상 내용은 본문에 드러난 범위 안에서만 구체화해줘.',
+  ].join('\n');
 }
 
 function extractVideoMetadata(playerResponse: Record<string, any>, html: string, watchUrl: string) {

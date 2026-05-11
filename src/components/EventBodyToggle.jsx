@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
 import { getAuthToken, requireUnlock } from '../storage/passcodeAuthStorage.js';
 
-const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
+const YOUTUBE_CONTEXT_TIMEOUT_MS = 35000;
 const YOUTUBE_INFO_TIMEOUT_MS = 45000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');

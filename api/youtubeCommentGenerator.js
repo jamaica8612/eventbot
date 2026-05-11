@@ -4,6 +4,7 @@ import { dirname, resolve } from 'node:path';
 
 const MODEL = 'gemini-2.5-flash';
 const ENDPOINT = `https://generativelanguage.googleapis.com/v1beta/models/${MODEL}:generateContent`;
+const SHOULD_ATTACH_VIDEO_FILE = process.env.GEMINI_ATTACH_VIDEO_FILE === '1';
 
 const PROMPT_PATH = resolve(
   dirname(fileURLToPath(import.meta.url)),
@@ -37,16 +38,17 @@ export async function generateCommentCandidates({
 
   const systemPrompt = loadSystemPrompt();
   const userPrompt = buildUserPrompt(eventInfo, comments);
+  const parts = [{ text: buildGeminiUserText(videoUrl, userPrompt) }];
+  if (SHOULD_ATTACH_VIDEO_FILE) {
+    parts.unshift({ fileData: { fileUri: videoUrl, mimeType: 'video/*' } });
+  }
 
   const requestBody = {
     systemInstruction: { parts: [{ text: systemPrompt }] },
     contents: [
       {
         role: 'user',
-        parts: [
-          { fileData: { fileUri: videoUrl, mimeType: 'video/*' } },
-          { text: userPrompt },
-        ],
+        parts,
       },
     ],
     generationConfig: {
@@ -125,6 +127,19 @@ export async function generateCommentCandidates({
       style: String(item.style || '').trim(),
       text: sanitizeCommentText(item.text),
     }));
+}
+
+function buildGeminiUserText(videoUrl, userPrompt) {
+  return [
+    userPrompt,
+    '',
+    '[참고 영상 URL]',
+    videoUrl,
+    '',
+    SHOULD_ATTACH_VIDEO_FILE
+      ? '첨부된 영상과 위 이벤트 정보를 함께 참고해 댓글 후보를 작성해줘.'
+      : '영상 파일은 속도를 위해 첨부하지 않았다. 위 이벤트 본문과 조건을 기준으로 댓글 후보를 작성하고, 영상 내용은 본문에 드러난 범위 안에서만 구체화해줘.',
+  ].join('\n');
 }
 
 function sanitizeCommentText(text) {

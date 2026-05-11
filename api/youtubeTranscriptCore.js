@@ -2,7 +2,7 @@ import { spawn } from 'node:child_process';
 import { generateCommentCandidates } from './youtubeCommentGenerator.js';
 
 const COMMENTS_TIMEOUT_MS = 25000;
-const COMMENT_CANDIDATES_TIMEOUT_MS = 80000;
+const COMMENT_CANDIDATES_TIMEOUT_MS = 25000;
 const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
 
 const WATCH_HEADERS = {
