@@ -314,6 +314,8 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
     )
     links = []
     seen = set()
+    apply_links = []
+    apply_seen = set()
     scopes = []
     for selector in ["#bo_v_con", ".bo_v_con", ".item-box", ".view_content", "#bo_v_link"]:
         scopes.extend(soup.select(selector))
@@ -326,12 +328,21 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
         for iframe in scope.find_all("iframe", src=True):
             add_link(links, seen, iframe["src"].strip(), link_pattern)
 
+    for scope in soup.select("#bo_v_link"):
+        for a in scope.find_all("a", href=True):
+            add_link(apply_links, apply_seen, a["href"].strip(), link_pattern)
+        for iframe in scope.find_all("iframe", src=True):
+            add_link(apply_links, apply_seen, iframe["src"].strip(), link_pattern)
+
     for el in soup.find_all(["input", "textarea"]):
         for attr in ("value", "data-original", "data-url", "placeholder"):
             add_link(links, seen, (el.get(attr) or "").strip(), link_pattern)
 
     for match in re.finditer(r"https?://[^\s\"'<>)]+", body_text):
         add_link(links, seen, match.group(0), link_pattern)
+
+    if apply_links:
+        metadata["applyTargetUrl"] = apply_links[0]
 
     return body_text, links, metadata_lines, metadata
 

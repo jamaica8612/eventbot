@@ -372,7 +372,7 @@ async function readJsonResponse(response) {
 
 function buildYoutubeLinks(event) {
   const raw = event.raw ?? {};
-  return [event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+  return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
     .filter((url) => extractYoutubeVideoId(url));
@@ -380,9 +380,8 @@ function buildYoutubeLinks(event) {
 
 function isYoutubeEvent(event) {
   const platform = String(event.platform ?? '').toLowerCase();
-  return platform.includes('유튜브') || platform.includes('youtube');
+  return platform.includes('???') || platform.includes('youtube');
 }
-
 function extractYoutubeVideoId(url) {
   const value = String(url ?? '');
   return (

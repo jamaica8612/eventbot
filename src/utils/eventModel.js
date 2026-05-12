@@ -8,6 +8,7 @@ export const FALLBACK_BODY_LINE =
   '아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.';
 
 export const PRIZE_FALLBACK = '경품 정보 미수집';
+const YOUTUBE_PLATFORM = '\uC720\uD29C\uBE0C \uC774\uBCA4\uD2B8';
 
 export function hasCrawledBody(event) {
   // EventBodyToggle/카드가 "원문에서 확인" 단순 안내로 분기할 때 사용한다.
@@ -17,12 +18,32 @@ export function hasCrawledBody(event) {
 
 export function enrichEvent(event) {
   const announcement = getFallbackAnnouncement(event);
+  const platform = getCorrectedPlatform(event);
   return {
     ...event,
     ...getFallbackDecision(event),
+    platform,
+    source: platform !== event.platform ? replaceSourcePlatform(event.source, platform) : event.source,
     resultAnnouncementDate: event.resultAnnouncementDate || announcement.date,
     resultAnnouncementText: event.resultAnnouncementText || announcement.text,
   };
+}
+
+function getCorrectedPlatform(event) {
+  if (hasYoutubeApplyUrl(event)) return YOUTUBE_PLATFORM;
+  return event.platform || '\uAE30\uD0C0 \uC774\uBCA4\uD2B8';
+}
+
+function replaceSourcePlatform(source = '', platform) {
+  if (!source) return platform;
+  if (!source.includes('\u00B7')) return source;
+  return source.replace(/\u00B7\s*.+$/, `\u00B7 ${platform}`);
+}
+
+function hasYoutubeApplyUrl(event = {}) {
+  const raw = event.raw ?? {};
+  const applyUrl = [event.applyTargetUrl, raw.applyTargetUrl].filter(Boolean).join(' ');
+  return /youtube\.com|youtu\.be/i.test(applyUrl);
 }
 
 function getFallbackAnnouncement(event) {
