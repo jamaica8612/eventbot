@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import react from '@vitejs/plugin-react';
+import { spawn } from 'node:child_process';
 import { extractVideoId, fetchYoutubeContext } from './api/youtubeTranscriptCore.js';
 
 export default defineConfig(({ mode }) => {
@@ -12,13 +13,15 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.GITHUB_PAGES ? '/eventbot/' : '/',
-    plugins: [react(), youtubeTranscriptApi()],
+    plugins: [react(), localApi()],
   };
 });
 
-function youtubeTranscriptApi() {
+function localApi() {
+  let crawlPromise = null;
+
   return {
-    name: 'youtube-transcript-api',
+    name: 'eventbot-local-api',
     configureServer(server) {
       server.middlewares.use('/api/youtube-transcript', async (request, response) => {
         try {
@@ -45,8 +48,59 @@ function youtubeTranscriptApi() {
           );
         }
       });
+
+      server.middlewares.use('/api/crawl-suto', async (request, response) => {
+        if (request.method !== 'POST') {
+          response.statusCode = 405;
+          response.setHeader('content-type', 'application/json; charset=utf-8');
+          response.end(JSON.stringify({ error: 'POST only' }));
+          return;
+        }
+
+        try {
+          if (!crawlPromise) {
+            crawlPromise = runCrawler().finally(() => {
+              crawlPromise = null;
+            });
+          }
+          const result = await crawlPromise;
+          response.setHeader('content-type', 'application/json; charset=utf-8');
+          response.end(JSON.stringify(result));
+        } catch (error) {
+          response.statusCode = 500;
+          response.setHeader('content-type', 'application/json; charset=utf-8');
+          response.end(JSON.stringify({ error: error.message || 'Crawler failed.' }));
+        }
+      });
     },
   };
+}
+
+function runCrawler() {
+  return new Promise((resolve, reject) => {
+    const command = process.platform === 'win32' ? 'npm.cmd' : 'npm';
+    const child = spawn(command, ['run', 'crawl:full'], {
+      cwd: process.cwd(),
+      env: process.env,
+      shell: false,
+    });
+    let stdout = '';
+    let stderr = '';
+    child.stdout.on('data', (chunk) => {
+      stdout += chunk.toString();
+    });
+    child.stderr.on('data', (chunk) => {
+      stderr += chunk.toString();
+    });
+    child.on('error', reject);
+    child.on('close', (code) => {
+      if (code === 0) {
+        resolve({ ok: true, stdout: stdout.slice(-4000), stderr: stderr.slice(-2000) });
+      } else {
+        reject(new Error((stderr || stdout || `Crawler exited with code ${code}`).slice(-4000)));
+      }
+    });
+  });
 }
 
 function readJsonBody(request) {

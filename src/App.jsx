@@ -76,6 +76,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
   const [crawlerStatus, setCrawlerStatus] = useState(null);
+  const [isCrawling, setIsCrawling] = useState(false);
   const didLoadFilterSettings = useRef(false);
   const {
     updateStatus,
@@ -155,6 +156,28 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
     saveFilterSettings(filterSettings);
   }, [filterSettings]);
+
+  async function handleManualCrawl() {
+    if (isCrawling) return;
+    setIsCrawling(true);
+    setSyncNotice({ type: 'info', message: '크롤링을 시작했습니다. 잠시만 기다려 주세요.' });
+
+    try {
+      const response = await fetch('/api/crawl-suto', { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
+      }
+      setSyncNotice({ type: 'success', message: '크롤링이 완료되었습니다. 목록을 다시 불러옵니다.' });
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      setSyncNotice({
+        type: 'warning',
+        message: error.message || '크롤링 실행에 실패했습니다.',
+      });
+      setIsCrawling(false);
+    }
+  }
 
   const appEvents = useMemo(() => events.filter((event) => !isInstagramEvent(event)), [events]);
 
@@ -237,6 +260,8 @@ function EventBotApp({ theme, setTheme, onLock }) {
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
+              onCrawl={handleManualCrawl}
+              isCrawling={isCrawling}
               onReset={() => setFilterSettings(defaultFilterSettings)}
             />
           ) : null}
@@ -326,7 +351,8 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
 const sortOptions = [
   { value: 'default', label: '기본순' },
-  { value: 'popular', label: '인원 많은순' },
+  { value: 'popular', label: '인기순' },
+  { value: 'winners', label: '당첨자수 많은순' },
   { value: 'deadline', label: '마감임박순' },
   { value: 'newest', label: '최신수집순' },
 ];
@@ -361,6 +387,15 @@ function sortEventsByMode(events, sortMode, filter) {
     );
   }
 
+  if (sortMode === 'winners') {
+    return [...events].sort(
+      (first, second) =>
+        getTotalWinnerCount(second) - getTotalWinnerCount(first) ||
+        getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
   if (sortMode === 'deadline') {
     return sortTodayDeadlineEvents(events);
   }
@@ -378,6 +413,31 @@ function sortEventsByMode(events, sortMode, filter) {
 
 function getNumber(value) {
   return Number.isFinite(value) ? value : 0;
+}
+
+function getTotalWinnerCount(event) {
+  const raw = event.raw ?? {};
+  const direct = parseCount(event.totalWinnerCount ?? raw.totalWinnerCount);
+  if (Number.isFinite(direct)) return direct;
+
+  const text = [
+    ...(Array.isArray(event.detailMetaLines) ? event.detailMetaLines : []),
+    ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+    event.originalText,
+    raw.originalText,
+  ].filter(Boolean).join('\n');
+
+  const match = text.match(/(?:총\s*)?당첨자\s*수|당첨\s*인원/i);
+  if (!match) return 0;
+  const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 40);
+  return parseCount(afterLabel) || 0;
+}
+
+function parseCount(value) {
+  const match = String(value ?? '').match(/\d[\d,]*/);
+  if (!match) return NaN;
+  const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
+  return Number.isFinite(count) ? count : NaN;
 }
 
 function getEventTime(event) {
@@ -496,6 +556,8 @@ function FilterSettingsPanel({
   onThemeChange,
   onSelectFilter,
   onLock,
+  onCrawl,
+  isCrawling,
   onReset,
 }) {
   const platforms = useMemo(
@@ -535,6 +597,14 @@ function FilterSettingsPanel({
         </button>
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
+        </button>
+        <button
+          type="button"
+          className="settings-action-button"
+          onClick={onCrawl}
+          disabled={isCrawling}
+        >
+          {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
         </button>
         <button
           type="button"
