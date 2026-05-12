@@ -1,4 +1,4 @@
-const DEFAULT_GEMINI_MODELS = ['gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+const DEFAULT_GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 const SHOULD_ATTACH_VIDEO_FILE = Deno.env.get('GEMINI_ATTACH_VIDEO_FILE') === '1';
 const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
 const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
@@ -19,12 +19,12 @@ Deno.serve(async (request) => {
   if (!PASSCODE_DISABLED) {
     const passcodeSecret = Deno.env.get('EVENTBOT_PASSCODE');
     if (!passcodeSecret) {
-      return json({ error: '비밀번호 secret이 설정되지 않았습니다.' }, 500);
+      return json({ error: 'Passcode secret is not configured.' }, 500);
     }
 
     const token = request.headers.get('x-eventbot-token') ?? '';
     if (!(await verifyToken(token, passcodeSecret))) {
-      return json({ error: '잠금 해제가 필요합니다.' }, 401);
+      return json({ error: 'Invalid access token.' }, 401);
     }
   }
 
@@ -40,7 +40,7 @@ Deno.serve(async (request) => {
     return json(context);
   } catch (error) {
     return json(
-      { error: error instanceof Error ? error.message : '유튜브 컨텍스트를 가져오지 못했습니다.' },
+      { error: error instanceof Error ? error.message : 'Failed to collect YouTube information.' },
       400,
     );
   }
@@ -114,15 +114,20 @@ async function fetchYoutubeContext({
   eventInfo: Record<string, unknown>;
   mode: 'context' | 'candidates';
 }) {
-  if (!videoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
+  if (!videoId) throw new Error('YouTube video ID was not found.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
   if (mode === 'candidates') {
+    const candidateContext = await fetchCandidateContext(videoId, watchUrl);
     let commentCandidates: Array<{ style: string; text: string }> = [];
     let commentCandidatesError = '';
 
     try {
-      commentCandidates = await generateCommentCandidates({ videoUrl: watchUrl, eventInfo });
+      commentCandidates = await generateCommentCandidates({
+        videoUrl: watchUrl,
+        eventInfo: buildCandidateEventInfo(eventInfo, candidateContext),
+        comments: candidateContext.comments,
+      });
     } catch (error) {
       commentCandidatesError = error instanceof Error ? error.message : 'Gemini comment generation failed.';
     }
@@ -130,9 +135,10 @@ async function fetchYoutubeContext({
     return {
       videoId,
       url: watchUrl,
-      transcript: null,
-      transcriptError: '',
-      comments: [],
+      ...candidateContext.metadata,
+      transcript: candidateContext.transcript,
+      transcriptError: candidateContext.transcript ? '' : candidateContext.transcriptError,
+      comments: candidateContext.comments,
       commentCandidates,
       commentCandidatesError,
     };
@@ -147,7 +153,7 @@ async function fetchYoutubeContext({
   });
   const html = await watchResponse.text();
   if (!watchResponse.ok) {
-    throw new Error(`유튜브 영상 페이지를 열 수 없습니다. (${watchResponse.status})`);
+    throw new Error(`Failed to open YouTube watch page. (${watchResponse.status})`);
   }
 
   const playerResponse = extractPlayerResponse(html);
@@ -181,10 +187,83 @@ async function fetchYoutubeContext({
       isGenerated: track.kind === 'asr',
     })),
     transcript,
-    transcriptError: transcript ? '' : '사용 가능한 공개 자막을 찾지 못했습니다.',
+    transcriptError: transcript ? '' : 'No public YouTube transcript was found.',
     comments,
     commentCandidates: [],
     commentCandidatesError: '',
+  };
+}
+
+async function fetchCandidateContext(videoId: string, watchUrl: string) {
+  try {
+    const watchResponse = await fetch(watchUrl, {
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'accept-language': 'ko-KR,ko;q=0.9,en;q=0.8',
+      },
+    });
+    const html = await watchResponse.text();
+    if (!watchResponse.ok) throw new Error(`YouTube watch page failed: ${watchResponse.status}`);
+
+    const playerResponse = extractPlayerResponse(html);
+    const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY') || '';
+    const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    const apiVideoPromise = youtubeApiKey
+      ? fetchYoutubeApiVideoSafe(videoId, youtubeApiKey)
+      : Promise.resolve(null);
+    const transcriptPromise = fetchTranscriptSafe(tracks);
+    const apiCommentsPromise = youtubeApiKey
+      ? fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey)
+      : Promise.resolve([]);
+    const [apiVideo, transcript, apiComments] = await Promise.all([
+      apiVideoPromise,
+      transcriptPromise,
+      apiCommentsPromise,
+    ]);
+    const metadata = {
+      ...extractVideoMetadata(playerResponse, html, watchUrl),
+      ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
+    };
+    const comments =
+      apiComments.length > 0 ? apiComments : await fetchCommentsSafe({ html, playerResponse, videoId });
+
+    return {
+      metadata,
+      transcript,
+      transcriptError: transcript ? '' : 'No public YouTube transcript was found.',
+      comments,
+    };
+  } catch (error) {
+    return {
+      metadata: {},
+      transcript: null,
+      transcriptError: error instanceof Error ? error.message : 'Failed to collect YouTube context.',
+      comments: [],
+    };
+  }
+}
+
+function buildCandidateEventInfo(
+  eventInfo: Record<string, unknown> = {},
+  context: {
+    metadata?: Record<string, unknown>;
+    transcript?: { lines?: string[] } | null;
+  } = {},
+) {
+  const transcriptLines = Array.isArray(context.transcript?.lines)
+    ? context.transcript.lines.slice(0, 36)
+    : [];
+  const metadata = context.metadata ?? {};
+  return {
+    ...eventInfo,
+    bodyLines: [
+      ...(Array.isArray(eventInfo.bodyLines) ? eventInfo.bodyLines : []),
+      metadata.title ? `YouTube title: ${metadata.title}` : '',
+      metadata.channelName ? `Channel: ${metadata.channelName}` : '',
+      metadata.description ? `Video description: ${String(metadata.description).slice(0, 900)}` : '',
+      ...transcriptLines.map((line) => `Transcript: ${line}`),
+    ].filter(Boolean),
   };
 }
 
@@ -359,7 +438,7 @@ function chooseCaptionTrack(tracks: Array<Record<string, any>>) {
   if (!Array.isArray(tracks) || tracks.length === 0) return null;
   return (
     tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('ko')) ??
-    tracks.find((track) => /korean|한국|한글/i.test(getText(track.name))) ??
+    tracks.find((track) => /korean|\uD55C\uAD6D|\uD55C\uAE00/i.test(getText(track.name))) ??
     tracks.find((track) => String(track.languageCode ?? '').toLowerCase().startsWith('en')) ??
     tracks[0]
   );
@@ -495,11 +574,10 @@ function parseLikeCount(value: string) {
   const match = text.match(/(\d+(?:\.\d+)?)/);
   if (!match) return 0;
   const number = Number(match[1]);
-  if (/만/.test(text)) return Math.round(number * 10000);
-  if (/천/.test(text)) return Math.round(number * 1000);
+  if (text.includes('\uB9CC') || /\bm\b/i.test(text)) return Math.round(number * 10000);
+  if (text.includes('\uCC9C') || /\bk\b/i.test(text)) return Math.round(number * 1000);
   return Number.isFinite(number) ? number : 0;
 }
-
 function getQuotedValue(html: string, key: string) {
   const pattern = new RegExp(`"${key}"\\s*:\\s*"([^"]+)"`);
   return decodeHtml(html.match(pattern)?.[1] ?? '');
@@ -508,14 +586,18 @@ function getQuotedValue(html: string, key: string) {
 async function generateCommentCandidates({
   videoUrl,
   eventInfo,
+  comments = [],
 }: {
   videoUrl: string;
   eventInfo: Record<string, unknown>;
+  comments?: Array<Record<string, unknown>>;
 }) {
   const apiKey = Deno.env.get('GEMINI_API_KEY');
-  if (!apiKey) throw new Error('Supabase Function Secret GEMINI_API_KEY가 설정되지 않았습니다.');
+  if (!apiKey) throw new Error('Supabase Function Secret GEMINI_API_KEY is not configured.');
 
-  const parts: Array<Record<string, unknown>> = [{ text: buildGeminiUserText(videoUrl, buildUserPrompt(eventInfo)) }];
+  const parts: Array<Record<string, unknown>> = [
+    { text: buildGeminiUserText(videoUrl, buildUserPrompt(eventInfo, comments)) },
+  ];
   if (SHOULD_ATTACH_VIDEO_FILE) {
     parts.unshift({ fileData: { fileUri: videoUrl, mimeType: 'video/*' } });
   }
@@ -552,61 +634,21 @@ async function generateCommentCandidates({
   };
 
   const rawText = await fetchGeminiWithFallback(apiKey, requestBody);
-  /*
-  const response = await fetch(`${GEMINI_ENDPOINT}?key=${encodeURIComponent(apiKey)}`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({
-      systemInstruction: { parts: [{ text: SYSTEM_PROMPT }] },
-      contents: [
-        {
-          role: 'user',
-          parts,
-        },
-      ],
-      generationConfig: {
-        mediaResolution: 'MEDIA_RESOLUTION_LOW',
-        responseMimeType: 'application/json',
-        responseSchema: {
-          type: 'object',
-          properties: {
-            candidates: {
-              type: 'array',
-              items: {
-                type: 'object',
-                properties: {
-                  style: { type: 'string' },
-                  text: { type: 'string' },
-                },
-                required: ['style', 'text'],
-              },
-            },
-          },
-          required: ['candidates'],
-        },
-      },
-    }),
-  });
-
-  const rawText = await response.text();
-  if (!response.ok) {
-    throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
-  }
-  */
 
   const payload = JSON.parse(rawText);
   const text = payload?.candidates?.[0]?.content?.parts?.find((part: Record<string, unknown>) => part.text)?.text;
   if (!text) {
     const reason = payload?.promptFeedback?.blockReason || payload?.candidates?.[0]?.finishReason || 'unknown';
-    throw new Error(`Gemini가 댓글 후보를 반환하지 않았습니다. (${reason})`);
+    throw new Error(`Gemini did not return a comment candidate. (${reason})`);
   }
 
   const parsed = JSON.parse(text);
   const list = Array.isArray(parsed?.candidates) ? parsed.candidates : [];
   return list
     .filter((item: Record<string, unknown>) => typeof item.text === 'string' && item.text.trim())
+    .slice(0, 1)
     .map((item: Record<string, unknown>) => ({
-      style: String(item.style || '').trim(),
+      style: String(item.style || '?? ??').trim(),
       text: sanitizeCommentText(String(item.text || '')),
     }));
 }
@@ -614,7 +656,7 @@ async function generateCommentCandidates({
 async function fetchGeminiWithFallback(apiKey: string, requestBody: Record<string, unknown>) {
   const errors: string[] = [];
   for (const model of getGeminiModels()) {
-    for (let attempt = 0; attempt < 2; attempt += 1) {
+    for (let attempt = 0; attempt < 1; attempt += 1) {
       let response: Response;
       let rawText = '';
       try {
@@ -634,13 +676,13 @@ async function fetchGeminiWithFallback(apiKey: string, requestBody: Record<strin
 
       errors.push(`${model}: ${response.status} ${rawText.slice(0, 180)}`);
       if (!RETRYABLE_GEMINI_STATUSES.has(response.status)) {
-        throw new Error(`Gemini 호출 실패 (${response.status}): ${rawText.slice(0, 300)}`);
+        throw new Error(`Gemini call failed (${response.status}): ${rawText.slice(0, 300)}`);
       }
       await sleep(backoffMs(attempt));
     }
   }
 
-  throw new Error(`Gemini가 일시적으로 혼잡합니다. 잠시 뒤 다시 시도해 주세요. (${errors.at(-1) ?? 'unavailable'})`);
+  throw new Error(`Gemini is temporarily busy. Please try again later. (${errors.at(-1) ?? 'unavailable'})`);
 }
 
 function getGeminiModels() {
@@ -664,33 +706,50 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildUserPrompt(eventInfo: Record<string, unknown>) {
+function buildUserPrompt(eventInfo: Record<string, unknown>, comments: Array<Record<string, unknown>> = []) {
   const bodyLines = Array.isArray(eventInfo.bodyLines) ? eventInfo.bodyLines : [];
   const participationHints = Array.isArray(eventInfo.participationHints)
     ? eventInfo.participationHints
     : [];
+  const commentLines = comments
+    .slice(0, 10)
+    .map((comment) => {
+      const likes = Number(comment.likes ?? 0);
+      const text = String(comment.text ?? '').replace(/\s+/g, ' ').trim();
+      return text ? `  - ${likes > 0 ? `[likes ${likes}] ` : ''}${text}` : '';
+    })
+    .filter(Boolean);
   return [
-    '서로 다른 목적의 이벤트 댓글 후보 3개를 만들어줘.',
-    '반드시 JSON의 candidates 배열만 채워라. 각 후보는 style과 text를 가진다.',
-    '후보 1: 짧고 자연스러운 댓글. 후보 2: 이벤트 조건을 충족하는 성의형 댓글. 후보 3: 영상 내용이 드러나는 개성형 댓글.',
-    '영상 내용을 정확히 이해하고, 이벤트 참여 댓글처럼 자연스럽게 작성해줘.',
-    '작은따옴표와 큰따옴표는 쓰지 말고, 실제 사람이 댓글창에 바로 남긴 것처럼 써줘.',
-    '당첨 보장, 과장 광고, 허위 시청 경험, 개인정보, 친구 태그 조작 문구는 쓰지 마.',
-    '각 댓글은 1~3문장, 35~140자 사이로 작성해줘.',
+    'Create exactly one sincere Korean event comment candidate.',
+    'Return JSON only. Put exactly one item in candidates. The item has style and text.',
+    'Set style to a short Korean tone label. Write the text in Korean, long and polished enough to feel like a winning event comment.',
+    'Use the supplied YouTube title, description, transcript excerpts, event text, and other participant comments only to understand context and mood.',
+    'Do not include prize/giveaway product details in the comment text.',
+    'Do not write evaluative review phrases about the video or post itself, such as saying the video was helpful, moving, detailed, or well made.',
+    'Naturally satisfy the required participation condition when available: answer, expectation, support message, review, subscribe, like, or comment requirement.',
+    'Make the comment unique, creative, positive, and lively, but not promotional or AI-like.',
+    'Avoid generic praise. Include concrete context from the event topic or situation without inventing unseen facts.',
+    'Treat supplied excerpts as the only source of facts. Do not infer products, scenes, tools, routines, or plot details from a title alone.',
+    'Use other participant comments only as tone reference. Do not copy their wording, structure, or ideas.',
+    'Do not say you want to win, are waiting for the announcement, or hope to receive the prize.',
+    'Do not use emojis. Avoid quotation marks except when truly necessary.',
+    'Do not use manipulative tags, personal data, false viewing claims, exaggerated advertising, or winning guarantees.',
+    'Make it sound like a real person wrote it after thinking, not a template.',
     '',
-    '[이벤트 정보]',
-    `제목: ${eventInfo.title || '-'}`,
-    `플랫폼: ${eventInfo.platform || '-'}`,
-    `마감: ${eventInfo.deadline || '-'}`,
-    `발표: ${eventInfo.announcement || '-'}`,
-    `경품: ${eventInfo.prize || '-'}`,
-    `참여 힌트: ${participationHints.join(', ') || '-'}`,
-    bodyLines.length ? '본문 발췌:' : '',
-    ...bodyLines.slice(0, 24).map((line) => `  ${line}`),
+    '[Event info]',
+    `Title: ${eventInfo.title || '-'}`,
+    `Platform: ${eventInfo.platform || '-'}`,
+    `Deadline: ${eventInfo.deadline || '-'}`,
+    `Announcement: ${eventInfo.announcement || '-'}`,
+    `Prize: ${eventInfo.prize || '-'}`,
+    `Participation hints: ${participationHints.join(', ') || '-'}`,
+    bodyLines.length ? 'Event body excerpts:' : '',
+    ...bodyLines.slice(0, 36).map((line) => `  ${line}`),
     '',
-    '[다른 참가자 댓글] 없음 또는 비활성화된 영상',
+    commentLines.length ? '[Other participant comments for mood reference only, do not copy]' : '[Other participant comments] none or unavailable',
+    ...commentLines,
     '',
-    'style 필드는 짧게 "짧은 자연형", "조건 충족형", "영상 공감형"처럼 한국어로 기입.',
+    'Write one polished comment that can be copied after a quick human check.',
   ]
     .filter((line) => line !== '')
     .join('\n');
@@ -699,21 +758,25 @@ function buildUserPrompt(eventInfo: Record<string, unknown>) {
 function sanitizeCommentText(text: string) {
   return text
     .trim()
-    .replace(/^[`'"“”‘’「」『』]+/, '')
-    .replace(/[`'"“”‘’「」『』]+$/, '')
+    .replace(/^[\s`'"]+|[\s`'"]+$/g, '')
     .trim();
 }
-
 function buildGeminiUserText(videoUrl: string, userPrompt: string) {
+  if (!SHOULD_ATTACH_VIDEO_FILE) {
+    return [
+      userPrompt,
+      '',
+      'The raw video file is not attached for speed. Use the supplied YouTube title, description, transcript excerpts, comments, event body excerpts, and event conditions as factual source material.',
+    ].join('\n');
+  }
+
   return [
     userPrompt,
     '',
-    '[참고 영상 URL]',
+    '[Reference video URL]',
     videoUrl,
     '',
-    SHOULD_ATTACH_VIDEO_FILE
-      ? '첨부된 영상과 위 이벤트 정보를 함께 참고해 댓글 후보를 작성해줘.'
-      : '영상 파일은 속도를 위해 첨부하지 않았다. 위 이벤트 본문과 조건을 기준으로 댓글 후보를 작성하고, 영상 내용은 본문에 드러난 범위 안에서만 구체화해줘.',
+    'Use the attached video together with the event information to write one sincere Korean comment.',
   ].join('\n');
 }
 
@@ -740,7 +803,7 @@ function extractVideoMetadata(playerResponse: Record<string, any>, html: string,
 function extractPlayerResponse(html: string) {
   const marker = 'ytInitialPlayerResponse = ';
   const start = html.indexOf(marker);
-  if (start < 0) throw new Error('유튜브 플레이어 정보를 찾지 못했습니다.');
+  if (start < 0) throw new Error('YouTube player response was not found.');
 
   const jsonStart = start + marker.length;
   return JSON.parse(readBalancedJson(html, jsonStart));
@@ -768,7 +831,7 @@ function readBalancedJson(text: string, start: number) {
     }
   }
 
-  throw new Error('유튜브 플레이어 JSON을 끝까지 읽지 못했습니다.');
+  throw new Error('Failed to read YouTube player JSON.');
 }
 
 function getText(value: any) {
@@ -793,9 +856,11 @@ function decodeHtml(value: string) {
     .replace(/&#39;|&#039;/g, "'");
 }
 
-const SYSTEM_PROMPT = `너는 한국 이벤트 댓글 후보 작성을 돕는 어시스턴트다.
-AI의 역할은 댓글 후보 생성으로만 제한된다. 이벤트 참여 여부 판단, 검색, 응모, 당첨 판정은 하지 않는다.
-사용자가 제공한 이벤트 정보와 영상 내용을 바탕으로 자연스럽고 짧은 댓글 후보를 만든다.
-과장 광고 문구처럼 쓰지 말고, 실제 사람이 영상 내용을 보고 남긴 댓글처럼 구체적으로 쓴다.
-다른 사람 댓글을 베끼지 않고 새 문장으로 작성한다.
-개인정보, 당첨 보장, 허위 시청 경험, 조작적 태그/공유 문구는 만들지 않는다.`;
+const SYSTEM_PROMPT = `You help draft Korean event comments.
+Your role is limited to drafting comment candidates. Do not judge participation, search, enter events, or decide winners.
+Create exactly one distinctive, sincere Korean comment candidate from the event information, supplied YouTube/post context, and other participant comments.
+Use other participant comments only to understand mood. Do not copy their wording, structure, or ideas.
+Do not mention giveaway prizes or prize products in the comment text.
+Do not include evaluative review phrases about the video or post itself.
+Write like a real person leaving a thoughtful, positive comment, not like an ad or AI explanation.
+Avoid emojis, excessive quotation marks, personal data, winning guarantees, false viewing claims, manipulative tag/share phrases, and duplicated ideas.`;

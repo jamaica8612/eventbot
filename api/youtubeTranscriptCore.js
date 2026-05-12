@@ -43,13 +43,19 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
   const watchUrl = `https://www.youtube.com/watch?v=${resolvedVideoId}`;
 
   if (mode !== 'context') {
-    const { commentCandidates, commentCandidatesError } = await generateFastCommentCandidates(watchUrl, eventInfo);
+    const candidateContext = await fetchCandidateContext(resolvedVideoId, watchUrl);
+    const { commentCandidates, commentCandidatesError } = await generateFastCommentCandidates(
+      watchUrl,
+      buildCandidateEventInfo(eventInfo, candidateContext),
+      candidateContext.comments,
+    );
     return {
       videoId: resolvedVideoId,
       url: watchUrl,
-      transcript: null,
-      transcriptError: '',
-      comments: [],
+      ...candidateContext.metadata,
+      transcript: candidateContext.transcript,
+      transcriptError: candidateContext.transcript ? '' : candidateContext.transcriptError,
+      comments: candidateContext.comments,
       commentCandidates,
       commentCandidatesError,
     };
@@ -100,7 +106,66 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
   };
 }
 
-async function generateFastCommentCandidates(watchUrl, eventInfo) {
+async function fetchCandidateContext(videoId, watchUrl) {
+  try {
+    const watchResponse = await fetch(watchUrl, { headers: WATCH_HEADERS });
+    const html = await watchResponse.text();
+    if (!watchResponse.ok) throw new Error(`YouTube watch page failed: ${watchResponse.status}`);
+
+    const playerResponse = extractPlayerResponse(html);
+    const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
+    const youtubeApiKey = process.env.YOUTUBE_API_KEY || '';
+    const apiVideoPromise = youtubeApiKey
+      ? fetchYoutubeApiVideoSafe(videoId, youtubeApiKey)
+      : Promise.resolve(null);
+    const transcriptPromise = fetchTranscriptSafe(tracks);
+    const commentsPromise = youtubeApiKey
+      ? fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey)
+      : Promise.resolve([]);
+    const [apiVideo, transcript, comments] = await Promise.all([
+      apiVideoPromise,
+      transcriptPromise,
+      commentsPromise,
+    ]);
+    const metadata = {
+      ...extractVideoMetadata(playerResponse, html, watchUrl),
+      ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
+    };
+
+    return {
+      metadata,
+      transcript,
+      transcriptError: transcript ? '' : 'No public YouTube transcript was found.',
+      comments,
+    };
+  } catch (error) {
+    return {
+      metadata: {},
+      transcript: null,
+      transcriptError: error.message || 'Failed to collect YouTube context.',
+      comments: [],
+    };
+  }
+}
+
+function buildCandidateEventInfo(eventInfo = {}, context = {}) {
+  const transcriptLines = Array.isArray(context.transcript?.lines)
+    ? context.transcript.lines.slice(0, 36)
+    : [];
+  const metadata = context.metadata ?? {};
+  return {
+    ...eventInfo,
+    bodyLines: [
+      ...(Array.isArray(eventInfo.bodyLines) ? eventInfo.bodyLines : []),
+      metadata.title ? `YouTube title: ${metadata.title}` : '',
+      metadata.channelName ? `Channel: ${metadata.channelName}` : '',
+      metadata.description ? `Video description: ${String(metadata.description).slice(0, 900)}` : '',
+      ...transcriptLines.map((line) => `Transcript: ${line}`),
+    ].filter(Boolean),
+  };
+}
+
+async function generateFastCommentCandidates(watchUrl, eventInfo, comments = []) {
   let commentCandidates = [];
   let commentCandidatesError = '';
 
@@ -109,7 +174,7 @@ async function generateFastCommentCandidates(watchUrl, eventInfo) {
       generateCommentCandidates({
         videoUrl: watchUrl,
         eventInfo: eventInfo ?? {},
-        comments: [],
+        comments: comments.slice(0, 12),
         timeoutMs: COMMENT_CANDIDATES_TIMEOUT_MS,
       }),
       COMMENT_CANDIDATES_TIMEOUT_MS + 5000,

@@ -230,10 +230,10 @@ export function EventBodyToggle({ event, lines, facts }) {
                 disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
               >
                 {transcriptStatus === 'loading'
-                  ? '댓글 후보 생성 중'
+                  ? '댓글 생성 중'
                   : hasCommentCandidates
-                    ? '댓글 후보 보기'
-                    : '댓글 후보 만들기'}
+                    ? '댓글 보기'
+                    : '댓글 만들기'}
               </button>
             </>
           ) : null}
@@ -261,8 +261,8 @@ export function EventBodyToggle({ event, lines, facts }) {
           {areCandidatesVisible && hasCommentCandidates ? (
             <div className="comment-candidates">
               <div className="comment-candidates-head">
-                <strong>댓글 후보</strong>
-                <span>복사해서 필요한 부분만 다듬어 쓰세요</span>
+                <strong>추천 댓글</strong>
+                <span>복사 전에 내 말투로 한 번만 다듬어 주세요</span>
               </div>
               {youtubeContext.commentCandidates.map((candidate, index) => (
                 <div key={index} className="comment-candidate">
@@ -277,7 +277,7 @@ export function EventBodyToggle({ event, lines, facts }) {
                     onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
                     onClick={(clickEvent) => handleCopyCandidate(clickEvent, candidate.text, index)}
                   >
-                    {copiedCandidateIndex === index ? '복사됨' : '이 댓글 복사'}
+                    {copiedCandidateIndex === index ? '복사됨' : '댓글 복사'}
                   </button>
                 </div>
               ))}
@@ -287,7 +287,7 @@ export function EventBodyToggle({ event, lines, facts }) {
             </div>
           ) : youtubeContext?.commentCandidatesError ? (
             <p className="youtube-transcript-error">
-              댓글 후보 생성 실패: {youtubeContext.commentCandidatesError}
+              댓글 생성 실패: {youtubeContext.commentCandidatesError}
             </p>
           ) : null}
           {manualCopyText ? (
@@ -445,7 +445,7 @@ function buildYoutubeCommentMaterialText(event, context) {
     '[인기 댓글 참고]',
     commentLines.join('\n') || '-',
     '',
-    '[생성된 댓글 후보]',
+    '[생성된 추천 댓글]',
     candidateLines.join('\n') || '-',
   ].join('\n');
 }
