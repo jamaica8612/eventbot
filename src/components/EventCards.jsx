@@ -61,12 +61,13 @@ function ReadyEventCard({ event, onStatusChange }) {
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
   const applyHref = event.applyUrl ?? event.url;
+  const totalWinnerCount = getTotalWinnerCount(event);
 
   return (
     <article className="event-card now-card">
       <div className="score-row">
         <span>{event.platform}</span>
-        <strong>{Number.isFinite(event.bookmarkCount) ? `${event.bookmarkCount}명` : '대기'}</strong>
+        <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
       </div>
 
       <h3>{event.title}</h3>
@@ -250,4 +251,29 @@ function getSchedulePrizeDisplay(event) {
     .replace(/\s+/g, ' ')
     .trim()
     .slice(0, 42);
+}
+
+function getTotalWinnerCount(event) {
+  const raw = event.raw ?? {};
+  const direct = parseCount(event.totalWinnerCount ?? raw.totalWinnerCount);
+  if (Number.isFinite(direct)) return direct;
+
+  const text = [
+    ...(Array.isArray(event.detailMetaLines) ? event.detailMetaLines : []),
+    ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+    event.originalText,
+    raw.originalText,
+  ].filter(Boolean).join('\n');
+
+  const match = text.match(/(?:총\s*)?당첨자\s*수|당첨\s*인원/i);
+  if (!match) return NaN;
+  const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 40);
+  return parseCount(afterLabel);
+}
+
+function parseCount(value) {
+  const match = String(value ?? '').match(/\d[\d,]*/);
+  if (!match) return NaN;
+  const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
+  return Number.isFinite(count) ? count : NaN;
 }

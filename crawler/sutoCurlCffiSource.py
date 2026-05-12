@@ -352,6 +352,7 @@ def extract_detail_metadata(soup: BeautifulSoup) -> dict:
         "resultAnnouncementDate": "",
         "resultAnnouncementText": "",
         "prizeText": "",
+        "totalWinnerCount": "",
     }
 
     for item in soup.select(".item-box li"):
@@ -366,6 +367,8 @@ def extract_detail_metadata(soup: BeautifulSoup) -> dict:
         if is_announcement_label(label):
             metadata["resultAnnouncementDate"] = normalize_detail_date(value)
             metadata["resultAnnouncementText"] = f"{label} {value}".strip()[:100]
+        elif is_total_winner_label(label):
+            metadata["totalWinnerCount"] = parse_first_number(value) or ""
         elif "경품태그" in label:
             prize_tags = unique_texts(item.select("a"))
             metadata["prizeText"] = ", ".join(prize_tags) or value[:50]
@@ -377,6 +380,18 @@ def is_announcement_label(label: str) -> bool:
     return "발표" in label and ("일" in label or "예정" in label)
 
 
+
+
+def is_total_winner_label(label: str) -> bool:
+    text = re.sub(r"\s+", "", label)
+    return "\uCD1D\uB2F9\uCCA8\uC790\uC218" in text or "\uB2F9\uCCA8\uC790\uC218" in text or "\uB2F9\uCCA8\uC778\uC6D0" in text
+
+
+def parse_first_number(value: str) -> int | None:
+    match = re.search(r"\d[\d,]*", value or "")
+    if not match:
+        return None
+    return int(match.group(0).replace(",", ""))
 def normalize_detail_date(value: str) -> str:
     today = datetime.now()
     text = re.sub(r"\s+", " ", value).strip()

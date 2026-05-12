@@ -148,6 +148,7 @@ function mergeExistingBody(event, existingRaw) {
     originalLines: existingRaw.originalLines ?? event.originalLines,
     detailMetaLines: existingRaw.detailMetaLines ?? event.detailMetaLines,
     applyTargetUrl: event.applyTargetUrl || existingRaw.applyTargetUrl || '',
+    totalWinnerCount: event.totalWinnerCount || existingRaw.totalWinnerCount || '',
     externalLinks: event.externalLinks?.length ? event.externalLinks : existingRaw.externalLinks ?? [],
     youtubeTranscripts: event.youtubeTranscripts?.length
       ? event.youtubeTranscripts

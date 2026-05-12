@@ -129,6 +129,7 @@ function toAppEvent(row) {
     platform: row.platform,
     rank: row.rank,
     bookmarkCount: row.bookmark_count,
+    totalWinnerCount: raw.totalWinnerCount ?? '',
     due: decision.deadlineText,
     deadlineText: decision.deadlineText,
     deadlineDate: row.deadline_date ?? raw.deadlineDate ?? decision.deadlineDate ?? '',
