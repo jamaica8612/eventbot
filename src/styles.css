@@ -1459,6 +1459,13 @@ h3 {
   white-space: nowrap;
 }
 
+.schedule-row .schedule-prize {
+  max-width: min(100%, 260px);
+  border-color: rgba(17, 24, 39, 0.08);
+  background: #f7f3e7;
+  color: #5b4636;
+}
+
 .quick-actions button {
   color: var(--text-main);
 }

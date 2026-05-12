@@ -217,15 +217,19 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 function EventScheduleMeta({ event }) {
   const deadline = getDeadlineDisplay(event);
   const announcement = event.resultAnnouncementDate || event.resultAnnouncementText;
+  const prize = getSchedulePrizeDisplay(event);
 
-  if (!deadline && !announcement) {
+  if (!deadline && !announcement && !prize) {
     return null;
   }
 
   return (
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
-      {deadline ? <span>마감 {deadline}</span> : null}
-      {announcement ? <span>발표 {event.resultAnnouncementDate || event.resultAnnouncementText}</span> : null}
+      {deadline ? <span>{`마감 ${deadline}`}</span> : null}
+      {announcement ? (
+        <span>{`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}</span>
+      ) : null}
+      {prize ? <span className="schedule-prize">{prize}</span> : null}
     </div>
   );
 }
@@ -233,4 +237,17 @@ function EventScheduleMeta({ event }) {
 function getDeadlineDisplay(event) {
   const value = event.deadlineDate || event.deadlineText || event.due || '';
   return value === '상세 확인 필요' ? '' : value;
+}
+
+function getSchedulePrizeDisplay(event) {
+  const raw = event.raw ?? {};
+  const directPrize = event.prizeText || event.prizeTitle || raw.prizeText || '';
+  const prize = directPrize || getPrizeDisplay(event);
+  if (!prize || /미수집|확인 필요|정보 미수집/i.test(prize)) return '';
+  return String(prize)
+    .replace(/^[\s🎁🎉🏆💝]+/u, '')
+    .replace(/^(?:이벤트\s*)?(?:경품|상품|혜택|리워드|선물|경품태그)\s*[:：]?\s*/u, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 42);
 }
