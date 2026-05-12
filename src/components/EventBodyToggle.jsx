@@ -43,7 +43,7 @@ export function EventBodyToggle({ event, lines, facts }) {
   const [manualCopyText, setManualCopyText] = useState('');
   const originalHref = event.originalUrl ?? event.url;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const canFetchYoutubeTranscript = isYoutubeEvent(event) && Boolean(youtubeLink);
+  const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
 
@@ -378,10 +378,6 @@ function buildYoutubeLinks(event) {
     .filter((url) => extractYoutubeVideoId(url));
 }
 
-function isYoutubeEvent(event) {
-  const platform = String(event.platform ?? '').toLowerCase();
-  return platform.includes('???') || platform.includes('youtube');
-}
 function extractYoutubeVideoId(url) {
   const value = String(url ?? '');
   return (
