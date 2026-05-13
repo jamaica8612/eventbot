@@ -43,7 +43,9 @@ async function loadSutoEvents() {
   }
 
   const html = await fetchHtml(SOURCE_URL);
-  return hydrateEventDetails(parseSutoHotEvents(html)).filter((event) => !isInstagramEvent(event));
+  const events = await hydrateEventDetails(parseSutoHotEvents(html));
+  printCrawlQualitySummary(events);
+  return events.filter((event) => !isInstagramEvent(event));
 }
 
 function printCrawlQualitySummary(events) {
