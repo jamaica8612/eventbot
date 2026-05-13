@@ -28,11 +28,14 @@ import {
   saveSupabaseFilterSettings,
 } from './storage/supabaseEventStorage.js';
 import {
-  clearSavedAuth,
-  hasSavedAuth,
+  getCurrentSession,
+  hasAuthConfig,
+  loadAuthProfile,
   onAuthRequired,
-  verifyPasscode,
-} from './storage/passcodeAuthStorage.js';
+  onAuthStateChange,
+  signInWithGoogle,
+  signOut,
+} from './storage/supabaseAuthStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
@@ -45,21 +48,78 @@ import { EventSearch } from './components/EventSearch.jsx';
 
 function App() {
   const [theme, setTheme] = useTheme();
-  const [isUnlocked, setIsUnlocked] = useState(hasSavedAuth);
+  const [authState, setAuthState] = useState({
+    isLoading: true,
+    session: null,
+    profile: null,
+    error: '',
+  });
 
-  useEffect(() => onAuthRequired(() => setIsUnlocked(false)), []);
+  useEffect(() => {
+    let isMounted = true;
 
-  function lockApp() {
-    clearSavedAuth();
-    setIsUnlocked(false);
+    async function loadAuth(sessionOverride) {
+      try {
+        const session = sessionOverride ?? (await getCurrentSession());
+        const profile = session ? await loadAuthProfile() : null;
+        if (isMounted) setAuthState({ isLoading: false, session, profile, error: '' });
+      } catch (error) {
+        if (isMounted) {
+          setAuthState({
+            isLoading: false,
+            session: null,
+            profile: null,
+            error: error.message || '\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+          });
+        }
+      }
+    }
+
+    loadAuth();
+    const unsubscribeAuth = onAuthStateChange((session) => loadAuth(session));
+    const unsubscribeRequired = onAuthRequired(() =>
+      setAuthState((current) => ({ ...current, session: null, profile: null })),
+    );
+    return () => {
+      isMounted = false;
+      unsubscribeAuth();
+      unsubscribeRequired();
+    };
+  }, []);
+
+  async function lockApp() {
+    await signOut();
+    setAuthState({ isLoading: false, session: null, profile: null, error: '' });
   }
 
-  if (!isUnlocked) {
+  if (authState.isLoading) {
     return (
-      <PasscodeGate
+      <AuthStatusGate
         theme={theme}
         setTheme={setTheme}
-        onUnlock={() => setIsUnlocked(true)}
+        title={'\uB85C\uADF8\uC778 \uD655\uC778 \uC911'}
+        message={'\uC7A0\uC2DC\uB9CC \uAE30\uB2E4\uB824 \uC8FC\uC138\uC694.'}
+      />
+    );
+  }
+
+  if (!hasAuthConfig || !authState.session) {
+    return (
+      <GoogleLoginGate
+        theme={theme}
+        setTheme={setTheme}
+        error={authState.error}
+      />
+    );
+  }
+
+  if (!authState.profile?.approved) {
+    return (
+      <PendingApprovalGate
+        theme={theme}
+        setTheme={setTheme}
+        profile={authState.profile}
+        onSignOut={lockApp}
       />
     );
   }
@@ -446,22 +506,22 @@ function getEventTime(event) {
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-function PasscodeGate({ theme, setTheme, onUnlock }) {
-  const [passcode, setPasscode] = useState('');
-  const [error, setError] = useState('');
+function GoogleLoginGate({ theme, setTheme, error: initialError }) {
+  const [error, setError] = useState(initialError || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function handleLogin() {
     setError('');
     setIsSubmitting(true);
 
     try {
-      await verifyPasscode(passcode.trim());
-      onUnlock();
+      await signInWithGoogle();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : '비밀번호를 확인해 주세요.');
-    } finally {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Google \uB85C\uADF8\uC778\uC744 \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+      );
       setIsSubmitting(false);
     }
   }
@@ -472,42 +532,77 @@ function PasscodeGate({ theme, setTheme, onUnlock }) {
         <div className="auth-head">
           <div>
             <p className="app-kicker">EVENT CLICK</p>
-            <h1 id="auth-title">잠금 해제</h1>
+            <h1 id="auth-title">Google {'\uB85C\uADF8\uC778'}</h1>
           </div>
           <button
             type="button"
             className="theme-switch"
-            aria-label="테마 변경"
-            onClick={() =>
-              setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
-            }
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
           >
-            {theme === 'dark' ? '다크' : '라이트'}
+            {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
         </div>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>
-            <span>비밀번호</span>
-            <input
-              type="password"
-              inputMode="numeric"
-              autoComplete="current-password"
-              value={passcode}
-              onChange={(event) => setPasscode(event.target.value)}
-              autoFocus
-            />
-          </label>
+        <div className="auth-form">
+          <p className="auth-help">
+            {'\uC2B9\uC778\uB41C Google \uACC4\uC815\uC73C\uB85C\uB9CC \uC774\uBCA4\uD2B8\uBD07\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'}
+          </p>
           {error ? <p className="auth-error">{error}</p> : null}
-          <button type="submit" disabled={isSubmitting || !passcode.trim()}>
-            {isSubmitting ? '확인 중' : '열기'}
+          <button type="button" onClick={handleLogin} disabled={isSubmitting}>
+            {isSubmitting ? '\uB85C\uADF8\uC778 \uC911' : 'Google\uB85C \uB85C\uADF8\uC778'}
           </button>
-        </form>
+        </div>
       </section>
     </main>
   );
 }
 
+function PendingApprovalGate({ theme, setTheme, profile, onSignOut }) {
+  return (
+    <AuthStatusGate
+      theme={theme}
+      setTheme={setTheme}
+      title={'\uC2B9\uC778 \uB300\uAE30 \uC911'}
+      message={
+        (profile?.email ?? '\uD604\uC7AC \uACC4\uC815') +
+        '\uC740 \uC544\uC9C1 \uC2B9\uC778\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uAD00\uB9AC\uC790 \uC2B9\uC778 \uD6C4 \uB2E4\uC2DC \uC811\uC18D\uD574 \uC8FC\uC138\uC694.'
+      }
+      actionLabel={'\uB2E4\uB978 \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778'}
+      onAction={onSignOut}
+    />
+  );
+}
+
+function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction }) {
+  return (
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-head">
+          <div>
+            <p className="app-kicker">EVENT CLICK</p>
+            <h1 id="auth-title">{title}</h1>
+          </div>
+          <button
+            type="button"
+            className="theme-switch"
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+        </div>
+        <div className="auth-form">
+          <p className="auth-help">{message}</p>
+          {actionLabel ? (
+            <button type="button" onClick={onAction}>
+              {actionLabel}
+            </button>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
+}
 function CrawlerStatusPanel({ status }) {
   const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
   const latestSeenAt = formatDateTime(status.latestSeenAt);

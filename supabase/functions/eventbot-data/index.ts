@@ -2,76 +2,207 @@ const JSON_HEADERS = {
   'content-type': 'application/json; charset=utf-8',
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'GET, POST, OPTIONS',
-  'access-control-allow-headers':
-    'authorization, x-client-info, apikey, content-type, x-eventbot-token',
+  'access-control-allow-headers': 'authorization, x-client-info, apikey, content-type',
 };
+
 const FILTER_SETTINGS_KEY = 'filter_settings';
 const CRAWL_STATUS_KEY = 'crawl_status';
-const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
-const PASSCODE_DISABLED = true;
+
+type Profile = {
+  user_id: string;
+  email: string;
+  display_name: string;
+  approved: boolean;
+  is_admin: boolean;
+};
+
+type AuthUser = {
+  id: string;
+  email?: string;
+  user_metadata?: Record<string, unknown>;
+};
+
+class HttpError extends Error {
+  status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
     return new Response(null, { status: 204, headers: JSON_HEADERS });
   }
 
-  if (!PASSCODE_DISABLED) {
-    const passcodeSecret = Deno.env.get('EVENTBOT_PASSCODE');
-    if (!passcodeSecret) {
-      return json({ error: '비밀번호 secret이 설정되지 않았습니다.' }, 500);
-    }
-
-    const token = request.headers.get('x-eventbot-token') ?? '';
-    if (!(await verifyToken(token, passcodeSecret))) {
-      return json({ error: '잠금 해제가 필요합니다.' }, 401);
-    }
-  }
-
   try {
     if (request.method === 'GET') {
       const url = new URL(request.url);
       const resource = url.searchParams.get('resource');
-      if (resource === 'events') return json({ events: await loadEvents() });
+
+      if (resource === 'profile') {
+        const auth = await authenticate(request, { requireApproved: false });
+        return json({ profile: auth.profile });
+      }
+
+      const auth = await authenticate(request);
+      if (resource === 'events') return json({ events: await loadEvents(auth.user.id) });
       if (resource === 'filterSettings') {
-        return json({ value: await loadSetting(FILTER_SETTINGS_KEY) });
+        return json({ value: await loadSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id)) });
       }
       if (resource === 'crawlStatus') {
         return json({ value: await loadSetting(CRAWL_STATUS_KEY) });
       }
-      return json({ error: '알 수 없는 데이터 요청입니다.' }, 400);
+      return json({ error: 'Unknown data request.' }, 400);
     }
 
     if (request.method === 'POST') {
+      const auth = await authenticate(request);
       const body = await request.json().catch(() => ({}));
       if (body.action === 'updateEventState') {
-        await updateEventState(String(body.eventId ?? ''), body.patch ?? {});
+        await updateEventState(auth.user.id, String(body.eventId ?? ''), body.patch ?? {});
         return json({ ok: true });
       }
       if (body.action === 'saveFilterSettings') {
-        await saveSetting(FILTER_SETTINGS_KEY, body.settings ?? {});
+        await saveSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id), body.settings ?? {});
         return json({ ok: true });
       }
-      return json({ error: '알 수 없는 저장 요청입니다.' }, 400);
+      return json({ error: 'Unknown save request.' }, 400);
     }
 
-    return json({ error: 'GET 또는 POST 요청만 사용할 수 있습니다.' }, 405);
+    return json({ error: 'Only GET and POST requests are supported.' }, 405);
   } catch (error) {
-    return json({ error: error instanceof Error ? error.message : '데이터 요청에 실패했습니다.' }, 500);
+    const status = error instanceof HttpError ? error.status : 500;
+    const message = error instanceof Error ? error.message : 'Data request failed.';
+    return json({ error: message }, status);
   }
 });
 
-async function loadEvents() {
-  return restFetch('/rest/v1/events?select=*&order=last_seen_at.desc&limit=240');
+async function authenticate(
+  request: Request,
+  options: { requireApproved?: boolean } = {},
+) {
+  const token = extractBearerToken(request.headers.get('authorization') ?? '');
+  if (!token) throw new HttpError('Login is required.', 401);
+
+  const user = await loadAuthUser(token);
+  const profile = await ensureProfile(user);
+  if (options.requireApproved !== false && !profile.approved) {
+    throw new HttpError('Account approval is required.', 403);
+  }
+
+  return { user, profile };
 }
 
-async function updateEventState(eventId: string, patch: Record<string, unknown>) {
-  if (!eventId) throw new Error('이벤트 ID가 필요합니다.');
+async function loadAuthUser(token: string): Promise<AuthUser> {
+  const supabaseUrl = requireEnv('SUPABASE_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.id) {
+    throw new HttpError('Invalid login session.', 401);
+  }
+
+  return payload as AuthUser;
+}
+
+async function ensureProfile(user: AuthUser): Promise<Profile> {
+  const existing = await restFetch(
+    `/rest/v1/profiles?select=*&user_id=eq.${encodeURIComponent(user.id)}&limit=1`,
+  );
+  if (Array.isArray(existing) && existing[0]) return existing[0] as Profile;
+
+  const displayName =
+    stringFromMetadata(user.user_metadata, 'full_name') ||
+    stringFromMetadata(user.user_metadata, 'name') ||
+    '';
+  const inserted = await restFetch('/rest/v1/profiles?on_conflict=user_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({
+      user_id: user.id,
+      email: user.email ?? '',
+      display_name: displayName,
+      approved: false,
+      is_admin: false,
+    }),
+  });
+
+  if (Array.isArray(inserted) && inserted[0]) return inserted[0] as Profile;
+  throw new Error('Could not create user profile.');
+}
+
+async function loadEvents(userId: string) {
+  const [events, states] = await Promise.all([
+    restFetch('/rest/v1/events?select=*&order=last_seen_at.desc&limit=240'),
+    restFetch(
+      `/rest/v1/user_event_states?select=*&user_id=eq.${encodeURIComponent(userId)}`,
+    ),
+  ]);
+
+  const stateByEventId = new Map<string, Record<string, unknown>>();
+  if (Array.isArray(states)) {
+    for (const state of states) {
+      if (state?.event_id) stateByEventId.set(String(state.event_id), state);
+    }
+  }
+
+  if (!Array.isArray(events)) return [];
+  return events.map((event) => mergeEventState(event, stateByEventId.get(String(event.id))));
+}
+
+function mergeEventState(event: Record<string, unknown>, state?: Record<string, unknown>) {
+  if (!state) {
+    return {
+      ...event,
+      status: 'ready',
+      result_status: 'unknown',
+      participated_at: null,
+      result_checked_at: null,
+      receipt_status: 'unclaimed',
+      winning_memo: '',
+    };
+  }
+  return {
+    ...event,
+    status: state.status,
+    result_status: state.result_status,
+    participated_at: state.participated_at,
+    result_checked_at: state.result_checked_at,
+    result_announcement_date: state.result_announcement_date,
+    result_announcement_text: state.result_announcement_text,
+    prize_title: state.prize_title,
+    prize_amount: state.prize_amount,
+    receipt_status: state.receipt_status,
+    winning_memo: state.winning_memo,
+    memo: state.memo,
+  };
+}
+
+async function updateEventState(
+  userId: string,
+  eventId: string,
+  patch: Record<string, unknown>,
+) {
+  if (!eventId) throw new Error('Event ID is required.');
   const rowPatch = toStateRowPatch(patch);
   if (Object.keys(rowPatch).length === 0) return;
-  await restFetch(`/rest/v1/events?id=eq.${encodeURIComponent(eventId)}`, {
-    method: 'PATCH',
-    headers: { Prefer: 'return=minimal' },
-    body: JSON.stringify(rowPatch),
+
+  await restFetch('/rest/v1/user_event_states?on_conflict=user_id,event_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+    body: JSON.stringify({
+      user_id: userId,
+      event_id: eventId,
+      ...rowPatch,
+    }),
   });
 }
 
@@ -91,11 +222,8 @@ async function saveSetting(key: string, value: unknown) {
 }
 
 async function restFetch(path: string, init: RequestInit = {}) {
-  const supabaseUrl = Deno.env.get('SUPABASE_URL');
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY');
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error('Supabase service 설정이 필요합니다.');
-  }
+  const supabaseUrl = requireEnv('SUPABASE_URL');
+  const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
 
   const response = await fetch(`${supabaseUrl}${path}`, {
     ...init,
@@ -109,7 +237,7 @@ async function restFetch(path: string, init: RequestInit = {}) {
 
   const text = await response.text();
   if (!response.ok) {
-    throw new Error(text || `Supabase REST 실패 (${response.status})`);
+    throw new Error(text || `Supabase REST failed (${response.status})`);
   }
   return text ? JSON.parse(text) : null;
 }
@@ -138,45 +266,24 @@ function toStateRowPatch(patch: Record<string, unknown>) {
   return rowPatch;
 }
 
-async function verifyToken(token: string, secret: string) {
-  const [issuedAtText, signature] = token.split('.');
-  const issuedAt = Number(issuedAtText);
-  if (!issuedAtText || !signature || !Number.isFinite(issuedAt)) return false;
-  if (Date.now() - issuedAt > TOKEN_TTL_MS) return false;
-  const expectedSignature = await sign(issuedAtText, secret);
-  return constantTimeEqual(signature, expectedSignature);
+function extractBearerToken(value: string) {
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? '';
 }
 
-async function sign(value: string, secret: string) {
-  const encoder = new TextEncoder();
-  const key = await crypto.subtle.importKey(
-    'raw',
-    encoder.encode(secret),
-    { name: 'HMAC', hash: 'SHA-256' },
-    false,
-    ['sign'],
-  );
-  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(value));
-  return toBase64Url(new Uint8Array(signature));
+function userSettingKey(baseKey: string, userId: string) {
+  return `${baseKey}:${userId}`;
 }
 
-function constantTimeEqual(left: string, right: string) {
-  const leftBytes = new TextEncoder().encode(left);
-  const rightBytes = new TextEncoder().encode(right);
-  const length = Math.max(leftBytes.length, rightBytes.length);
-  let diff = leftBytes.length ^ rightBytes.length;
-
-  for (let index = 0; index < length; index += 1) {
-    diff |= (leftBytes[index] ?? 0) ^ (rightBytes[index] ?? 0);
-  }
-
-  return diff === 0;
+function stringFromMetadata(metadata: Record<string, unknown> | undefined, key: string) {
+  const value = metadata?.[key];
+  return typeof value === 'string' ? value : '';
 }
 
-function toBase64Url(bytes: Uint8Array) {
-  let text = '';
-  for (const byte of bytes) text += String.fromCharCode(byte);
-  return btoa(text).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+function requireEnv(name: string) {
+  const value = Deno.env.get(name);
+  if (!value) throw new Error(`${name} is required.`);
+  return value;
 }
 
 function json(payload: unknown, status = 200) {

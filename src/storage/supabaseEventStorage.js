@@ -1,5 +1,5 @@
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
-import { getAuthToken, requireUnlock } from './passcodeAuthStorage.js';
+import { getAuthToken, requireUnlock } from './supabaseAuthStorage.js';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -9,9 +9,9 @@ export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 const DATA_FUNCTION_URL = `${supabaseUrl}/functions/v1/eventbot-data`;
 
 const effortLabels = {
-  quick: '현장 딸각',
-  home: '집에서 처리',
-  hard: '복잡함',
+  quick: '\uD604\uC7A5 \uC989\uC2DC',
+  home: '\uC9D1\uC5D0\uC11C \uCC98\uB9AC',
+  hard: '\uBCF5\uC7A1\uD568',
 };
 
 export async function loadSupabaseEvents() {
@@ -69,9 +69,9 @@ export async function loadSupabaseCrawlerStatus() {
 }
 
 async function callDataFunction(method, resource, body) {
-  const token = getAuthToken();
+  const token = await getAuthToken();
   if (!token) {
-    throw new Error('잠금 해제가 필요합니다.');
+    throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
   }
 
   const url = new URL(DATA_FUNCTION_URL);
@@ -84,8 +84,7 @@ async function callDataFunction(method, resource, body) {
     headers: {
       'content-type': 'application/json',
       apikey: supabaseAnonKey,
-      authorization: `Bearer ${supabaseAnonKey}`,
-      'x-eventbot-token': token,
+      authorization: `Bearer ${token}`,
     },
     body: body ? JSON.stringify(body) : undefined,
   });
@@ -95,7 +94,7 @@ async function callDataFunction(method, resource, body) {
     if (response.status === 401) {
       requireUnlock();
     }
-    throw new Error(payload.error || 'DB 요청에 실패했습니다.');
+    throw new Error(payload.error || 'DB \uC694\uCCAD\uC774 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
   }
   return payload;
 }

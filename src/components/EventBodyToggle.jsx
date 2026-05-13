@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
-import { getAuthToken, requireUnlock } from '../storage/passcodeAuthStorage.js';
+import { getAuthToken, requireUnlock } from '../storage/supabaseAuthStorage.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 35000;
 const YOUTUBE_INFO_TIMEOUT_MS = 45000;
@@ -51,7 +51,7 @@ export function EventBodyToggle({ event, lines, facts }) {
     const endpoint = getYoutubeContextEndpoint();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: getYoutubeContextHeaders(endpoint),
+      headers: await getYoutubeContextHeaders(endpoint),
       signal,
       body: JSON.stringify({
         mode,
@@ -338,12 +338,11 @@ function shouldUseSupabaseFunction() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
-function getYoutubeContextHeaders(endpoint) {
+async function getYoutubeContextHeaders(endpoint) {
   const headers = { 'content-type': 'application/json' };
   if (SUPABASE_URL && endpoint.startsWith(`${SUPABASE_URL}/functions/v1/`)) {
     headers.apikey = SUPABASE_ANON_KEY;
-    headers.authorization = `Bearer ${SUPABASE_ANON_KEY}`;
-    headers['x-eventbot-token'] = getAuthToken();
+    headers.authorization = `Bearer ${await getAuthToken()}`;
   }
   return headers;
 }
