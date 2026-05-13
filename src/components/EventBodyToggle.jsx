@@ -46,6 +46,7 @@ export function EventBodyToggle({ event, lines, facts }) {
   const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
+  const youtubeDisplayUrl = youtubeContext?.url || youtubeLink;
 
   async function fetchYoutubeContextPayload({ mode, signal }) {
     const endpoint = getYoutubeContextEndpoint();
@@ -245,6 +246,19 @@ export function EventBodyToggle({ event, lines, facts }) {
               <p>채널: {youtubeContext.channelName || '-'}</p>
               {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
               {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
+              {youtubeDisplayUrl ? (
+                <p>
+                  {'\uC720\uD29C\uBE0C URL: '}
+                  <a
+                    href={youtubeDisplayUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(clickEvent) => clickEvent.stopPropagation()}
+                  >
+                    {youtubeDisplayUrl}
+                  </a>
+                </p>
+              ) : null}
               <button
                 type="button"
                 onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
@@ -398,6 +412,7 @@ function buildYoutubeCommentMaterialText(event, context) {
   const candidateLines = (context.commentCandidates ?? []).map(
     (candidate, index) => `${index + 1}. ${candidate.style ? `${candidate.style}: ` : ''}${candidate.text}`,
   );
+  const youtubeUrl = context.url || buildYoutubeLinks(event)[0] || eventInfo.applyUrl || '';
 
   return [
     '[유튜브 이벤트 자료]',
@@ -441,6 +456,9 @@ function buildYoutubeCommentMaterialText(event, context) {
     '',
     '[생성된 추천 댓글]',
     candidateLines.join('\n') || '-',
+    '',
+    '[YouTube URL]',
+    youtubeUrl || '-',
   ].join('\n');
 }
 
