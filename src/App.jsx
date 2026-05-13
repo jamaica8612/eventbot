@@ -26,6 +26,7 @@ import {
   loadSupabaseCrawlerStatus,
   loadSupabaseFilterSettings,
   saveSupabaseFilterSettings,
+  triggerSupabaseCrawler,
 } from './storage/supabaseEventStorage.js';
 import {
   getCurrentSession,
@@ -224,11 +225,20 @@ function EventBotApp({ theme, setTheme, onLock }) {
     setSyncNotice({ type: 'info', message: '크롤링을 시작했습니다. 잠시만 기다려 주세요.' });
 
     try {
+      if (hasSupabaseConfig) {
+        await triggerSupabaseCrawler();
+        setSyncNotice({
+          type: 'success',
+          message:
+            '크롤링 작업을 GitHub Actions에 요청했습니다. 완료까지 몇 분 걸릴 수 있습니다.',
+        });
+        window.setTimeout(() => setIsCrawling(false), 1200);
+        return;
+      }
+
       const response = await fetch('/api/crawl-suto', { method: 'POST' });
       const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
-      }
+      if (!response.ok) throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
       setSyncNotice({ type: 'success', message: '크롤링이 완료되었습니다. 목록을 다시 불러옵니다.' });
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {

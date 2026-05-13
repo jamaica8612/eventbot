@@ -68,6 +68,32 @@ export async function loadSupabaseCrawlerStatus() {
   return payload.value ?? null;
 }
 
+export async function triggerSupabaseCrawler() {
+  if (!hasSupabaseConfig) {
+    throw new Error('Supabase \uC124\uC815\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+  }
+
+  const token = await getAuthToken();
+  if (!token) {
+    throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+  }
+
+  const response = await fetch(`${supabaseUrl}/functions/v1/eventbot-crawl-trigger`, {
+    method: 'POST',
+    headers: {
+      'content-type': 'application/json',
+      apikey: supabaseAnonKey,
+      authorization: `Bearer ${token}`,
+    },
+  });
+  const payload = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    if (response.status === 401) requireUnlock();
+    throw new Error(payload.error || '\uD06C\uB864\uB9C1 \uC2E4\uD589\uC744 \uC694\uCCAD\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.');
+  }
+  return payload;
+}
+
 async function callDataFunction(method, resource, body) {
   const token = await getAuthToken();
   if (!token) {
