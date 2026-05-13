@@ -60,8 +60,9 @@ function App() {
 
     async function loadAuth(sessionOverride) {
       try {
-        const session = sessionOverride ?? (await getCurrentSession());
-        const profile = session ? await loadAuthProfile() : null;
+        const session =
+          sessionOverride === undefined ? await getCurrentSession() : sessionOverride;
+        const profile = session ? await loadAuthProfile(session.access_token) : null;
         if (isMounted) setAuthState({ isLoading: false, session, profile, error: '' });
       } catch (error) {
         if (isMounted) {

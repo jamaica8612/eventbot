@@ -3,6 +3,8 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AUTH_REQUIRED_EVENT = 'eventbot-auth-required';
+const AUTH_TIMEOUT_MS = 12000;
+const PROFILE_TIMEOUT_MS = 15000;
 
 export const hasAuthConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -25,7 +27,11 @@ export function getSupabaseClient() {
 export async function getCurrentSession() {
   const supabase = getSupabaseClient();
   if (!supabase) return null;
-  const { data, error } = await supabase.auth.getSession();
+  const { data, error } = await withTimeout(
+    supabase.auth.getSession(),
+    AUTH_TIMEOUT_MS,
+    'Google \uB85C\uADF8\uC778 \uC0C1\uD0DC \uD655\uC778\uC774 \uC9C0\uC5F0\uB418\uACE0 \uC788\uC2B5\uB2C8\uB2E4. \uC0C8\uB85C\uACE0\uCE68 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.',
+  );
   if (error) throw error;
   return data.session ?? null;
 }
@@ -74,21 +80,42 @@ export function onAuthRequired(handler) {
   return () => window.removeEventListener(AUTH_REQUIRED_EVENT, handler);
 }
 
-export async function loadAuthProfile() {
+export async function loadAuthProfile(accessToken) {
   if (!hasAuthConfig) return null;
-  const token = await getAuthToken();
+  const token = accessToken ?? (await getAuthToken());
   if (!token) return null;
+  const abortController = new AbortController();
+  const timeoutId = window.setTimeout(() => abortController.abort(), PROFILE_TIMEOUT_MS);
   const response = await fetch(`${supabaseUrl}/functions/v1/eventbot-data?resource=profile`, {
     headers: {
       apikey: supabaseAnonKey,
       authorization: `Bearer ${token}`,
     },
+    signal: abortController.signal,
   });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) {
-    throw new Error(
-      payload.error || '\uC0AC\uC6A9\uC790 \uC2B9\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
-    );
+  try {
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      throw new Error(
+        payload.error || '\uC0AC\uC6A9\uC790 \uC2B9\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+      );
+    }
+    return payload.profile ?? null;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('\uC0AC\uC6A9\uC790 \uC2B9\uC778 \uD655\uC778\uC774 \uC9C0\uC5F0\uB418\uACE0 \uC788\uC2B5\uB2C8\uB2E4. \uC0C8\uB85C\uACE0\uCE68 \uD6C4 \uB2E4\uC2DC \uC2DC\uB3C4\uD574 \uC8FC\uC138\uC694.');
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
   }
-  return payload.profile ?? null;
+}
+
+function withTimeout(promise, timeoutMs, message) {
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => {
+      window.setTimeout(() => reject(new Error(message)), timeoutMs);
+    }),
+  ]);
 }
