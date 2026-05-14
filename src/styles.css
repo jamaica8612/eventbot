@@ -1228,13 +1228,10 @@ h3 {
 }
 
 .platform-badge-icon svg {
-  width: 18px;
-  height: 18px;
-  fill: none;
-  stroke: currentColor;
-  stroke-linecap: round;
-  stroke-linejoin: round;
-  stroke-width: 1.8;
+  width: 15px;
+  height: 15px;
+  fill: currentColor;
+  stroke: none;
 }
 
 .platform-badge-youtube .platform-badge-icon {
@@ -1242,16 +1239,21 @@ h3 {
   color: #f04444;
 }
 
-.platform-badge-youtube .platform-badge-icon svg rect,
-.platform-badge-youtube .platform-badge-icon svg path {
-  fill: currentColor;
-  stroke: none;
-}
-
 .platform-badge-naver .platform-badge-icon,
 .platform-badge-blog .platform-badge-icon {
   background: rgba(31, 139, 118, 0.1);
-  color: #1f8b76;
+  color: #03c75a;
+}
+
+.platform-badge-home .platform-badge-icon svg,
+.platform-badge-event .platform-badge-icon svg {
+  width: 18px;
+  height: 18px;
+  fill: none;
+  stroke: currentColor;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 1.8;
 }
 
 .platform-badge-home .platform-badge-icon {
