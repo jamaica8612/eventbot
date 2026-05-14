@@ -436,6 +436,23 @@ h3 {
   font-size: 0.82rem;
 }
 
+.settings-crawl-action {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+  align-items: stretch;
+  min-width: min(100%, 126px);
+}
+
+.settings-crawl-action span {
+  color: var(--text-muted);
+  font-size: 0.68rem;
+  font-weight: 800;
+  line-height: 1.15;
+  text-align: center;
+  white-space: nowrap;
+}
+
 .settings-excluded-button {
   border-color: rgba(240, 68, 82, 0.28);
   background: rgba(251, 113, 133, 0.08);

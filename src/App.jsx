@@ -333,6 +333,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
               onLock={onLock}
               onCrawl={handleManualCrawl}
               isCrawling={isCrawling}
+              crawlerStatus={crawlerStatus}
               onReset={() => setFilterSettings(defaultFilterSettings)}
             />
           ) : null}
@@ -664,6 +665,7 @@ function FilterSettingsPanel({
   onLock,
   onCrawl,
   isCrawling,
+  crawlerStatus,
   onReset,
 }) {
   const platforms = useMemo(
@@ -674,6 +676,7 @@ function FilterSettingsPanel({
     [events],
   );
   const keywordText = settings.excludedKeywords.join('\n');
+  const lastCrawledAt = formatDateTime(crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt);
 
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
@@ -717,14 +720,17 @@ function FilterSettingsPanel({
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
         </button>
-        <button
-          type="button"
-          className="settings-action-button"
-          onClick={onCrawl}
-          disabled={isCrawling}
-        >
-          {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
-        </button>
+        <div className="settings-crawl-action">
+          <button
+            type="button"
+            className="settings-action-button"
+            onClick={onCrawl}
+            disabled={isCrawling}
+          >
+            {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
+          </button>
+          <span>{`\uB9C8\uC9C0\uB9C9 ${lastCrawledAt}`}</span>
+        </div>
         <button
           type="button"
           className={`settings-action-button settings-excluded-button${
