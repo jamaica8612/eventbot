@@ -103,7 +103,7 @@ export function EventInbox({
   onMetaChange,
   onDelete,
 }) {
-  const [selectedFilter, setSelectedFilter] = useState('all');
+  const [selectedFilter, setSelectedFilter] = useState('check');
   const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
   const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
   const visibleEvents = useMemo(
