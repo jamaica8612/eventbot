@@ -360,7 +360,12 @@ def extract_detail_metadata(soup: BeautifulSoup) -> dict:
         if not label_node:
             continue
         label = label_node.get_text(" ", strip=True)
-        value = item.get_text(" ", strip=True).replace(label, "", 1).strip()
+        value_node = item.select_one(".item_desc")
+        value = (
+            value_node.get_text(" ", strip=True)
+            if value_node
+            else item.get_text(" ", strip=True).replace(label, "", 1).strip()
+        )
         if not label or not value:
             continue
 
