@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
 import { getAuthToken, requireUnlock } from '../storage/supabaseAuthStorage.js';
+import { updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 
 const YOUTUBE_CONTEXT_TIMEOUT_MS = 35000;
 const YOUTUBE_INFO_TIMEOUT_MS = 45000;
@@ -33,7 +34,7 @@ async function copyTextToClipboard(text) {
 
 export function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
-  const [youtubeContext, setYoutubeContext] = useState(null);
+  const [youtubeContext, setYoutubeContext] = useState(() => normalizeSavedYoutubeContext(event.youtubeContext));
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [infoStatus, setInfoStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
@@ -84,6 +85,7 @@ export function EventBodyToggle({ event, lines, facts }) {
         signal: abortController.signal,
       });
       setYoutubeContext(payload);
+      persistYoutubeContext(event.id, payload);
       setAreCandidatesVisible(false);
       const materialText = buildYoutubeCommentMaterialText(event, payload);
       try {
@@ -108,9 +110,9 @@ export function EventBodyToggle({ event, lines, facts }) {
     }
   }
 
-  async function handleYoutubeTranscriptFetch(clickEvent) {
+  async function handleYoutubeTranscriptFetch(clickEvent, options = {}) {
     clickEvent.stopPropagation();
-    if (hasCommentCandidates) {
+    if (hasCommentCandidates && !options.force) {
       setAreCandidatesVisible(true);
       setTranscriptError('');
       return;
@@ -127,6 +129,7 @@ export function EventBodyToggle({ event, lines, facts }) {
         signal: abortController.signal,
       });
       setYoutubeContext(payload);
+      persistYoutubeContext(event.id, payload);
       setAreCandidatesVisible(true);
       setTranscriptError('');
       setTranscriptStatus('done');
@@ -298,6 +301,16 @@ export function EventBodyToggle({ event, lines, facts }) {
               {copiedCandidateIndex === -2 ? (
                 <p className="youtube-transcript-error">복사에 실패했습니다. 아래 텍스트를 직접 복사하세요.</p>
               ) : null}
+              <button
+                type="button"
+                className="comment-candidate-copy"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={(clickEvent) => handleYoutubeTranscriptFetch(clickEvent, { force: true })}
+                disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
+              >
+                {transcriptStatus === 'loading' ? '다시 생성 중' : '다시 만들기'}
+              </button>
             </div>
           ) : youtubeContext?.commentCandidatesError ? (
             <p className="youtube-transcript-error">
@@ -340,6 +353,18 @@ export function EventBodyToggle({ event, lines, facts }) {
       )}
     </div>
   );
+}
+
+function normalizeSavedYoutubeContext(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return Object.keys(value).length > 0 ? value : null;
+}
+
+function persistYoutubeContext(eventId, youtubeContext) {
+  if (!eventId || !youtubeContext) return;
+  updateSupabaseEventState(eventId, { youtubeContext }).catch(() => {
+    // 저장 실패는 댓글 생성 흐름을 막지 않는다. 새로고침 후 재사용만 못할 수 있다.
+  });
 }
 
 function getYoutubeContextEndpoint() {

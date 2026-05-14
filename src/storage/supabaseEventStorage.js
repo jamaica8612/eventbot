@@ -198,6 +198,11 @@ function toAppEvent(row) {
     receiptStatus: row.receipt_status ?? 'unclaimed',
     winningMemo: row.winning_memo ?? raw.winningMemo ?? '',
     memo: row.memo,
+    youtubeContext:
+      row.youtube_context && typeof row.youtube_context === 'object'
+        ? row.youtube_context
+        : null,
+    youtubeContextSavedAt: row.youtube_context_saved_at ?? null,
     url: row.url,
     crawledFrom: row.source_name,
     raw,

@@ -191,6 +191,8 @@ function mergeEventState(event: Record<string, unknown>, state?: Record<string, 
     receipt_status: state.receipt_status,
     winning_memo: state.winning_memo,
     memo: state.memo,
+    youtube_context: state.youtube_context,
+    youtube_context_saved_at: state.youtube_context_saved_at,
   };
 }
 
@@ -270,8 +272,16 @@ function toStateRowPatch(patch: Record<string, unknown>) {
     const parsedAmount = Number.parseInt(String(patch.prizeAmount ?? '').replace(/[^\d]/g, ''), 10);
     rowPatch.prize_amount = Number.isFinite(parsedAmount) ? parsedAmount : null;
   }
+  if ('youtubeContext' in patch && isPlainObject(patch.youtubeContext)) {
+    rowPatch.youtube_context = patch.youtubeContext;
+    rowPatch.youtube_context_saved_at = new Date().toISOString();
+  }
 
   return rowPatch;
+}
+
+function isPlainObject(value: unknown) {
+  return Boolean(value && typeof value === 'object' && !Array.isArray(value));
 }
 
 function extractBearerToken(value: string) {
