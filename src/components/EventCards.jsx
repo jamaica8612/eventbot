@@ -84,22 +84,21 @@ function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
     <article className="event-card now-card">
       <div className="score-row">
         <PlatformBadge platform={event.platform} />
-        <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
+        <div className="score-row-actions">
+          <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
+          {onDeadlineChange ? (
+            <button
+              type="button"
+              onClick={() => setIsDeadlineEditing((current) => !current)}
+            >
+              마감 수정
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
-
-      {onDeadlineChange ? (
-        <div className="deadline-edit-actions">
-          <button
-            type="button"
-            onClick={() => setIsDeadlineEditing((current) => !current)}
-          >
-            마감 수정
-          </button>
-        </div>
-      ) : null}
 
       {isDeadlineEditing && onDeadlineChange ? (
         <DeadlinePanel event={event} onDeadlineChange={onDeadlineChange} />

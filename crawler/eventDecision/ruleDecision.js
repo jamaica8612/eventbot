@@ -170,6 +170,27 @@ export function buildDecisionReason(input, score, actionType) {
 }
 
 export function getFallbackDecision(event) {
+  const raw = event.raw && typeof event.raw === 'object' ? event.raw : {};
+  const deadline = extractDeadlineByRules({
+    ...raw,
+    ...event,
+    detailMetaLines: event.detailMetaLines ?? raw.detailMetaLines,
+    originalLines: [
+      ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+      ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines : []),
+      ...(Array.isArray(raw.bodyLines) ? raw.bodyLines : []),
+    ],
+    originalText: [
+      event.originalText,
+      raw.originalText,
+      raw.bodyText,
+      raw.contentText,
+      raw.pageText,
+    ]
+      .filter(Boolean)
+      .join('\n'),
+  });
   const effort = event.effort ?? 'quick';
   const actionType =
     event.actionType ??
@@ -185,8 +206,8 @@ export function getFallbackDecision(event) {
     estimatedSeconds,
     decisionReason: event.decisionReason ?? event.memo ?? '',
     prizeText: event.prizeText ?? '',
-    deadlineText: event.deadlineText ?? event.due ?? '상세 확인 필요',
-    deadlineDate: event.deadlineDate ?? '',
+    deadlineText: deadline.text || event.deadlineText || event.due || '상세 확인 필요',
+    deadlineDate: event.deadlineDate || deadline.date || '',
     effort: event.effort ?? effortByActionType[actionType],
     effortLabel: event.effortLabel ?? effortLabelByActionType[actionType],
   };
