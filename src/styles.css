@@ -1208,17 +1208,21 @@ h3 {
   font-weight: 400;
 }
 
-.score-row-actions {
+.winner-row-actions {
   display: inline-flex;
   flex: 0 0 auto;
   gap: 6px;
   align-items: center;
+  justify-content: flex-end;
+  min-width: max-content;
 }
 
-.score-row-actions button {
+.deadline-edit-inline {
   min-height: 26px;
   border-radius: 999px;
   padding: 0 9px;
+  border-color: rgba(26, 115, 232, 0.18);
+  background: rgba(26, 115, 232, 0.06);
   color: var(--text-muted);
   font-size: 0.72rem;
 }
@@ -1336,10 +1340,6 @@ h3 {
 .schedule-row .deadline-chip {
   flex: 0 0 auto;
   max-width: 132px;
-}
-
-.schedule-row .schedule-announcement {
-  max-width: min(100%, 188px);
 }
 
 .schedule-row .deadline-today,

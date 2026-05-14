@@ -84,10 +84,11 @@ function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
     <article className="event-card now-card">
       <div className="score-row">
         <PlatformBadge platform={event.platform} />
-        <div className="score-row-actions">
+        <div className="winner-row-actions">
           <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
           {onDeadlineChange ? (
             <button
+              className="deadline-edit-inline"
               type="button"
               onClick={() => setIsDeadlineEditing((current) => !current)}
             >
@@ -250,21 +251,15 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 
 function EventScheduleMeta({ event }) {
   const deadline = getDeadlineDisplay(event);
-  const announcement = event.resultAnnouncementDate || event.resultAnnouncementText;
   const prize = getSchedulePrizeDisplay(event);
 
-  if (!deadline && !announcement && !prize) {
+  if (!deadline && !prize) {
     return null;
   }
 
   return (
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
       {deadline ? <span className={getDeadlineClassName(event)}>{deadline}</span> : null}
-      {announcement ? (
-        <span className="schedule-announcement">
-          {`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}
-        </span>
-      ) : null}
       {prize ? <span className="schedule-prize">{prize}</span> : null}
     </div>
   );
