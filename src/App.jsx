@@ -689,6 +689,19 @@ function FilterSettingsPanel({
     updateSettings({ hiddenPlatforms: [...hiddenPlatforms] });
   }
 
+  const [keywordDraft, setKeywordDraft] = useState(keywordText);
+  const isComposingKeyword = useRef(false);
+
+  useEffect(() => {
+    if (!isComposingKeyword.current && keywordDraft !== keywordText) {
+      setKeywordDraft(keywordText);
+    }
+  }, [keywordDraft, keywordText]);
+
+  function saveKeywordDraft(value) {
+    updateSettings({ excludedKeywords: parseKeywordInput(value) });
+  }
+
   return (
     <section className="settings-panel" aria-label="필터 설정">
       <div className="settings-actions">
@@ -727,11 +740,23 @@ function FilterSettingsPanel({
         <span>제외 키워드</span>
         <textarea
           rows="3"
-          value={keywordText}
-          placeholder={'예: 출석\n리그램'}
-          onChange={(event) =>
-            updateSettings({ excludedKeywords: parseKeywordInput(event.target.value) })
-          }
+          value={keywordDraft}
+          placeholder={'\uC608: \uCCB4\uD5D8\uB2E8\n\uB9AC\uADF8\uB7A8'}
+          onChange={(event) => {
+            setKeywordDraft(event.target.value);
+            if (!event.nativeEvent.isComposing && !isComposingKeyword.current) {
+              saveKeywordDraft(event.target.value);
+            }
+          }}
+          onCompositionStart={() => {
+            isComposingKeyword.current = true;
+          }}
+          onCompositionEnd={(event) => {
+            isComposingKeyword.current = false;
+            setKeywordDraft(event.currentTarget.value);
+            saveKeywordDraft(event.currentTarget.value);
+          }}
+          onBlur={(event) => saveKeywordDraft(event.currentTarget.value)}
         />
       </label>
 
