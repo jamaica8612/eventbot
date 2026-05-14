@@ -361,9 +361,8 @@ function buildInboxCounts(events) {
 }
 
 function matchesInboxView(event, view) {
-  const announcement = getAnnouncementStatus(event);
   if (view === 'check') {
-    return event.resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
+    return event.resultStatus === 'unknown';
   }
   if (view === 'won') return event.resultStatus === 'won';
   if (view === 'unreceived') {
