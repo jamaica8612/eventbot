@@ -64,7 +64,7 @@ function getFallbackAnnouncement(event) {
 export function matchesFilter(event, filter, filterSettings) {
   if (isInstagramEvent(event)) return false;
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
-  if (shouldHideExpiredEvent(event, filter)) return false;
+  if (shouldHideExpiredReadyEvent(event, filter, filterSettings)) return false;
 
   if (filter === 'ready') return event.status === 'ready';
   if (filter === 'later') return event.status === 'later';
@@ -112,10 +112,26 @@ export function isExpiredEvent(event) {
   return deadline.getTime() < getLocalToday().getTime();
 }
 
-function shouldHideExpiredEvent(event, filter) {
-  if (!isExpiredEvent(event)) return false;
-  if (event.status === 'done') return false;
-  return ['ready', 'todayDeadline', 'search', 'skipped'].includes(filter);
+export function isExpiredReadyEvent(event) {
+  return event.status === 'ready' && isExpiredEvent(event);
+}
+
+export function isOldSkippedEvent(event) {
+  if (event.status !== 'skipped') return false;
+  const deadline = parseLocalDate(event.deadlineDate);
+  if (deadline) {
+    return deadline.getTime() < getLocalToday().getTime();
+  }
+  const lastSeenAt = parseLocalDate(String(event.lastSeenAt ?? ''));
+  if (!lastSeenAt) return false;
+  const thirtyDaysAgo = new Date(getLocalToday().getTime() - 30 * 86400000);
+  return lastSeenAt.getTime() < thirtyDaysAgo.getTime();
+}
+
+function shouldHideExpiredReadyEvent(event, filter, filterSettings) {
+  if (filter !== 'ready') return false;
+  if (filterSettings?.hideExpiredReadyEvents === false) return false;
+  return isExpiredReadyEvent(event);
 }
 
 export function isHiddenByFilterSettings(event, filterSettings) {

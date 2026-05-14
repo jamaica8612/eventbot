@@ -6,7 +6,9 @@ import {
 } from './constants.js';
 import {
   buildPlatformOptions,
+  isExpiredReadyEvent,
   isInstagramEvent,
+  isOldSkippedEvent,
   matchesFilter,
   matchesTodayAnnouncement,
   sortInboxEvents,
@@ -760,6 +762,8 @@ function FilterSettingsPanel({
     [events],
   );
   const keywordText = settings.excludedKeywords.join('\n');
+  const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
+  const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
   const lastCrawledAt = formatDateTime(
     crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt,
   );
@@ -896,6 +900,21 @@ function FilterSettingsPanel({
           </button>
         </div>
       </section>
+
+      <label className="settings-check-row">
+        <input
+          type="checkbox"
+          checked={settings.hideExpiredReadyEvents !== false}
+          onChange={(event) => updateSettings({ hideExpiredReadyEvents: event.target.checked })}
+        />
+        <span>
+          마감 지난 미응모 대기 숨김 <strong>{expiredReadyCount}개</strong>
+        </span>
+      </label>
+
+      <p className="settings-cleanup-note">
+        오래된 제외 이벤트 정리 대상 {oldSkippedCount}개 · 아직 DB 삭제 없이 화면 정리만 합니다.
+      </p>
 
       {platforms.length > 0 ? (
         <div className="platform-settings">

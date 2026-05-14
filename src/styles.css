@@ -546,6 +546,41 @@ h3 {
   min-width: 120px;
 }
 
+.settings-check-row {
+  display: flex !important;
+  grid-template-columns: none !important;
+  gap: 8px !important;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface-raised);
+  padding: 10px;
+}
+
+.settings-check-row input {
+  width: 18px;
+  min-height: 18px;
+  accent-color: var(--warning);
+}
+
+.settings-check-row span {
+  color: var(--text-main) !important;
+  font-size: 0.8rem !important;
+  line-height: 1.35;
+}
+
+.settings-check-row strong {
+  color: var(--warning);
+}
+
+.settings-cleanup-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  line-height: 1.35;
+}
+
 .platform-settings {
   display: grid;
   gap: 7px;
