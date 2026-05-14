@@ -7,6 +7,7 @@ const JSON_HEADERS = {
 
 const FILTER_SETTINGS_KEY = 'filter_settings';
 const CRAWL_STATUS_KEY = 'crawl_status';
+const COMMENT_SETTINGS_KEY = 'comment_settings';
 
 type Profile = {
   user_id: string;
@@ -51,6 +52,9 @@ Deno.serve(async (request) => {
       if (resource === 'filterSettings') {
         return json({ value: await loadSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id)) });
       }
+      if (resource === 'commentSettings') {
+        return json({ value: await loadSetting(userSettingKey(COMMENT_SETTINGS_KEY, auth.user.id)) });
+      }
       if (resource === 'crawlStatus') {
         return json({ value: await loadSetting(CRAWL_STATUS_KEY) });
       }
@@ -66,6 +70,10 @@ Deno.serve(async (request) => {
       }
       if (body.action === 'saveFilterSettings') {
         await saveSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id), body.settings ?? {});
+        return json({ ok: true });
+      }
+      if (body.action === 'saveCommentSettings') {
+        await saveSetting(userSettingKey(COMMENT_SETTINGS_KEY, auth.user.id), normalizeCommentSettings(body.settings ?? {}));
         return json({ ok: true });
       }
       return json({ error: 'Unknown save request.' }, 400);
@@ -273,6 +281,13 @@ function extractBearerToken(value: string) {
 
 function userSettingKey(baseKey: string, userId: string) {
   return `${baseKey}:${userId}`;
+}
+
+function normalizeCommentSettings(settings: Record<string, unknown>) {
+  return {
+    geminiApiKey: typeof settings.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '',
+    commentPrompt: typeof settings.commentPrompt === 'string' ? settings.commentPrompt.trim() : '',
+  };
 }
 
 function stringFromMetadata(metadata: Record<string, unknown> | undefined, key: string) {

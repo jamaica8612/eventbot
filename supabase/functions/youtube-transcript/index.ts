@@ -1,4 +1,6 @@
 const DEFAULT_GEMINI_MODELS = ['gemini-2.5-flash', 'gemini-2.5-flash-lite'];
+const COMMENT_SETTINGS_KEY = 'comment_settings';
+const DEFAULT_COMMENT_PROMPT = `이 GPT, 이벤트 댓글 마스터는 사용자가 제공한 이벤트 정보 및 다른 참가자들의 댓글을 참고하여 독특하고 창의적인 댓글을 생성합니다. 이벤트의 분위기를 더욱 활기차고 긍정적으로 만드는 데 초점을 맞춥니다. 다른 참가자들의 댓글은 이벤트의 분위기와 참가자들의 반응을 이해하는 데 사용되며, 이를 바탕으로 참신하고 긍정적인 메시지를 담은 댓글을 제작합니다. 각 댓글은 이벤트의 주제와 맥락에 맞추어 개성있고 매력적으로 구성되며, 중복된 내용이나 아이디어는 피합니다. 경품 상품에 대한 내용과 영상이나 글에 대한 평가적인 내용은 포함하지 않으며, 사용자의 요청에 따라 댓글의 톤과 스타일을 조절할 수 있습니다. 부적절한 내용이나 불쾌감을 주는 요소는 배제합니다. 댓글은 이벤트 심사위원의 입장에서 1등을 줄 수 있을 만한 수준으로 길게 만듭니다. 인용 부호 사용을 최소화하여 강조를 표현합니다. 이모티콘을 사용하지 않는다. AI가 자주 사용하는 말투는 쓰지 않고 정말 사람처럼 글을 쓴다.`;
 const SHOULD_ATTACH_VIDEO_FILE = Deno.env.get('GEMINI_ATTACH_VIDEO_FILE') === '1';
 const RETRYABLE_GEMINI_STATUSES = new Set([429, 500, 502, 503, 504]);
 const YOUTUBE_API_ENDPOINT = 'https://www.googleapis.com/youtube/v3';
@@ -10,6 +12,11 @@ const JSON_HEADERS = {
 };
 const TOKEN_TTL_MS = 1000 * 60 * 60 * 24 * 30;
 const PASSCODE_DISABLED = true;
+
+type CommentSettings = {
+  geminiApiKey: string;
+  commentPrompt: string;
+};
 
 Deno.serve(async (request) => {
   if (request.method === 'OPTIONS') {
@@ -36,7 +43,13 @@ Deno.serve(async (request) => {
       requestUrl.searchParams.get('videoId') ||
       extractVideoId(body.url || requestUrl.searchParams.get('url') || '');
     const mode = body.mode === 'context' ? 'context' : 'candidates';
-    const context = await fetchYoutubeContext({ videoId, eventInfo: body.eventInfo ?? {}, mode });
+    const userSettings = await loadRequestCommentSettings(request);
+    const context = await fetchYoutubeContext({
+      videoId,
+      eventInfo: body.eventInfo ?? {},
+      mode,
+      userSettings,
+    });
     return json(context);
   } catch (error) {
     return json(
@@ -90,6 +103,77 @@ function json(payload: unknown, status = 200) {
   return new Response(JSON.stringify(payload), { status, headers: JSON_HEADERS });
 }
 
+async function loadRequestCommentSettings(request: Request): Promise<CommentSettings> {
+  const token = extractBearerToken(request.headers.get('authorization') ?? '');
+  if (!token) return { geminiApiKey: '', commentPrompt: DEFAULT_COMMENT_PROMPT };
+
+  const user = await loadAuthUser(token);
+  const value = await loadUserSetting(user.id, COMMENT_SETTINGS_KEY);
+  return normalizeCommentSettings(value);
+}
+
+async function loadAuthUser(token: string): Promise<{ id: string }> {
+  const supabaseUrl = requireEnv('SUPABASE_URL');
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const response = await fetch(`${supabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      authorization: `Bearer ${token}`,
+    },
+  });
+
+  const payload = await response.json().catch(() => null);
+  if (!response.ok || !payload?.id) throw new Error('Invalid login session.');
+  return { id: String(payload.id) };
+}
+
+async function loadUserSetting(userId: string, key: string) {
+  const rows = await restFetch(
+    `/rest/v1/app_settings?select=value&key=eq.${encodeURIComponent(`${key}:${userId}`)}&limit=1`,
+  );
+  return Array.isArray(rows) ? rows[0]?.value ?? null : null;
+}
+
+async function restFetch(path: string, init: RequestInit = {}) {
+  const supabaseUrl = requireEnv('SUPABASE_URL');
+  const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
+  const response = await fetch(`${supabaseUrl}${path}`, {
+    ...init,
+    headers: {
+      apikey: serviceRoleKey,
+      authorization: `Bearer ${serviceRoleKey}`,
+      'content-type': 'application/json',
+      ...(init.headers ?? {}),
+    },
+  });
+
+  const text = await response.text();
+  if (!response.ok) throw new Error(text || `Supabase REST failed (${response.status})`);
+  return text ? JSON.parse(text) : null;
+}
+
+function normalizeCommentSettings(value: unknown): CommentSettings {
+  const settings = value && typeof value === 'object' ? (value as Record<string, unknown>) : {};
+  return {
+    geminiApiKey: typeof settings.geminiApiKey === 'string' ? settings.geminiApiKey.trim() : '',
+    commentPrompt:
+      typeof settings.commentPrompt === 'string' && settings.commentPrompt.trim()
+        ? settings.commentPrompt.trim()
+        : DEFAULT_COMMENT_PROMPT,
+  };
+}
+
+function extractBearerToken(value: string) {
+  const match = value.match(/^Bearer\s+(.+)$/i);
+  return match?.[1] ?? '';
+}
+
+function requireEnv(name: string) {
+  const value = Deno.env.get(name);
+  if (!value) throw new Error(`${name} is required.`);
+  return value;
+}
+
 function extractVideoId(value = '') {
   const text = String(value);
   const patterns = [
@@ -109,10 +193,12 @@ async function fetchYoutubeContext({
   videoId,
   eventInfo,
   mode,
+  userSettings,
 }: {
   videoId: string;
   eventInfo: Record<string, unknown>;
   mode: 'context' | 'candidates';
+  userSettings: CommentSettings;
 }) {
   if (!videoId) throw new Error('YouTube video ID was not found.');
 
@@ -127,6 +213,7 @@ async function fetchYoutubeContext({
         videoUrl: watchUrl,
         eventInfo: buildCandidateEventInfo(eventInfo, candidateContext),
         comments: candidateContext.comments,
+        userSettings,
       });
     } catch (error) {
       commentCandidatesError = error instanceof Error ? error.message : 'Gemini comment generation failed.';
@@ -587,16 +674,18 @@ async function generateCommentCandidates({
   videoUrl,
   eventInfo,
   comments = [],
+  userSettings,
 }: {
   videoUrl: string;
   eventInfo: Record<string, unknown>;
   comments?: Array<Record<string, unknown>>;
+  userSettings: CommentSettings;
 }) {
-  const apiKey = Deno.env.get('GEMINI_API_KEY');
+  const apiKey = userSettings.geminiApiKey || Deno.env.get('GEMINI_API_KEY');
   if (!apiKey) throw new Error('Supabase Function Secret GEMINI_API_KEY is not configured.');
 
   const parts: Array<Record<string, unknown>> = [
-    { text: buildGeminiUserText(videoUrl, buildUserPrompt(eventInfo, comments)) },
+    { text: buildGeminiUserText(videoUrl, buildUserPrompt(eventInfo, comments, userSettings.commentPrompt)) },
   ];
   if (SHOULD_ATTACH_VIDEO_FILE) {
     parts.unshift({ fileData: { fileUri: videoUrl, mimeType: 'video/*' } });
@@ -706,7 +795,11 @@ function sleep(ms: number) {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
-function buildUserPrompt(eventInfo: Record<string, unknown>, comments: Array<Record<string, unknown>> = []) {
+function buildUserPrompt(
+  eventInfo: Record<string, unknown>,
+  comments: Array<Record<string, unknown>> = [],
+  commentPrompt = DEFAULT_COMMENT_PROMPT,
+) {
   const bodyLines = Array.isArray(eventInfo.bodyLines) ? eventInfo.bodyLines : [];
   const participationHints = Array.isArray(eventInfo.participationHints)
     ? eventInfo.participationHints
@@ -720,6 +813,9 @@ function buildUserPrompt(eventInfo: Record<string, unknown>, comments: Array<Rec
     })
     .filter(Boolean);
   return [
+    '[User comment style prompt]',
+    commentPrompt || DEFAULT_COMMENT_PROMPT,
+    '',
     'Create exactly one sincere Korean event comment candidate.',
     'Return JSON only. Put exactly one item in candidates. The item has style and text.',
     'Set style to a short Korean tone label. Write the text in Korean, long and polished enough to feel like a winning event comment.',

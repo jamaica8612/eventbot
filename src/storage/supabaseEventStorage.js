@@ -48,6 +48,15 @@ export async function loadSupabaseFilterSettings() {
   return payload.value ?? null;
 }
 
+export async function loadSupabaseCommentSettings() {
+  if (!hasSupabaseConfig) {
+    return null;
+  }
+
+  const payload = await callDataFunction('GET', 'commentSettings');
+  return payload.value ?? null;
+}
+
 export async function saveSupabaseFilterSettings(settings) {
   if (!hasSupabaseConfig) {
     return;
@@ -55,6 +64,17 @@ export async function saveSupabaseFilterSettings(settings) {
 
   await callDataFunction('POST', '', {
     action: 'saveFilterSettings',
+    settings,
+  });
+}
+
+export async function saveSupabaseCommentSettings(settings) {
+  if (!hasSupabaseConfig) {
+    return;
+  }
+
+  await callDataFunction('POST', '', {
+    action: 'saveCommentSettings',
     settings,
   });
 }

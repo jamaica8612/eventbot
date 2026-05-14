@@ -37,7 +37,8 @@ Deno.serve(async (request) => {
     if (!auth.profile.approved) throw new HttpError('Account approval is required.', 403);
 
     await triggerGithubWorkflow();
-    return json({ ok: true });
+    const crawlStatus = await saveCrawlRequestStatus(auth.user.id);
+    return json({ ok: true, crawlStatus });
   } catch (error) {
     const status = error instanceof HttpError ? error.status : 500;
     const message = error instanceof Error ? error.message : 'Crawler trigger failed.';
@@ -104,6 +105,34 @@ async function triggerGithubWorkflow() {
     const text = await response.text();
     throw new Error(`GitHub Actions trigger failed (${response.status}): ${text.slice(0, 300)}`);
   }
+}
+
+async function saveCrawlRequestStatus(userId: string) {
+  const previous = await loadCrawlStatus();
+  const requestedAt = new Date().toISOString();
+  const value = {
+    ...(previous ?? {}),
+    status: 'requested',
+    checkedAt: requestedAt,
+    requestedAt,
+    requestedBy: userId,
+  };
+
+  await restFetch('/rest/v1/app_settings?on_conflict=key', {
+    method: 'POST',
+    headers: {
+      prefer: 'resolution=merge-duplicates',
+    },
+    body: JSON.stringify({ key: 'crawl_status', value }),
+  });
+
+  return value;
+}
+
+async function loadCrawlStatus() {
+  const rows = await restFetch('/rest/v1/app_settings?select=value&key=eq.crawl_status&limit=1');
+  const value = Array.isArray(rows) ? rows[0]?.value : null;
+  return value && typeof value === 'object' ? value : null;
 }
 
 async function restFetch(path: string, init: RequestInit = {}) {

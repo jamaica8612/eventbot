@@ -22,9 +22,17 @@ import {
   saveFilterSettings,
 } from './storage/filterSettingsStorage.js';
 import {
+  defaultCommentSettings,
+  loadCommentSettings,
+  normalizeCommentSettings,
+  saveCommentSettings,
+} from './storage/commentSettingsStorage.js';
+import {
   hasSupabaseConfig,
   loadSupabaseCrawlerStatus,
+  loadSupabaseCommentSettings,
   loadSupabaseFilterSettings,
+  saveSupabaseCommentSettings,
   saveSupabaseFilterSettings,
   triggerSupabaseCrawler,
 } from './storage/supabaseEventStorage.js';
@@ -137,9 +145,11 @@ function EventBotApp({ theme, setTheme, onLock }) {
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
+  const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
   const [crawlerStatus, setCrawlerStatus] = useState(null);
   const [isCrawling, setIsCrawling] = useState(false);
   const didLoadFilterSettings = useRef(false);
+  const didLoadCommentSettings = useRef(false);
   const {
     updateStatus,
     updateResult,
@@ -187,6 +197,29 @@ function EventBotApp({ theme, setTheme, onLock }) {
   }, []);
 
   useEffect(() => {
+    if (!hasSupabaseConfig) {
+      didLoadCommentSettings.current = true;
+      return;
+    }
+
+    loadSupabaseCommentSettings()
+      .then((remoteSettings) => {
+        if (remoteSettings) {
+          setCommentSettings(normalizeCommentSettings(remoteSettings));
+        }
+      })
+      .catch((error) => {
+        setSyncNotice({
+          type: 'warning',
+          message: `댓글 설정을 DB에서 불러오지 못했습니다. (${error.message})`,
+        });
+      })
+      .finally(() => {
+        didLoadCommentSettings.current = true;
+      });
+  }, []);
+
+  useEffect(() => {
     if (!hasSupabaseConfig) return;
 
     let isMounted = true;
@@ -226,7 +259,10 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
     try {
       if (hasSupabaseConfig) {
-        await triggerSupabaseCrawler();
+        const payload = await triggerSupabaseCrawler();
+        if (payload?.crawlStatus) {
+          setCrawlerStatus(payload.crawlStatus);
+        }
         setSyncNotice({
           type: 'success',
           message:
@@ -247,6 +283,25 @@ function EventBotApp({ theme, setTheme, onLock }) {
         message: error.message || '크롤링 실행에 실패했습니다.',
       });
       setIsCrawling(false);
+    }
+  }
+
+  async function handleSaveCommentSettings() {
+    const normalized = normalizeCommentSettings(commentSettings);
+    setCommentSettings(normalized);
+
+    try {
+      if (hasSupabaseConfig) {
+        await saveSupabaseCommentSettings(normalized);
+      } else {
+        saveCommentSettings(normalized);
+      }
+      setSyncNotice({ type: 'success', message: '댓글 설정을 저장했습니다.' });
+    } catch (error) {
+      setSyncNotice({
+        type: 'warning',
+        message: error.message || '댓글 설정 저장에 실패했습니다.',
+      });
     }
   }
 
@@ -324,10 +379,13 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <FilterSettingsPanel
               events={appEvents}
               settings={filterSettings}
+              commentSettings={commentSettings}
               counts={counts}
               selectedFilter={filter}
               theme={theme}
               onChange={setFilterSettings}
+              onCommentSettingsChange={setCommentSettings}
+              onSaveCommentSettings={handleSaveCommentSettings}
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
@@ -616,22 +674,44 @@ function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction
   );
 }
 function CrawlerStatusPanel({ status }) {
+  const statusInfo = getCrawlerStatusInfo(status?.status);
   const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
+  const lastSuccessAt = formatDateTime(status.lastSuccessAt ?? status.checkedAt ?? status.updatedAt);
   const latestSeenAt = formatDateTime(status.latestSeenAt);
   const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
+  const recentSeen = Number.isFinite(status.recentSeen24h)
+    ? status.recentSeen24h
+    : Array.isArray(status.recentEvents)
+      ? status.recentEvents.length
+      : '-';
 
   return (
-    <section className="crawler-status-panel" aria-label="크롤링 상태">
+    <section
+      className={`crawler-status-panel crawler-status-${statusInfo.kind}`}
+      aria-label="크롤링 상태"
+    >
       <div>
-        <strong>크롤링 정상</strong>
-        <span>마지막 확인 {checkedAt}</span>
+        <strong>{statusInfo.label}</strong>
+        <span>마지막 성공 {lastSuccessAt}</span>
       </div>
       <div>
         <span>DB {total}개</span>
+        <span>최근 24시간 {recentSeen}개</span>
         <span>최신 수집 {latestSeenAt}</span>
       </div>
+      <p>
+        {statusInfo.kind === 'failure'
+          ? status.failureMessage || '최근 크롤링이 실패했습니다. 설정의 크롤링하기로 다시 요청해보세요.'
+          : `상태 확인 ${checkedAt}`}
+      </p>
     </section>
   );
+}
+
+function getCrawlerStatusInfo(status) {
+  if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
+  if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
+  return { kind: 'success', label: '크롤링 정상' };
 }
 
 function formatDateTime(value) {
@@ -657,10 +737,13 @@ function getEmptyMessage(filter) {
 function FilterSettingsPanel({
   events,
   settings,
+  commentSettings,
   counts,
   selectedFilter,
   theme,
   onChange,
+  onCommentSettingsChange,
+  onSaveCommentSettings,
   onThemeChange,
   onSelectFilter,
   onLock,
@@ -677,7 +760,9 @@ function FilterSettingsPanel({
     [events],
   );
   const keywordText = settings.excludedKeywords.join('\n');
-  const lastCrawledAt = formatDateTime(crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt);
+  const lastCrawledAt = formatDateTime(
+    crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt,
+  );
 
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
@@ -730,7 +815,7 @@ function FilterSettingsPanel({
           >
             {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
           </button>
-          <span>{`\uB9C8\uC9C0\uB9C9 ${lastCrawledAt}`}</span>
+          <span>{`\uB9C8\uC9C0\uB9C9 \uC131\uACF5 ${lastCrawledAt}`}</span>
         </div>
         <button
           type="button"
@@ -766,6 +851,51 @@ function FilterSettingsPanel({
           onBlur={(event) => saveKeywordDraft(event.currentTarget.value)}
         />
       </label>
+
+      <section className="comment-settings" aria-label="댓글 생성 설정">
+        <div>
+          <strong>댓글 생성 설정</strong>
+          <span>비워두면 기본 마스터 프롬프트와 서버 Gemini 키를 사용합니다.</span>
+        </div>
+        <label>
+          <span>내 Gemini API 키</span>
+          <input
+            type="password"
+            value={commentSettings.geminiApiKey}
+            placeholder="AIza... 개인 키를 쓰고 싶을 때만 입력"
+            autoComplete="off"
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, geminiApiKey: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <label>
+          <span>댓글 작성 프롬프트</span>
+          <textarea
+            rows="5"
+            value={commentSettings.commentPrompt}
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, commentPrompt: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <div className="comment-settings-actions">
+          <button type="button" className="settings-action-button" onClick={onSaveCommentSettings}>
+            댓글 설정 저장
+          </button>
+          <button
+            type="button"
+            className="settings-reset"
+            onClick={() => onCommentSettingsChange(defaultCommentSettings)}
+          >
+            기본값
+          </button>
+        </div>
+      </section>
 
       {platforms.length > 0 ? (
         <div className="platform-settings">

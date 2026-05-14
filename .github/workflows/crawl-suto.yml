@@ -63,3 +63,11 @@ jobs:
           else
             echo "No changes to commit."
           fi
+
+      - name: Save crawl failure status
+        if: failure()
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          CRAWL_FAILURE_STAGE: "crawl-suto workflow failed"
+        run: node scripts/saveCrawlFailureStatus.js
