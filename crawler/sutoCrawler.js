@@ -6,8 +6,10 @@ import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
 
 const SOURCE_NAME = '슈퍼투데이';
+const AJAX_ROWS = Number.parseInt(process.env.SUTO_AJAX_ROWS ?? '80', 10);
+const AJAX_HOT_COUNT = Number.parseInt(process.env.SUTO_AJAX_HOT_COUNT ?? '50', 10);
 const SOURCE_URL =
-  'https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=80&hot_cnt=50&skin_dir=mo_simple';
+  `https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=${AJAX_ROWS}&hot_cnt=${AJAX_HOT_COUNT}&skin_dir=mo_simple`;
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
 
 async function main() {

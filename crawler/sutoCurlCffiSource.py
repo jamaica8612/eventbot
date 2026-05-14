@@ -30,7 +30,7 @@ BASE = "https://suto.co.kr"
 LIST_URL = f"{BASE}/cpevent?isActive=1"
 IMPERSONATE = "chrome124"
 TIMEOUT = 20
-DETAIL_LIMIT = 80
+DETAIL_LIMIT = int(os.environ.get("SUTO_DETAIL_LIMIT", "80"))
 LIST_PAGE_LIMIT = int(os.environ.get("SUTO_LIST_PAGE_LIMIT", "20"))
 DETAIL_DELAY_SECONDS = float(os.environ.get("SUTO_DETAIL_DELAY_SECONDS", "1.1"))
 RATE_LIMIT_BACKOFF_SECONDS = [4, 9, 16]
