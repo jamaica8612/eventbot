@@ -87,11 +87,12 @@ export function extractDeadlineByRules(eventInput = {}) {
     };
   }
 
-  const dates = extractKoreanEventDates(line);
+  const focusedLine = getDeadlineFocusedText(line);
+  const dates = extractKoreanEventDates(focusedLine);
   const date = dates.at(-1) ?? '';
   return {
     date: eventInput.deadlineDate || date,
-    text: normalizeDeadlineText(line, date),
+    text: normalizeDeadlineText(focusedLine || line, date),
   };
 }
 
@@ -240,15 +241,43 @@ function findDeadlineLine(text) {
   const lines = text
     .split(/\n+/)
     .map((line) => line.replace(/\s+/g, ' ').trim())
-    .filter(Boolean)
-    .filter((line) => !/당첨자?\s*발표|결과\s*발표|발표\s*일|수상작\s*발표|경품\s*발송|상품\s*발송/.test(line));
+    .filter(Boolean);
+  const windows = lines.map((line, index) =>
+    [line, lines[index + 1], lines[index + 2]].filter(Boolean).join(' '),
+  );
 
   return (
-    lines.find(
+    windows.find(
       (line) =>
-        /(?:이벤트|응모|참여|설문|투표|심사|접수)?\s*(?:기간|마감|기한|일정)|까지|종료/.test(line) &&
-        /(20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}|\d{1,2}\s*[.\-/월]\s*\d{1,2})/.test(line),
+        hasDeadlineKeyword(line) &&
+        hasEventDateText(getDeadlineFocusedText(line)),
     ) ?? ''
+  );
+}
+
+function getDeadlineFocusedText(line) {
+  const source = String(line ?? '');
+  const startMatches = [
+    ...source.matchAll(/(?:이벤트|응모|참여|설문|투표|심사|접수)?\s*(?:기간|마감|기한|일정)|까지|종료/g),
+  ];
+  if (startMatches.length === 0) return removeAnnouncementTail(source);
+
+  const start = startMatches[0].index ?? 0;
+  return removeAnnouncementTail(source.slice(start, start + 180));
+}
+
+function removeAnnouncementTail(text) {
+  const marker = text.search(/당첨자?\s*발표|결과\s*발표|발표\s*일|수상작\s*발표|경품\s*발송|상품\s*발송/);
+  return marker >= 0 ? text.slice(0, marker).trim() : text.trim();
+}
+
+function hasDeadlineKeyword(line) {
+  return /(?:이벤트|응모|참여|설문|투표|심사|접수)?\s*(?:기간|마감|기한|일정)|까지|종료/.test(line);
+}
+
+function hasEventDateText(line) {
+  return /(20\d{2}\s*[.\-/년]\s*\d{1,2}\s*[.\-/월]\s*\d{1,2}|\d{1,2}\s*[.\-/월]\s*\d{1,2})/.test(
+    line,
   );
 }
 
