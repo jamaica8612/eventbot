@@ -176,7 +176,9 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 
       <div className="meta-row">
         <span>{event.source}</span>
-        {getDeadlineDisplay(event) ? <span>{getDeadlineDisplay(event)}</span> : null}
+        {getDeadlineDisplay(event) ? (
+          <span className={getDeadlineClassName(event)}>{getDeadlineDisplay(event)}</span>
+        ) : null}
       </div>
 
       {showCompletionActions ? (
@@ -227,7 +229,7 @@ function EventScheduleMeta({ event }) {
 
   return (
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
-      {deadline ? <span>{deadline}</span> : null}
+      {deadline ? <span className={getDeadlineClassName(event)}>{deadline}</span> : null}
       {announcement ? (
         <span>{`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}</span>
       ) : null}
@@ -265,6 +267,13 @@ function getDeadlineDisplay(event) {
   }
 
   return new RegExp('^\\uB9C8\\uAC10\\s*').test(text) ? text : `\uB9C8\uAC10 ${text}`;
+}
+
+function getDeadlineClassName(event) {
+  const deadline = getDeadlineDisplay(event);
+  if (deadline === '\uC624\uB298\uB9C8\uAC10') return 'deadline-chip deadline-today';
+  if (deadline === '\uB0B4\uC77C\uB9C8\uAC10') return 'deadline-chip deadline-tomorrow';
+  return 'deadline-chip';
 }
 
 function getSchedulePrizeDisplay(event) {
