@@ -2625,6 +2625,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .inbox-title-cell {
     gap: 4px;
+    padding-right: 0;
   }
 
   .inbox-title-cell .manage-row-title {
@@ -2665,6 +2666,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .inbox-action-cell {
     gap: 7px;
+    align-self: stretch;
+    justify-content: stretch;
   }
 
   .inbox-action-cell .manage-result-actions {
@@ -2681,8 +2684,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .inbox-top-actions {
     order: initial;
-    top: 50%;
-    transform: translateY(-50%);
+    position: static;
+    transform: none;
     justify-content: flex-end;
   }
 
