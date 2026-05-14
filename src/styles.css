@@ -1681,6 +1681,24 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   color: #5b4636;
 }
 
+.deadline-edit-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.deadline-edit-actions button {
+  min-height: 30px;
+  border-radius: 999px;
+  padding: 0 10px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+.deadline-panel {
+  border-color: rgba(26, 115, 232, 0.18);
+  background: rgba(26, 115, 232, 0.06);
+}
+
 .quick-actions button {
   color: var(--text-main);
 }

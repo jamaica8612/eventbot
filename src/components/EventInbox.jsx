@@ -27,7 +27,7 @@ const inboxFilters = [
   { value: 'lost', label: '미당첨' },
 ];
 
-export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
+export function TodayDeadlineList({ events, isLoading, onDeadlineChange, onStatusChange }) {
   const [selectedFilter, setSelectedFilter] = useState('all');
   const sortedEvents = events;
   const filterCounts = useMemo(
@@ -75,6 +75,7 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
               key={event.id}
               event={event}
               filter="todayDeadline"
+              onDeadlineChange={onDeadlineChange}
               onStatusChange={onStatusChange}
             />
           ))

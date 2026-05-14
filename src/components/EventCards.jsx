@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { resultLabels, statusActions, statusLabels } from '../constants.js';
 import {
   buildSourceFacts,
@@ -8,12 +9,25 @@ import {
 } from '../utils/eventModel.js';
 import { getLocalToday, parseLocalDate } from '../utils/format.js';
 import { EventBodyToggle } from './EventBodyToggle.jsx';
-import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { AnnouncementPanel, ApplyLink, DeadlinePanel } from './EventShared.jsx';
 import { PlatformBadge } from './PlatformBadge.jsx';
 
-export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
+export function EventCard({
+  event,
+  filter,
+  onResultChange,
+  onAnnouncementChange,
+  onDeadlineChange,
+  onStatusChange,
+}) {
   if (filter === 'ready' || filter === 'todayDeadline' || filter === 'later') {
-    return <ReadyEventCard event={event} onStatusChange={onStatusChange} />;
+    return (
+      <ReadyEventCard
+        event={event}
+        onDeadlineChange={onDeadlineChange}
+        onStatusChange={onStatusChange}
+      />
+    );
   }
   if (filter === 'todayAnnouncement') {
     return (
@@ -59,7 +73,8 @@ function EventSourceSummary({ event }) {
   );
 }
 
-function ReadyEventCard({ event, onStatusChange }) {
+function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
+  const [isDeadlineEditing, setIsDeadlineEditing] = useState(false);
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
   const applyHref = event.applyUrl ?? event.url;
@@ -74,6 +89,21 @@ function ReadyEventCard({ event, onStatusChange }) {
 
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
+
+      {onDeadlineChange ? (
+        <div className="deadline-edit-actions">
+          <button
+            type="button"
+            onClick={() => setIsDeadlineEditing((current) => !current)}
+          >
+            마감 수정
+          </button>
+        </div>
+      ) : null}
+
+      {isDeadlineEditing && onDeadlineChange ? (
+        <DeadlinePanel event={event} onDeadlineChange={onDeadlineChange} />
+      ) : null}
 
       <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 

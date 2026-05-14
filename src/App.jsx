@@ -156,6 +156,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
     updateStatus,
     updateResult,
     updateAnnouncement,
+    updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
   } =
@@ -428,6 +429,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <TodayDeadlineList
               events={visibleEvents}
               isLoading={isLoading}
+              onDeadlineChange={updateDeadline}
               onStatusChange={updateDeadlineStatus}
             />
           ) : filter === 'search' ? (
@@ -456,6 +458,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
                     filter={filter}
                     onResultChange={updateResult}
                     onAnnouncementChange={updateAnnouncement}
+                    onDeadlineChange={updateDeadline}
                     onStatusChange={updateStatus}
                   />
                 ))

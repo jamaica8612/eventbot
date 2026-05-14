@@ -39,6 +39,18 @@ export async function updateSupabaseEventState(eventId, patch) {
   });
 }
 
+export async function updateSupabaseEventDetails(eventId, patch) {
+  if (!hasSupabaseConfig) {
+    return;
+  }
+
+  await callDataFunction('POST', '', {
+    action: 'updateEventDetails',
+    eventId,
+    patch,
+  });
+}
+
 export async function loadSupabaseFilterSettings() {
   if (!hasSupabaseConfig) {
     return null;

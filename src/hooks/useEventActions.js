@@ -7,7 +7,11 @@ import {
   removeEventState,
 } from '../storage/eventStatusStorage.js';
 import { saveExcludedEvent } from '../storage/excludedEventStorage.js';
-import { hasSupabaseConfig, updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
+import {
+  hasSupabaseConfig,
+  updateSupabaseEventDetails,
+  updateSupabaseEventState,
+} from '../storage/supabaseEventStorage.js';
 import {
   enqueueSyncPatch,
   getSyncQueueSummary,
@@ -197,6 +201,49 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     [events, setEvents, setSyncNotice],
   );
 
+  const updateDeadline = useCallback(
+    (eventId, meta) => {
+      const deadlineText =
+        typeof meta.deadlineText === 'string'
+          ? meta.deadlineText.trim()
+          : meta.deadlineDate || '상세 확인 필요';
+      const patch = {
+        deadlineDate: meta.deadlineDate || '',
+        deadlineText,
+      };
+
+      setSyncNotice(null);
+      updateSupabaseEventDetails(eventId, patch)
+        .then(() => setSyncNotice({ type: 'success', message: '마감일을 저장했습니다.' }))
+        .catch((error) =>
+          setSyncNotice({
+            type: 'warning',
+            message: `마감일 저장 실패. (${error.message})`,
+          }),
+        );
+
+      setEvents((currentEvents) =>
+        currentEvents.map((event) =>
+          event.id === eventId
+            ? {
+                ...event,
+                deadlineDate: patch.deadlineDate,
+                deadlineText,
+                due: deadlineText,
+                raw: {
+                  ...(event.raw ?? {}),
+                  deadlineDate: patch.deadlineDate,
+                  deadlineText,
+                  due: deadlineText,
+                },
+              }
+            : event,
+        ),
+      );
+    },
+    [setEvents, setSyncNotice],
+  );
+
   const updateWinningMeta = useCallback(
     (eventId, meta) => {
       if (!hasSupabaseConfig) {
@@ -273,6 +320,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     updateStatus,
     updateResult,
     updateAnnouncement,
+    updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
   };

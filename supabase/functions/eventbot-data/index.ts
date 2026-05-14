@@ -68,6 +68,10 @@ Deno.serve(async (request) => {
         await updateEventState(auth.user.id, String(body.eventId ?? ''), body.patch ?? {});
         return json({ ok: true });
       }
+      if (body.action === 'updateEventDetails') {
+        await updateEventDetails(String(body.eventId ?? ''), body.patch ?? {});
+        return json({ ok: true });
+      }
       if (body.action === 'saveFilterSettings') {
         await saveSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id), body.settings ?? {});
         return json({ ok: true });
@@ -213,6 +217,26 @@ async function updateEventState(
       event_id: eventId,
       ...rowPatch,
     }),
+  });
+}
+
+async function updateEventDetails(eventId: string, patch: Record<string, unknown>) {
+  if (!eventId) throw new Error('Event ID is required.');
+  const rowPatch: Record<string, unknown> = {};
+
+  if ('deadlineDate' in patch) rowPatch.deadline_date = patch.deadlineDate || null;
+  if ('deadlineText' in patch) {
+    const deadlineText = typeof patch.deadlineText === 'string' ? patch.deadlineText.trim() : '';
+    rowPatch.deadline_text = deadlineText || '상세 확인 필요';
+    rowPatch.due_text = rowPatch.deadline_text;
+  }
+
+  if (Object.keys(rowPatch).length === 0) return;
+
+  await restFetch(`/rest/v1/events?id=eq.${encodeURIComponent(eventId)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify(rowPatch),
   });
 }
 
