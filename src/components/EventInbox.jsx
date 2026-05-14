@@ -9,6 +9,7 @@ import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
 import { EventCard } from './EventCards.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { PlatformBadge } from './PlatformBadge.jsx';
 
 const deadlineFilters = [
   { value: 'all', label: '전체' },
@@ -203,7 +204,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
     >
       <div className="inbox-date-cell">
         <time>{formatDate(event.participatedAt)}</time>
-        <span>{event.platform}</span>
+        <PlatformBadge platform={event.platform} />
       </div>
 
       <div className="inbox-title-cell">

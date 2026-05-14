@@ -9,6 +9,7 @@ import {
 import { getLocalToday, parseLocalDate } from '../utils/format.js';
 import { EventBodyToggle } from './EventBodyToggle.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { PlatformBadge } from './PlatformBadge.jsx';
 
 export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
   if (filter === 'ready' || filter === 'todayDeadline' || filter === 'later') {
@@ -67,7 +68,7 @@ function ReadyEventCard({ event, onStatusChange }) {
   return (
     <article className="event-card now-card">
       <div className="score-row">
-        <span>{event.platform}</span>
+        <PlatformBadge platform={event.platform} />
         <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
       </div>
 
@@ -104,7 +105,7 @@ function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) 
   return (
     <article className="event-card announcement-card">
       <div className="score-row">
-        <span>{event.platform}</span>
+        <PlatformBadge platform={event.platform} />
         <strong>{getAnnouncementStatus(event).label}</strong>
       </div>
 
