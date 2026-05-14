@@ -177,7 +177,7 @@ function toAppEvent(row) {
     totalWinnerCount: raw.totalWinnerCount ?? '',
     due: decision.deadlineText,
     deadlineText: decision.deadlineText,
-    deadlineDate: row.deadline_date ?? raw.deadlineDate ?? decision.deadlineDate ?? '',
+    deadlineDate: row.deadline_date || raw.deadlineDate || decision.deadlineDate || '',
     clickScore: decision.clickScore,
     actionType: decision.actionType,
     estimatedSeconds: decision.estimatedSeconds,

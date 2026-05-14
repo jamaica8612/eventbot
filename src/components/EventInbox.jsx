@@ -16,7 +16,7 @@ const deadlineFilters = [
   { value: 'today', label: '오늘' },
   { value: 'tomorrow', label: '내일' },
   { value: 'week', label: '7일 이내' },
-  { value: 'unknown', label: '확인 필요' },
+  { value: 'unknown', label: '마감일 미확인' },
 ];
 
 const inboxFilters = [

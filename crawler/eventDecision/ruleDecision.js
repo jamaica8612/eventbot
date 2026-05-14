@@ -199,6 +199,7 @@ function buildDecisionText({
   bodyText = '',
   originalText = '',
   originalLines = [],
+  detailMetaLines = [],
 } = {}) {
   return [
     title,
@@ -207,6 +208,7 @@ function buildDecisionText({
     deadlineText,
     bodyText,
     originalText,
+    Array.isArray(detailMetaLines) ? detailMetaLines.join(' ') : '',
     Array.isArray(originalLines) ? originalLines.join(' ') : '',
   ].join(' ');
 }

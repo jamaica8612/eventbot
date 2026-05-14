@@ -349,6 +349,8 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
 
 def extract_detail_metadata(soup: BeautifulSoup) -> dict:
     metadata = {
+        "deadlineDate": "",
+        "deadlineText": "",
         "resultAnnouncementDate": "",
         "resultAnnouncementText": "",
         "prizeText": "",
@@ -369,7 +371,10 @@ def extract_detail_metadata(soup: BeautifulSoup) -> dict:
         if not label or not value:
             continue
 
-        if is_announcement_label(label):
+        if is_period_label(label):
+            metadata["deadlineDate"] = normalize_detail_date(value, prefer_last=True)
+            metadata["deadlineText"] = f"{label} {value}".strip()[:100]
+        elif is_announcement_label(label):
             metadata["resultAnnouncementDate"] = normalize_detail_date(value)
             metadata["resultAnnouncementText"] = f"{label} {value}".strip()[:100]
         elif is_total_winner_label(label):
@@ -385,6 +390,9 @@ def is_announcement_label(label: str) -> bool:
     return "발표" in label and ("일" in label or "예정" in label)
 
 
+def is_period_label(label: str) -> bool:
+    text = re.sub(r"\s+", "", label)
+    return any(word in text for word in ["응모기간", "이벤트기간", "참여기간", "접수기간", "기간"])
 
 
 def is_total_winner_label(label: str) -> bool:
@@ -397,26 +405,27 @@ def parse_first_number(value: str) -> int | None:
     if not match:
         return None
     return int(match.group(0).replace(",", ""))
-def normalize_detail_date(value: str) -> str:
+def normalize_detail_date(value: str, prefer_last: bool = False) -> str:
     today = datetime.now()
     text = re.sub(r"\s+", " ", value).strip()
+    matches = []
 
-    full = re.search(r"(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
-    if full:
-        return format_date_parts(int(full.group(1)), int(full.group(2)), int(full.group(3)))
+    for full in re.finditer(r"(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text):
+        matches.append(format_date_parts(int(full.group(1)), int(full.group(2)), int(full.group(3))))
 
-    short_year = re.search(r"(?<!\d)(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})", text)
-    if short_year:
-        return format_date_parts(2000 + int(short_year.group(1)), int(short_year.group(2)), int(short_year.group(3)))
+    for short_year in re.finditer(r"(?<!\d)(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})", text):
+        matches.append(format_date_parts(2000 + int(short_year.group(1)), int(short_year.group(2)), int(short_year.group(3))))
 
-    month_day = re.search(r"(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
-    if month_day:
+    for month_day in re.finditer(r"(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text):
         month = int(month_day.group(1))
         day = int(month_day.group(2))
         year = today.year + (1 if today.month >= 11 and month <= 2 else 0)
-        return format_date_parts(year, month, day)
+        matches.append(format_date_parts(year, month, day))
 
-    return ""
+    matches = [match for match in matches if match]
+    if not matches:
+        return ""
+    return matches[-1] if prefer_last else matches[0]
 
 
 def format_date_parts(year: int, month: int, day: int) -> str:
