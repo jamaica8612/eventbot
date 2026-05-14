@@ -140,6 +140,7 @@ h3 {
   max-width: 100%;
   margin: 0 auto;
   padding: 18px 16px 104px;
+  overflow-x: clip;
 }
 
 .app-hero {
@@ -424,8 +425,9 @@ h3 {
 
 .settings-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(96px, 1fr));
   gap: 8px;
+  min-width: 0;
 }
 
 .settings-action-button {
@@ -441,7 +443,7 @@ h3 {
   flex-direction: column;
   gap: 4px;
   align-items: stretch;
-  min-width: min(100%, 126px);
+  min-width: 0;
 }
 
 .settings-crawl-action span {
@@ -450,7 +452,7 @@ h3 {
   font-weight: 800;
   line-height: 1.15;
   text-align: center;
-  white-space: nowrap;
+  white-space: normal;
 }
 
 .settings-excluded-button {
@@ -660,9 +662,11 @@ h3 {
 
 .crawler-status-panel {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
   align-items: center;
   justify-content: space-between;
+  min-width: 0;
   border: 1px solid rgba(34, 197, 94, 0.24);
   border-radius: 14px;
   background: rgba(34, 197, 94, 0.1);
@@ -697,6 +701,16 @@ h3 {
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.crawler-status-panel p {
+  flex: 1 0 100%;
+  min-width: 0;
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 @media (max-width: 520px) {
