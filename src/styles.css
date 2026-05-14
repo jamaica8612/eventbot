@@ -1182,13 +1182,16 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
+  min-width: 0;
 }
 
 .schedule-row span {
   display: inline-flex;
   align-items: center;
+  flex: 0 1 auto;
   overflow: hidden;
-  max-width: 100%;
+  max-width: min(100%, 240px);
+  min-width: 0;
   min-height: 28px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -1199,6 +1202,15 @@ h3 {
   font-weight: 900;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.schedule-row .deadline-chip {
+  flex: 0 0 auto;
+  max-width: 132px;
+}
+
+.schedule-row .schedule-announcement {
+  max-width: min(100%, 188px);
 }
 
 .schedule-row .deadline-today,

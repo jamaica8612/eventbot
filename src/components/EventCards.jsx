@@ -231,7 +231,9 @@ function EventScheduleMeta({ event }) {
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
       {deadline ? <span className={getDeadlineClassName(event)}>{deadline}</span> : null}
       {announcement ? (
-        <span>{`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}</span>
+        <span className="schedule-announcement">
+          {`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}
+        </span>
       ) : null}
       {prize ? <span className="schedule-prize">{prize}</span> : null}
     </div>
