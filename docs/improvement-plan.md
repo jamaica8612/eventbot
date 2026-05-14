@@ -52,7 +52,7 @@
 ## Test Plan
 
 - [x] `npm run build` 통과
-- [ ] GitHub Pages 배포 성공 확인
+- [x] GitHub Pages 배포 성공 확인
 - [x] Supabase DB에서 `crawl_status`, `events`, `user_event_states` 데이터 확인
 - [x] 설정 패널에서 마지막 크롤링 상태가 한국 시간으로 표시됨
 - [x] 이벤트 카드가 PC/모바일에서 겹치지 않음
