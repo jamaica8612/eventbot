@@ -6,6 +6,7 @@ import {
   getAnnouncementStatus,
   getPrizeDisplay,
 } from '../utils/eventModel.js';
+import { getLocalToday, parseLocalDate } from '../utils/format.js';
 import { EventBodyToggle } from './EventBodyToggle.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
 
@@ -226,7 +227,7 @@ function EventScheduleMeta({ event }) {
 
   return (
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
-      {deadline ? <span>{`마감 ${deadline}`}</span> : null}
+      {deadline ? <span>{deadline}</span> : null}
       {announcement ? (
         <span>{`발표 ${event.resultAnnouncementDate || event.resultAnnouncementText}`}</span>
       ) : null}
@@ -237,7 +238,33 @@ function EventScheduleMeta({ event }) {
 
 function getDeadlineDisplay(event) {
   const value = event.deadlineDate || event.deadlineText || event.due || '';
-  return value === '상세 확인 필요' ? '' : value;
+  if (!value || value === '\uC0C1\uC138 \uD655\uC778 \uD544\uC694') return '';
+
+  const text = String(value).trim();
+  if (
+    new RegExp(
+      '\\uC624\\uB298\\s*\\uB9C8\\uAC10|\\uAE08\\uC77C\\s*\\uB9C8\\uAC10|\\uB9C8\\uAC10\\s*\\uC624\\uB298|\\uC624\\uB298\\s*\\uC885\\uB8CC|\\uAE08\\uC77C\\s*\\uC885\\uB8CC',
+    ).test(text)
+  ) {
+    return '\uC624\uB298\uB9C8\uAC10';
+  }
+  if (
+    new RegExp(
+      '\\uB0B4\\uC77C\\s*\\uB9C8\\uAC10|\\uB9C8\\uAC10\\s*\\uB0B4\\uC77C|\\uB0B4\\uC77C\\s*\\uC885\\uB8CC',
+    ).test(text)
+  ) {
+    return '\uB0B4\uC77C\uB9C8\uAC10';
+  }
+
+  const date = parseLocalDate(event.deadlineDate || text);
+  if (date) {
+    const today = getLocalToday();
+    const diffDays = Math.round((date.getTime() - today.getTime()) / 86400000);
+    if (diffDays === 0) return '\uC624\uB298\uB9C8\uAC10';
+    if (diffDays === 1) return '\uB0B4\uC77C\uB9C8\uAC10';
+  }
+
+  return new RegExp('^\\uB9C8\\uAC10\\s*').test(text) ? text : `\uB9C8\uAC10 ${text}`;
 }
 
 function getSchedulePrizeDisplay(event) {
