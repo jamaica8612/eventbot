@@ -23,6 +23,14 @@ type AuthUser = {
   user_metadata?: Record<string, unknown>;
 };
 
+type UserEventState = {
+  user_id: string;
+  status: string;
+  result_status: string;
+  receipt_status: string;
+  prize_amount: number | null;
+};
+
 class HttpError extends Error {
   status: number;
 
@@ -58,6 +66,10 @@ Deno.serve(async (request) => {
       if (resource === 'crawlStatus') {
         return json({ value: await loadSetting(CRAWL_STATUS_KEY) });
       }
+      if (resource === 'adminUsers') {
+        await requireAdmin(auth.profile);
+        return json({ users: await loadAdminUsers() });
+      }
       return json({ error: 'Unknown data request.' }, 400);
     }
 
@@ -78,6 +90,11 @@ Deno.serve(async (request) => {
       }
       if (body.action === 'saveCommentSettings') {
         await saveSetting(userSettingKey(COMMENT_SETTINGS_KEY, auth.user.id), normalizeCommentSettings(body.settings ?? {}));
+        return json({ ok: true });
+      }
+      if (body.action === 'updateProfileAccess') {
+        await requireAdmin(auth.profile);
+        await updateProfileAccess(String(body.userId ?? ''), body.patch ?? {});
         return json({ ok: true });
       }
       return json({ error: 'Unknown save request.' }, 400);
@@ -107,6 +124,12 @@ async function authenticate(
   return { user, profile };
 }
 
+function requireAdmin(profile: Profile) {
+  if (!profile.is_admin) {
+    throw new HttpError('Admin access is required.', 403);
+  }
+}
+
 async function loadAuthUser(token: string): Promise<AuthUser> {
   const supabaseUrl = requireEnv('SUPABASE_URL');
   const anonKey = Deno.env.get('SUPABASE_ANON_KEY') ?? requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -129,7 +152,19 @@ async function ensureProfile(user: AuthUser): Promise<Profile> {
   const existing = await restFetch(
     `/rest/v1/profiles?select=*&user_id=eq.${encodeURIComponent(user.id)}&limit=1`,
   );
-  if (Array.isArray(existing) && existing[0]) return existing[0] as Profile;
+  const bootstrapAccess = getBootstrapAdminAccess(user.email);
+  if (Array.isArray(existing) && existing[0]) {
+    const profile = existing[0] as Profile;
+    if (bootstrapAccess.isAdmin && (!profile.approved || !profile.is_admin)) {
+      const patch = {
+        approved: true,
+        is_admin: true,
+      };
+      await updateProfileAccess(profile.user_id, { approved: true, isAdmin: true });
+      return { ...profile, ...patch };
+    }
+    return profile;
+  }
 
   const displayName =
     stringFromMetadata(user.user_metadata, 'full_name') ||
@@ -142,8 +177,8 @@ async function ensureProfile(user: AuthUser): Promise<Profile> {
       user_id: user.id,
       email: user.email ?? '',
       display_name: displayName,
-      approved: false,
-      is_admin: false,
+      approved: bootstrapAccess.approved,
+      is_admin: bootstrapAccess.isAdmin,
     }),
   });
 
@@ -255,6 +290,70 @@ async function saveSetting(key: string, value: unknown) {
   });
 }
 
+async function loadAdminUsers() {
+  const [profiles, states] = await Promise.all([
+    restFetch('/rest/v1/profiles?select=*&order=created_at.desc'),
+    restFetch('/rest/v1/user_event_states?select=user_id,status,result_status,receipt_status,prize_amount'),
+  ]);
+
+  const statsByUserId = new Map<string, ReturnType<typeof createEmptyUserStats>>();
+  if (Array.isArray(states)) {
+    for (const state of states as UserEventState[]) {
+      const stats = statsByUserId.get(state.user_id) ?? createEmptyUserStats();
+      stats.total += 1;
+      if (state.status === 'ready') stats.ready += 1;
+      if (state.status === 'later') stats.later += 1;
+      if (state.status === 'done') stats.done += 1;
+      if (state.status === 'skipped') stats.skipped += 1;
+      if (state.result_status === 'won') stats.won += 1;
+      if (state.result_status === 'lost') stats.lost += 1;
+      if (state.result_status === 'unknown') stats.unknown += 1;
+      if (state.result_status === 'won' && state.receipt_status !== 'received') {
+        stats.unreceived += 1;
+      }
+      if (state.result_status === 'won' && Number.isFinite(state.prize_amount)) {
+        stats.prizeAmount += Number(state.prize_amount);
+      }
+      statsByUserId.set(state.user_id, stats);
+    }
+  }
+
+  if (!Array.isArray(profiles)) return [];
+  return profiles.map((profile) => ({
+    ...profile,
+    stats: statsByUserId.get(String(profile.user_id)) ?? createEmptyUserStats(),
+  }));
+}
+
+function createEmptyUserStats() {
+  return {
+    total: 0,
+    ready: 0,
+    later: 0,
+    done: 0,
+    skipped: 0,
+    unknown: 0,
+    won: 0,
+    lost: 0,
+    unreceived: 0,
+    prizeAmount: 0,
+  };
+}
+
+async function updateProfileAccess(userId: string, patch: Record<string, unknown>) {
+  if (!userId) throw new Error('User ID is required.');
+  const rowPatch: Record<string, unknown> = {};
+  if (typeof patch.approved === 'boolean') rowPatch.approved = patch.approved;
+  if (typeof patch.isAdmin === 'boolean') rowPatch.is_admin = patch.isAdmin;
+  if (Object.keys(rowPatch).length === 0) return;
+
+  await restFetch(`/rest/v1/profiles?user_id=eq.${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify(rowPatch),
+  });
+}
+
 async function restFetch(path: string, init: RequestInit = {}) {
   const supabaseUrl = requireEnv('SUPABASE_URL');
   const serviceRoleKey = requireEnv('SUPABASE_SERVICE_ROLE_KEY');
@@ -333,6 +432,16 @@ function requireEnv(name: string) {
   const value = Deno.env.get(name);
   if (!value) throw new Error(`${name} is required.`);
   return value;
+}
+
+function getBootstrapAdminAccess(email = '') {
+  const normalizedEmail = email.trim().toLocaleLowerCase();
+  const adminEmails = (Deno.env.get('EVENTBOT_ADMIN_EMAILS') ?? '')
+    .split(',')
+    .map((value) => value.trim().toLocaleLowerCase())
+    .filter(Boolean);
+  const isAdmin = Boolean(normalizedEmail && adminEmails.includes(normalizedEmail));
+  return { approved: isAdmin, isAdmin };
 }
 
 function json(payload: unknown, status = 200) {

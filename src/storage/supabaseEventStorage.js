@@ -100,6 +100,27 @@ export async function loadSupabaseCrawlerStatus() {
   return payload.value ?? null;
 }
 
+export async function loadSupabaseAdminUsers() {
+  if (!hasSupabaseConfig) {
+    return [];
+  }
+
+  const payload = await callDataFunction('GET', 'adminUsers');
+  return Array.isArray(payload.users) ? payload.users : [];
+}
+
+export async function updateSupabaseProfileAccess(userId, patch) {
+  if (!hasSupabaseConfig) {
+    return;
+  }
+
+  await callDataFunction('POST', '', {
+    action: 'updateProfileAccess',
+    userId,
+    patch,
+  });
+}
+
 export async function triggerSupabaseCrawler() {
   if (!hasSupabaseConfig) {
     throw new Error('Supabase \uC124\uC815\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');

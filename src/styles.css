@@ -713,6 +713,26 @@ h3 {
   overflow-wrap: anywhere;
 }
 
+.crawler-status-failure,
+.crawler-status-quiet {
+  border-color: rgba(255, 82, 82, 0.28);
+  background: rgba(255, 82, 82, 0.08);
+}
+
+.crawler-status-failure strong,
+.crawler-status-quiet strong {
+  color: var(--danger);
+}
+
+.crawler-status-requested {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+}
+
+.crawler-status-requested strong {
+  color: var(--warning);
+}
+
 @media (max-width: 520px) {
   .crawler-status-panel {
     gap: 6px;
@@ -940,6 +960,11 @@ h3 {
   padding: 10px;
 }
 
+.inbox-summary div.is-attention {
+  border-color: rgba(255, 82, 82, 0.28);
+  background: rgba(255, 82, 82, 0.08);
+}
+
 .inbox-summary span {
   display: block;
   color: var(--text-muted);
@@ -995,6 +1020,15 @@ h3 {
 
 .inbox-announcement-today .inbox-attention {
   border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
+.inbox-row.is-unreceived-target {
+  border-color: rgba(255, 176, 32, 0.28);
+}
+
+.inbox-receipt-attention {
   background: var(--wanted-blue-soft);
   color: var(--warning);
 }
@@ -1063,6 +1097,146 @@ h3 {
 .inbox-edit-panel .prize-title-field,
 .inbox-edit-panel .winning-memo-field {
   grid-column: 1 / -1;
+}
+
+.admin-board,
+.admin-user-list {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-summary div,
+.admin-user-row {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  box-shadow: var(--shadow-card);
+}
+
+.admin-summary div {
+  padding: 10px;
+}
+
+.admin-summary div.is-attention {
+  border-color: rgba(255, 82, 82, 0.28);
+  background: rgba(255, 82, 82, 0.08);
+}
+
+.admin-summary span,
+.admin-user-main span,
+.admin-user-stats span {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.admin-summary strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.admin-user-row {
+  display: grid;
+  gap: 10px;
+  padding: 13px 14px;
+}
+
+.admin-user-row.is-pending {
+  border-color: rgba(255, 82, 82, 0.28);
+}
+
+.admin-user-main {
+  display: grid;
+  gap: 8px;
+}
+
+.admin-user-main strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text-strong);
+  font-size: 0.96rem;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-main span {
+  display: block;
+  overflow: hidden;
+  margin-top: 3px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-badges {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.admin-user-badges span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 8px;
+  background: var(--surface-raised);
+  padding: 0 8px;
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.admin-user-badges .is-pending {
+  background: rgba(255, 82, 82, 0.1);
+  color: var(--danger);
+}
+
+.admin-user-badges .is-approved,
+.admin-user-badges .is-admin {
+  background: rgba(46, 136, 85, 0.12);
+  color: var(--success);
+}
+
+.admin-user-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 7px;
+}
+
+.admin-user-stats div {
+  min-width: 0;
+  border-radius: 10px;
+  background: var(--surface-raised);
+  padding: 8px;
+}
+
+.admin-user-stats strong {
+  display: block;
+  overflow: hidden;
+  margin-top: 2px;
+  color: var(--text-strong);
+  font-size: 0.92rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.admin-user-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.admin-user-actions button {
+  min-height: 38px;
+  border-radius: 10px;
+  font-size: 0.82rem;
 }
 
 .search-box {
@@ -2744,11 +2918,16 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .manage-mode .event-list,
   .manage-mode .manage-list,
   .manage-mode .ledger-table,
+  .admin-user-list,
   .deadline-list,
   .search-list {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     align-items: start;
     gap: 14px;
+  }
+
+  .admin-summary {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
   .inbox-list {
@@ -3184,11 +3363,13 @@ button.is-selected {
 .ledger-row,
 .deadline-row,
 .inbox-row,
+.admin-user-row,
 .search-row,
 .search-box,
 .settings-panel,
 .auth-card,
 .inbox-summary div,
+.admin-summary div,
 .ledger-summary div,
 .ledger-month-head,
 .manage-metrics div,
@@ -3205,6 +3386,7 @@ button.is-selected {
 .ledger-row,
 .deadline-row,
 .inbox-row,
+.admin-user-row,
 .search-row {
   transition: border-color 150ms ease, transform 150ms ease, background 150ms ease;
 }
@@ -3214,6 +3396,7 @@ button.is-selected {
 .ledger-row:hover,
 .deadline-row:hover,
 .inbox-row:hover,
+.admin-user-row:hover,
 .search-row:hover {
   border-color: var(--border-strong);
 }
@@ -3312,6 +3495,32 @@ button.is-selected {
   border-color: transparent;
   background: rgba(229, 72, 77, 0.1);
   color: var(--danger);
+}
+
+.inbox-announcement-today .inbox-attention,
+.inbox-receipt-attention {
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
+.crawler-status-failure,
+.crawler-status-quiet {
+  border-color: rgba(229, 72, 77, 0.24);
+  background: rgba(229, 72, 77, 0.08);
+}
+
+.crawler-status-failure strong,
+.crawler-status-quiet strong {
+  color: var(--danger);
+}
+
+.crawler-status-requested {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+}
+
+.crawler-status-requested strong {
+  color: var(--warning);
 }
 
 .prize-panel,

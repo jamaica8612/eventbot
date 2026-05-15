@@ -1,10 +1,16 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { matchesSearchQuery, sortSearchEvents } from '../utils/eventModel.js';
 import { EventCard } from './EventCards.jsx';
 
-export function EventSearch({ events, isLoading, onStatusChange }) {
-  const [query, setQuery] = useState('');
-  const [scope, setScope] = useState('all');
+export function EventSearch({
+  events,
+  isLoading,
+  query,
+  scope,
+  onQueryChange,
+  onScopeChange,
+  onStatusChange,
+}) {
   const matchingEvents = useMemo(
     () =>
       sortSearchEvents(events)
@@ -23,7 +29,7 @@ export function EventSearch({ events, isLoading, onStatusChange }) {
           type="search"
           placeholder="브랜드, 경품, 플랫폼, 본문 검색"
           value={query}
-          onChange={(event) => setQuery(event.target.value)}
+          onChange={(event) => onQueryChange(event.target.value)}
         />
       </label>
 
@@ -33,7 +39,7 @@ export function EventSearch({ events, isLoading, onStatusChange }) {
             key={item.value}
             type="button"
             className={scope === item.value ? 'is-active' : ''}
-            onClick={() => setScope(item.value)}
+            onClick={() => onScopeChange(item.value)}
           >
             {item.label} <strong>{item.count}</strong>
           </button>

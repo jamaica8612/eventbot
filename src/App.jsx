@@ -30,6 +30,10 @@ import {
   saveCommentSettings,
 } from './storage/commentSettingsStorage.js';
 import {
+  loadViewState,
+  saveViewState,
+} from './storage/viewStateStorage.js';
+import {
   hasSupabaseConfig,
   loadSupabaseCrawlerStatus,
   loadSupabaseCommentSettings,
@@ -56,6 +60,7 @@ import {
 import { EventCard } from './components/EventCards.jsx';
 import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
 import { EventSearch } from './components/EventSearch.jsx';
+import { AdminPanel } from './components/AdminPanel.jsx';
 
 function App() {
   const [theme, setTheme] = useTheme();
@@ -136,20 +141,33 @@ function App() {
     );
   }
 
-  return <EventBotApp theme={theme} setTheme={setTheme} onLock={lockApp} />;
+  return (
+    <EventBotApp
+      theme={theme}
+      setTheme={setTheme}
+      profile={authState.profile}
+      onLock={lockApp}
+    />
+  );
 }
 
-function EventBotApp({ theme, setTheme, onLock }) {
+function EventBotApp({ theme, setTheme, profile, onLock }) {
   const { events, setEvents, isLoading } = useEvents();
-  const [filter, setFilter] = useState('ready');
-  const [platformFilter, setPlatformFilter] = useState('all');
-  const [sortMode, setSortMode] = useState('default');
+  const [viewState, setViewState] = useState(loadViewState);
+  const [filter, setFilterState] = useState(viewState.filter);
+  const [platformFilter, setPlatformFilterState] = useState(viewState.platformFilter);
+  const [sortMode, setSortModeState] = useState(viewState.sortMode);
+  const [deadlineFilter, setDeadlineFilterState] = useState(viewState.deadlineFilter);
+  const [inboxFilter, setInboxFilterState] = useState(viewState.inboxFilter);
+  const [searchQuery, setSearchQueryState] = useState(viewState.searchQuery);
+  const [searchScope, setSearchScopeState] = useState(viewState.searchScope);
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
   const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
   const [crawlerStatus, setCrawlerStatus] = useState(null);
   const [isCrawling, setIsCrawling] = useState(false);
+  const [adminSummary, setAdminSummary] = useState({ pending: 0 });
   const didLoadFilterSettings = useRef(false);
   const didLoadCommentSettings = useRef(false);
   const {
@@ -166,15 +184,60 @@ function EventBotApp({ theme, setTheme, onLock }) {
     updateStatus(eventId, status);
   }
 
-  useEffect(() => {
-    setPlatformFilter('all');
-  }, [filter]);
+  function updateViewState(patch) {
+    setViewState((current) => {
+      const next = { ...current, ...patch };
+      saveViewState(next);
+      return next;
+    });
+  }
+
+  function setFilter(value) {
+    setFilterState(value);
+    updateViewState({ filter: value });
+  }
+
+  function setPlatformFilter(value) {
+    setPlatformFilterState(value);
+    updateViewState({ platformFilter: value });
+  }
+
+  function setSortMode(value) {
+    setSortModeState(value);
+    updateViewState({ sortMode: value });
+  }
+
+  function setDeadlineFilter(value) {
+    setDeadlineFilterState(value);
+    updateViewState({ deadlineFilter: value });
+  }
+
+  function setInboxFilter(value) {
+    setInboxFilterState(value);
+    updateViewState({ inboxFilter: value });
+  }
+
+  function setSearchQuery(value) {
+    setSearchQueryState(value);
+    updateViewState({ searchQuery: value });
+  }
+
+  function setSearchScope(value) {
+    setSearchScopeState(value);
+    updateViewState({ searchScope: value });
+  }
 
   useEffect(() => {
     if (!isSortableFilter(filter)) {
       setSortMode('default');
     }
   }, [filter]);
+
+  useEffect(() => {
+    if (!profile?.is_admin && filter === 'admin') {
+      setFilter('ready');
+    }
+  }, [filter, profile?.is_admin]);
 
   useEffect(() => {
     if (!hasSupabaseConfig) {
@@ -310,7 +373,26 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
   const appEvents = useMemo(() => events.filter((event) => !isInstagramEvent(event)), [events]);
 
-  const counts = useMemo(() => buildCounts(appEvents, filterSettings), [appEvents, filterSettings]);
+  const isAdmin = Boolean(profile?.is_admin);
+
+  const navFilters = useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...primaryFilters,
+            { value: 'admin', label: '관리자', countKey: 'admin' },
+          ]
+        : primaryFilters,
+    [isAdmin],
+  );
+
+  const counts = useMemo(
+    () => ({
+      ...buildCounts(appEvents, filterSettings),
+      admin: adminSummary.pending,
+    }),
+    [adminSummary.pending, appEvents, filterSettings],
+  );
 
   const filteredByTabEvents = useMemo(
     () => appEvents.filter((event) => matchesFilter(event, filter, filterSettings)),
@@ -321,6 +403,15 @@ function EventBotApp({ theme, setTheme, onLock }) {
     () => buildPlatformOptions(filteredByTabEvents),
     [filteredByTabEvents],
   );
+
+  useEffect(() => {
+    if (
+      platformFilter !== 'all' &&
+      !platformOptions.some((option) => option.platform === platformFilter)
+    ) {
+      setPlatformFilter('all');
+    }
+  }, [platformFilter, platformOptions]);
 
   const visibleEvents = useMemo(() => {
     const platformEvents =
@@ -342,7 +433,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
     [appEvents],
   );
 
-  const isManageMode = manageFilters.has(filter);
+  const isManageMode = manageFilters.has(filter) || filter === 'admin';
 
   return (
     <>
@@ -350,7 +441,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
         <section className="app-hero" aria-label="주요 메뉴">
           <DesktopNav
             counts={counts}
-            filters={primaryFilters}
+            filters={navFilters}
             selectedFilter={filter}
             onSelect={setFilter}
           />
@@ -373,6 +464,8 @@ function EventBotApp({ theme, setTheme, onLock }) {
               <span className="list-count">{visibleEvents.length}개</span>
             </div>
           </div>
+
+          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
 
           {syncNotice ? (
             <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
@@ -425,10 +518,17 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <SortChips selectedSort={sortMode} onSelectSort={setSortMode} />
           ) : null}
 
-          {filter === 'todayDeadline' ? (
+          {filter === 'admin' ? (
+            <AdminPanel
+              onSummaryChange={setAdminSummary}
+              onNotice={setSyncNotice}
+            />
+          ) : filter === 'todayDeadline' ? (
             <TodayDeadlineList
               events={visibleEvents}
               isLoading={isLoading}
+              selectedFilter={deadlineFilter}
+              onSelectFilter={setDeadlineFilter}
               onDeadlineChange={updateDeadline}
               onStatusChange={updateDeadlineStatus}
             />
@@ -436,12 +536,18 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <EventSearch
               events={visibleEvents}
               isLoading={isLoading}
+              query={searchQuery}
+              scope={searchScope}
+              onQueryChange={setSearchQuery}
+              onScopeChange={setSearchScope}
               onStatusChange={updateStatus}
             />
           ) : filter === 'inbox' ? (
             <EventInbox
               events={visibleEvents}
               isLoading={isLoading}
+              selectedFilter={inboxFilter}
+              onSelectFilter={setInboxFilter}
               totalAmount={winningTotal}
               onAnnouncementChange={updateAnnouncement}
               onResultChange={updateResult}
@@ -469,14 +575,12 @@ function EventBotApp({ theme, setTheme, onLock }) {
               )}
             </div>
           )}
-
-          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
         </section>
       </main>
 
       <BottomNav
         counts={counts}
-        filters={primaryFilters}
+        filters={navFilters}
         selectedFilter={filter}
         onSelect={setFilter}
       />
@@ -679,16 +783,23 @@ function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction
   );
 }
 function CrawlerStatusPanel({ status }) {
-  const statusInfo = getCrawlerStatusInfo(status?.status);
-  const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
-  const lastSuccessAt = formatDateTime(status.lastSuccessAt ?? status.checkedAt ?? status.updatedAt);
-  const latestSeenAt = formatDateTime(status.latestSeenAt);
-  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
   const recentSeen = Number.isFinite(status.recentSeen24h)
     ? status.recentSeen24h
     : Array.isArray(status.recentEvents)
       ? status.recentEvents.length
-      : '-';
+      : null;
+  const statusInfo = getCrawlerStatusInfo(status?.status, recentSeen);
+  const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
+  const lastSuccessAt = formatDateTime(status.lastSuccessAt ?? status.checkedAt ?? status.updatedAt);
+  const latestSeenAt = formatDateTime(status.latestSeenAt);
+  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
+  const recentLabel = recentSeen === null ? '-' : recentSeen;
+  const summary =
+    statusInfo.kind === 'failure'
+      ? status.failureMessage || '최근 크롤링이 실패했습니다. 설정의 크롤링하기로 다시 요청해보세요.'
+      : statusInfo.kind === 'quiet'
+        ? '최근 24시간 신규 수집이 없습니다. 이벤트가 없는 상황인지 크롤링 로그를 한 번 확인해보세요.'
+        : `상태 확인 ${checkedAt}`;
 
   return (
     <section
@@ -701,21 +812,18 @@ function CrawlerStatusPanel({ status }) {
       </div>
       <div>
         <span>DB {total}개</span>
-        <span>최근 24시간 {recentSeen}개</span>
+        <span>최근 24시간 {recentLabel}개</span>
         <span>최신 수집 {latestSeenAt}</span>
       </div>
-      <p>
-        {statusInfo.kind === 'failure'
-          ? status.failureMessage || '최근 크롤링이 실패했습니다. 설정의 크롤링하기로 다시 요청해보세요.'
-          : `상태 확인 ${checkedAt}`}
-      </p>
+      <p>{summary}</p>
     </section>
   );
 }
 
-function getCrawlerStatusInfo(status) {
+function getCrawlerStatusInfo(status, recentSeen) {
   if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
   if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
+  if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
   return { kind: 'success', label: '크롤링 정상' };
 }
 
