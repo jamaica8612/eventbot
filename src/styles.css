@@ -965,6 +965,12 @@ h3 {
   background: rgba(255, 82, 82, 0.08);
 }
 
+@media (max-width: 520px) {
+  .inbox-summary-unreceived {
+    display: none;
+  }
+}
+
 .inbox-summary span {
   display: block;
   color: var(--text-muted);

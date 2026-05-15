@@ -141,7 +141,7 @@ export function EventInbox({
           <span>오늘발표</span>
           <strong>{inboxCounts.check}</strong>
         </div>
-        <div className={attentionCounts.unreceived > 0 ? 'is-attention' : ''}>
+        <div className={`inbox-summary-unreceived${attentionCounts.unreceived > 0 ? ' is-attention' : ''}`}>
           <span>미수령</span>
           <strong>{inboxCounts.unreceived}</strong>
         </div>
