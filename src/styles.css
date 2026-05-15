@@ -2638,13 +2638,17 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   left: 0;
   z-index: 10;
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--nav-count, 5), minmax(0, 1fr));
   gap: 6px;
   border-top: 1px solid var(--border);
   background: var(--nav-bg);
   padding: 8px max(10px, env(safe-area-inset-left)) calc(8px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-right));
   box-shadow: 0 -8px 24px rgba(0, 0, 0, 0.32);
   backdrop-filter: blur(12px);
+}
+
+.bottom-nav-many {
+  gap: 3px;
 }
 
 .bottom-nav button {
@@ -2658,6 +2662,11 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   background: transparent;
   color: var(--text-muted);
   padding: 6px 4px;
+}
+
+.bottom-nav-many button {
+  min-height: 56px;
+  padding: 5px 2px;
 }
 
 .bottom-nav .nav-icon {
@@ -2691,10 +2700,18 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   white-space: nowrap;
 }
 
+.bottom-nav-many span {
+  font-size: 0.62rem;
+}
+
 .bottom-nav strong {
   color: inherit;
   font-size: 0.88rem;
   line-height: 1;
+}
+
+.bottom-nav-many strong {
+  font-size: 0.8rem;
 }
 
 .ledger-row {

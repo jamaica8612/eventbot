@@ -77,6 +77,7 @@ export function AdminPanel({ onSummaryChange, onNotice }) {
         <AdminSummaryCard label="전체 사용자" value={`${summary.total}명`} />
         <AdminSummaryCard label="승인 대기" value={`${summary.pending}명`} attention={summary.pending > 0} />
         <AdminSummaryCard label="응모완료" value={`${summary.done}건`} />
+        <AdminSummaryCard label="당첨률" value={summary.winRate} />
         <AdminSummaryCard label="미수령" value={`${summary.unreceived}건`} attention={summary.unreceived > 0} />
       </div>
 
@@ -125,6 +126,7 @@ function AdminUserRow({ user, isUpdating, onUpdateAccess }) {
         <Metric label="임시" value={stats.later} />
         <Metric label="응모" value={stats.done} />
         <Metric label="당첨" value={stats.won} />
+        <Metric label="당첨률" value={getWinRateLabel(stats)} />
         <Metric label="미수령" value={stats.unreceived} />
         <Metric label="당첨금" value={formatWon(stats.prizeAmount)} />
       </div>
@@ -166,10 +168,13 @@ function buildAdminSummary(users) {
       summary.total += 1;
       if (!user.approved) summary.pending += 1;
       summary.done += stats.done;
+      summary.won += stats.won;
+      summary.lost += stats.lost;
       summary.unreceived += stats.unreceived;
+      summary.winRate = getWinRateLabel(summary);
       return summary;
     },
-    { total: 0, pending: 0, done: 0, unreceived: 0 },
+    { total: 0, pending: 0, done: 0, won: 0, lost: 0, unreceived: 0, winRate: '-' },
   );
 }
 
@@ -179,7 +184,14 @@ function normalizeStats(stats = {}) {
     later: Number(stats.later) || 0,
     done: Number(stats.done) || 0,
     won: Number(stats.won) || 0,
+    lost: Number(stats.lost) || 0,
     unreceived: Number(stats.unreceived) || 0,
     prizeAmount: Number(stats.prizeAmount) || 0,
   };
+}
+
+function getWinRateLabel(stats) {
+  const decided = stats.won + stats.lost;
+  if (decided === 0) return '-';
+  return `${Math.round((stats.won / decided) * 100)}%`;
 }

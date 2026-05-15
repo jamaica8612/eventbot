@@ -33,6 +33,12 @@ const navIcons = {
       <path d="M4 13h4l2 3h4l2-3h4" />
     </svg>
   ),
+  admin: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M12 3 19 6v5c0 4.5-2.7 8-7 10-4.3-2-7-5.5-7-10V6z" />
+      <path d="M9 12h6M12 9v6" />
+    </svg>
+  ),
 };
 
 export function SummaryItem({ active, label, value, onClick }) {
@@ -70,7 +76,11 @@ export function ManageMetrics({ events, totalAmount }) {
 
 export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
   return (
-    <nav className="bottom-nav" aria-label="주요 분류">
+    <nav
+      className={`bottom-nav${filters.length > 5 ? ' bottom-nav-many' : ''}`}
+      style={{ '--nav-count': filters.length }}
+      aria-label="주요 분류"
+    >
       {filters.map((item) => (
         <button
           key={item.value}

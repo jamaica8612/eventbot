@@ -20,8 +20,8 @@ const deadlineFilters = [
 ];
 
 const inboxFilters = [
-  { value: 'all', label: '전체' },
-  { value: 'check', label: '발표확인' },
+  { value: 'all', label: '미확인' },
+  { value: 'check', label: '오늘발표' },
   { value: 'won', label: '당첨' },
   { value: 'unreceived', label: '미수령' },
   { value: 'lost', label: '미당첨' },
@@ -116,6 +116,7 @@ export function EventInbox({
   const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
   const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
   const attentionCounts = useMemo(() => buildInboxAttentionCounts(sortedEvents), [sortedEvents]);
+  const winRate = useMemo(() => getWinRateLabel(sortedEvents), [sortedEvents]);
   const visibleEvents = useMemo(
     () => sortedEvents.filter((event) => matchesInboxView(event, selectedFilter)),
     [selectedFilter, sortedEvents],
@@ -137,12 +138,16 @@ export function EventInbox({
           <strong>{events.length}</strong>
         </div>
         <div className={attentionCounts.check > 0 ? 'is-attention' : ''}>
-          <span>오늘/지난 발표</span>
+          <span>오늘발표</span>
           <strong>{inboxCounts.check}</strong>
         </div>
         <div className={attentionCounts.unreceived > 0 ? 'is-attention' : ''}>
           <span>미수령</span>
           <strong>{inboxCounts.unreceived}</strong>
+        </div>
+        <div>
+          <span>당첨률</span>
+          <strong>{winRate}</strong>
         </div>
         <div>
           <span>당첨금</span>
@@ -396,5 +401,12 @@ function matchesInboxView(event, view) {
     return event.resultStatus === 'won' && event.receiptStatus !== 'received';
   }
   if (view === 'lost') return event.resultStatus === 'lost';
-  return true;
+  return event.resultStatus === 'unknown';
+}
+
+function getWinRateLabel(events) {
+  const decidedEvents = events.filter((event) => ['won', 'lost'].includes(event.resultStatus));
+  if (decidedEvents.length === 0) return '-';
+  const wonCount = decidedEvents.filter((event) => event.resultStatus === 'won').length;
+  return `${Math.round((wonCount / decidedEvents.length) * 100)}%`;
 }
