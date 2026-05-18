@@ -38,7 +38,7 @@ function findMatchPreview(event, query) {
   return null;
 }
 
-export function EventCard({ event, selected, onClick, query, now }) {
+export function EventCard({ event, selected, onClick, onQuickAction, query, now }) {
   const meta = computeDeadlineMeta(event.deadlineDate, now);
   const deadlineLabel = meta?.label ?? event.deadlineText ?? '';
   const deadlineVariant = meta?.variant === 'past' ? 'outline' : (meta?.variant ?? 'outline');
@@ -63,6 +63,19 @@ export function EventCard({ event, selected, onClick, query, now }) {
       className={cx('v2-evcard', selected && 'v2-evcard--selected')}
     >
       <PlatformThumb platform={event.platform} />
+
+      {onQuickAction && event.status !== 'done' && event.status !== 'skipped' && (
+        <div className="v2-evcard__quick" onClick={(e) => e.stopPropagation()}>
+          <button
+            type="button" className="done" title="참여완료 (E)"
+            onClick={(e) => { e.stopPropagation(); onQuickAction('complete'); }}
+          >✔</button>
+          <button
+            type="button" className="skip" title="제외 (⌫)"
+            onClick={(e) => { e.stopPropagation(); onQuickAction('skip'); }}
+          >✕</button>
+        </div>
+      )}
 
       <div className="v2-evcard__main">
         <div className="v2-evcard__head">

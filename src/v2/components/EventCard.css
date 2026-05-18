@@ -3,6 +3,35 @@
   grid-template-columns: auto 1fr;
   gap: var(--sp-3);
   align-items: flex-start;
+  position: relative;
+}
+.v2-evcard__quick {
+  position: absolute; top: 6px; right: 6px;
+  display: flex; gap: 2px;
+  opacity: 0;
+  transition: opacity var(--dur-fast) var(--ease-out);
+}
+.v2-evcard:hover .v2-evcard__quick,
+.v2-evcard__quick:focus-within {
+  opacity: 1;
+}
+.v2-evcard__quick button {
+  width: 26px; height: 26px;
+  border-radius: var(--r-sm);
+  border: 1px solid var(--c-line);
+  background: var(--c-surface-2);
+  color: var(--c-text-mid);
+  display: grid; place-items: center;
+  font-size: 12px; cursor: pointer;
+  font-family: inherit;
+}
+.v2-evcard__quick button:hover { background: var(--c-surface-3); color: var(--c-text); }
+.v2-evcard__quick button.done:hover { background: var(--c-success-soft); color: var(--c-success); border-color: var(--c-success); }
+.v2-evcard__quick button.skip:hover { background: var(--c-danger-soft); color: var(--c-danger); border-color: var(--c-danger); }
+
+/* 모바일에서는 항상 보이지 않음 (터치라 hover 없음) — 시트의 액션바로 처리 */
+@media (hover: none) {
+  .v2-evcard__quick { display: none; }
 }
 .v2-evcard__main {
   min-width: 0;       /* allow ellipsis on title */

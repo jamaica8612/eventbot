@@ -550,6 +550,7 @@ export default function AppDemo() {
                 event={event}
                 selected={event.id === effectiveSelected.id}
                 onClick={() => handleItemClick(event.id)}
+                onQuickAction={(action) => applyAction(event.id, action)}
                 query={query}
                 now={DEMO_NOW}
               />
