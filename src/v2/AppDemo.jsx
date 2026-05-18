@@ -296,7 +296,7 @@ export default function AppDemo() {
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState(initialUi.selectedId || 'e1');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
+  const [toasts, setToasts] = useState([]); // [{id, action, eventId, prevPatch, ts}], 최근 5개만 유지
   const [helpOpen, setHelpOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState(() => getStoredTheme());
@@ -359,22 +359,39 @@ export default function AppDemo() {
     dsUpdateEvent(eventId, patch);
     if (nextCandidate && nextCandidate.id !== eventId) setSelectedId(nextCandidate.id);
     setSheetOpen(false);
-    setToast({ action, eventId, prevPatch, ts: Date.now() });
+    setToasts((prev) => {
+      const next = [
+        ...prev,
+        { id: `${Date.now()}-${Math.random().toString(36).slice(2, 6)}`, action, eventId, prevPatch, ts: Date.now() },
+      ];
+      return next.slice(-5);
+    });
   }, [events, visibleEvents, dsUpdateEvent]);
 
-  const undoToast = useCallback(() => {
-    if (!toast) return;
-    dsUpdateEvent(toast.eventId, toast.prevPatch);
-    setSelectedId(toast.eventId);
-    setToast(null);
-  }, [toast, dsUpdateEvent]);
+  const dismissToast = useCallback((id) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  }, []);
 
-  // 토스트 자동 소멸 (4s)
+  const undoToast = useCallback((id) => {
+    setToasts((prev) => {
+      const target = id ? prev.find((t) => t.id === id) : prev[prev.length - 1];
+      if (target) {
+        dsUpdateEvent(target.eventId, target.prevPatch);
+        setSelectedId(target.eventId);
+      }
+      return prev.filter((t) => t.id !== (target?.id ?? id));
+    });
+  }, [dsUpdateEvent]);
+
+  // 각 토스트 자동 소멸 (개별 4s)
   useEffect(() => {
-    if (!toast) return;
-    const t = window.setTimeout(() => setToast(null), 4000);
-    return () => window.clearTimeout(t);
-  }, [toast]);
+    if (toasts.length === 0) return;
+    const timers = toasts.map((t) => {
+      const remaining = Math.max(0, 4000 - (Date.now() - t.ts));
+      return window.setTimeout(() => dismissToast(t.id), remaining);
+    });
+    return () => timers.forEach((id) => window.clearTimeout(id));
+  }, [toasts, dismissToast]);
 
   const handleApply = useCallback(() => {
     const url = effectiveSelected?.applyUrl || effectiveSelected?.originalUrl;
@@ -405,7 +422,7 @@ export default function AppDemo() {
         const i = visibleEvents.findIndex((ev) => ev.id === effectiveSelected?.id);
         const prev = visibleEvents[Math.max(i - 1, 0)];
         if (prev) setSelectedId(prev.id);
-      } else if (k === 'u' && toast) {
+      } else if (k === 'u' && toasts.length > 0) {
         e.preventDefault(); undoToast();
       } else if (e.key === '?' || (e.shiftKey && k === '/')) {
         e.preventDefault(); setHelpOpen((v) => !v);
@@ -413,7 +430,7 @@ export default function AppDemo() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [applyAction, effectiveSelected, visibleEvents, toast, undoToast]);
+  }, [applyAction, effectiveSelected, visibleEvents, toasts, undoToast]);
 
   /* -------- 네비 섹션 생성 (카운트 = 현재 events 기반, 재계산) -------- */
   const counts = useMemo(() => {
@@ -463,7 +480,7 @@ export default function AppDemo() {
     if (!window.confirm('저장된 상태(액션·결과·메모)를 초기화할까요? 직접 추가한 이벤트는 유지됩니다.')) return;
     clearPatches();
     setEvents([...MOCK_EVENTS, ...loadCreated()]);
-    setToast(null);
+    setToasts([]);
   };
 
   const nav = (
@@ -717,7 +734,7 @@ export default function AppDemo() {
         drawerOpen={drawerOpen}
         onDrawerClose={() => setDrawerOpen(false)}
       />
-      {toast && <ActionToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} />}
+      <ActionToastStack toasts={toasts} onUndo={undoToast} onDismiss={dismissToast} />
       <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
       <NewEventDialog open={newOpen} onClose={() => setNewOpen(false)} onSubmit={handleAddEvent} />
     </>
@@ -725,30 +742,63 @@ export default function AppDemo() {
 }
 
 /* ============================================================
-   ActionToast — 액션 후 4초간 표시되는 undo 토스트
+   ActionToastStack — 여러 토스트를 아래에서 위로 쌓아 표시
+   각 토스트는 4초 후 자동 소멸. U 키는 가장 최근 것 실행 취소.
    ============================================================ */
-function ActionToast({ toast, onUndo, onClose }) {
+function ActionToastStack({ toasts, onUndo, onDismiss }) {
+  if (!toasts || toasts.length === 0) return null;
   return (
-    <div className="v2" style={{
-      position: 'fixed',
-      bottom: 'calc(var(--sp-5) + env(safe-area-inset-bottom, 0px) + 76px)',
-      left: '50%', transform: 'translateX(-50%)',
-      zIndex: 'var(--z-toast)',
-      background: 'var(--c-surface-3)',
-      border: '1px solid var(--c-line-strong)',
-      borderRadius: 'var(--r-lg)',
-      padding: 'var(--sp-3) var(--sp-4)',
-      boxShadow: 'var(--shadow-lg)',
-      display: 'flex', alignItems: 'center', gap: 'var(--sp-3)',
-      maxWidth: 'min(440px, calc(100vw - 24px))',
-      animation: 'v2-fade var(--dur-base) var(--ease-out)',
-    }}>
+    <div
+      className="v2"
+      style={{
+        position: 'fixed',
+        bottom: 'calc(var(--sp-5) + env(safe-area-inset-bottom, 0px) + 76px)',
+        left: '50%',
+        transform: 'translateX(-50%)',
+        zIndex: 'var(--z-toast)',
+        display: 'flex',
+        flexDirection: 'column-reverse', // 새 것이 위로 쌓이게
+        gap: 'var(--sp-2)',
+        pointerEvents: 'none',
+      }}
+    >
+      {toasts.map((toast, i) => (
+        <ActionToast
+          key={toast.id}
+          toast={toast}
+          isLatest={i === toasts.length - 1}
+          onUndo={() => onUndo(toast.id)}
+          onClose={() => onDismiss(toast.id)}
+        />
+      ))}
+    </div>
+  );
+}
+
+function ActionToast({ toast, isLatest, onUndo, onClose }) {
+  return (
+    <div
+      style={{
+        background: 'var(--c-surface-3)',
+        border: '1px solid var(--c-line-strong)',
+        borderRadius: 'var(--r-lg)',
+        padding: 'var(--sp-3) var(--sp-4)',
+        boxShadow: 'var(--shadow-lg)',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 'var(--sp-3)',
+        maxWidth: 'min(440px, calc(100vw - 24px))',
+        animation: 'v2-fade var(--dur-base) var(--ease-out)',
+        opacity: isLatest ? 1 : 0.85,
+        pointerEvents: 'auto',
+      }}
+    >
       <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--c-text)' }}>
         ✓ {ACTION_LABEL[toast.action]} 처리됨
       </span>
       <button onClick={onUndo} className="v2-btn v2-btn--sm v2-btn--ghost"
         style={{ color: 'var(--c-brand)', minHeight: 28, padding: '0 10px' }}>
-        실행 취소 <span style={{ fontSize: 'var(--fs-xs)', opacity: 0.7, marginLeft: 4 }}>U</span>
+        실행 취소{isLatest && <span style={{ fontSize: 'var(--fs-xs)', opacity: 0.7, marginLeft: 4 }}>U</span>}
       </button>
       <button onClick={onClose} className="v2-icon-btn v2-icon-btn--sm" aria-label="닫기">✕</button>
     </div>
