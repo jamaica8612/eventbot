@@ -22,6 +22,29 @@ export function saveUiState(state) {
   try { localStorage.setItem(UI_KEY, JSON.stringify(state)); } catch {}
 }
 
+/* 최근 검색어 — 최대 5개, 최신순 */
+const SEARCH_HISTORY_KEY = 'eventbot.v2.search-history.v1';
+const SEARCH_HISTORY_MAX = 5;
+export function loadSearchHistory() {
+  try {
+    const raw = localStorage.getItem(SEARCH_HISTORY_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((s) => typeof s === 'string' && s.trim()) : [];
+  } catch { return []; }
+}
+export function pushSearchHistory(term) {
+  const trimmed = typeof term === 'string' ? term.trim() : '';
+  if (!trimmed) return loadSearchHistory();
+  const prev = loadSearchHistory();
+  const next = [trimmed, ...prev.filter((s) => s !== trimmed)].slice(0, SEARCH_HISTORY_MAX);
+  try { localStorage.setItem(SEARCH_HISTORY_KEY, JSON.stringify(next)); } catch {}
+  return next;
+}
+export function clearSearchHistory() {
+  try { localStorage.removeItem(SEARCH_HISTORY_KEY); } catch {}
+}
+
 /* 사용자가 직접 추가한 이벤트들 */
 const CREATED_KEY = 'eventbot.v2.created.v1';
 export function loadCreated() {

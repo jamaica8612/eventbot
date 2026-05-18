@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import './tokens.css';
 import {
   AppShell, SideNav, TopBar, ListPanel, DetailPanel, BottomNav, useEscape,
@@ -13,7 +13,10 @@ import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { NewEventDialog } from './components/NewEventDialog.jsx';
-import { clearPatches, loadCreated, loadUiState, saveUiState } from './lib/eventStore.js';
+import {
+  clearPatches, loadCreated, loadUiState, saveUiState,
+  loadSearchHistory, pushSearchHistory, clearSearchHistory,
+} from './lib/eventStore.js';
 import { useDataSource } from './lib/useDataSource.js';
 import { AuthBanner } from './components/AuthBanner.jsx';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
@@ -523,24 +526,10 @@ export default function AppDemo() {
         {['received', 'won', 'lost'].includes(selectedView) && (
           <InboxSummary events={events} />
         )}
-        <div style={{ position: 'relative', marginBottom: 'var(--sp-3)' }}>
-          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-text-faint)', pointerEvents: 'none' }}>🔎</span>
-          <Input
-            value={query}
-            onChange={(e) => setQuery(e.target.value)}
-            placeholder="제목 / 본문 / 경품 / 출처 검색…"
-            style={{ paddingLeft: 38, paddingRight: query ? 36 : 16 }}
-          />
-          {query && (
-            <button
-              type="button"
-              aria-label="검색어 지우기"
-              onClick={() => setQuery('')}
-              className="v2-icon-btn v2-icon-btn--sm"
-              style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)' }}
-            >✕</button>
-          )}
-        </div>
+        <SearchInput
+          value={query}
+          onChange={setQuery}
+        />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)', flexWrap: 'wrap' }}>
           <Inline style={{ flexWrap: 'wrap' }}>
             {PILLS.map((p) => (
@@ -827,6 +816,127 @@ function matchesQuery(event, q) {
     ...(event.originalLines ?? []),
   ].filter(Boolean).join(' ').toLowerCase();
   return haystack.includes(q);
+}
+
+/* ============================================================
+   SearchInput — 최근 검색어 5개 드롭다운 포함
+   ============================================================ */
+function SearchInput({ value, onChange }) {
+  const [history, setHistory] = useState(() => loadSearchHistory());
+  const [focused, setFocused] = useState(false);
+  const blurTimerRef = useRef(null);
+
+  const commit = useCallback((term) => {
+    const trimmed = (term ?? '').trim();
+    if (!trimmed) return;
+    setHistory(pushSearchHistory(trimmed));
+  }, []);
+
+  const onKeyDown = (e) => {
+    if (e.key === 'Enter') {
+      commit(value);
+    }
+  };
+
+  const onBlur = () => {
+    // 드롭다운 클릭 처리될 시간 확보
+    blurTimerRef.current = window.setTimeout(() => setFocused(false), 120);
+    if (value && value.trim()) commit(value);
+  };
+
+  const handlePick = (term) => {
+    if (blurTimerRef.current) window.clearTimeout(blurTimerRef.current);
+    onChange(term);
+    setHistory(pushSearchHistory(term));
+    setFocused(false);
+  };
+
+  const handleClearHistory = () => {
+    clearSearchHistory();
+    setHistory([]);
+  };
+
+  const showDropdown = focused && history.length > 0 && !value;
+
+  return (
+    <div style={{ position: 'relative', marginBottom: 'var(--sp-3)' }}>
+      <span style={{ position: 'absolute', left: 14, top: 'calc(var(--input-height, 38px) / 2)', transform: 'translateY(-50%)', color: 'var(--c-text-faint)', pointerEvents: 'none' }}>🔎</span>
+      <Input
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        onFocus={() => {
+          if (blurTimerRef.current) window.clearTimeout(blurTimerRef.current);
+          setFocused(true);
+        }}
+        onBlur={onBlur}
+        onKeyDown={onKeyDown}
+        placeholder="제목 / 본문 / 경품 / 출처 검색…"
+        style={{ paddingLeft: 38, paddingRight: value ? 36 : 16 }}
+      />
+      {value && (
+        <button
+          type="button"
+          aria-label="검색어 지우기"
+          onClick={() => onChange('')}
+          className="v2-icon-btn v2-icon-btn--sm"
+          style={{ position: 'absolute', right: 6, top: 'calc(var(--input-height, 38px) / 2)', transform: 'translateY(-50%)' }}
+        >✕</button>
+      )}
+      {showDropdown && (
+        <div
+          style={{
+            position: 'absolute',
+            top: '100%',
+            left: 0,
+            right: 0,
+            marginTop: 4,
+            background: 'var(--c-surface-2)',
+            border: '1px solid var(--c-line)',
+            borderRadius: 'var(--r-md)',
+            boxShadow: 'var(--shadow-md)',
+            zIndex: 10,
+            overflow: 'hidden',
+          }}
+          onMouseDown={(e) => e.preventDefault()}
+        >
+          <div style={{
+            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+            padding: 'var(--sp-2) var(--sp-3)',
+            fontSize: 'var(--fs-xs)', color: 'var(--c-text-mute)',
+            borderBottom: '1px solid var(--c-line)',
+          }}>
+            <span>최근 검색어</span>
+            <button
+              type="button"
+              onClick={handleClearHistory}
+              className="v2-btn v2-btn--sm v2-btn--ghost"
+              style={{ minHeight: 22, padding: '0 6px', fontSize: 'var(--fs-xs)' }}
+            >전체 삭제</button>
+          </div>
+          {history.map((term) => (
+            <button
+              key={term}
+              type="button"
+              onClick={() => handlePick(term)}
+              style={{
+                display: 'block',
+                width: '100%',
+                textAlign: 'left',
+                padding: 'var(--sp-2) var(--sp-3)',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--c-text)',
+                fontSize: 'var(--fs-sm)',
+                cursor: 'pointer',
+              }}
+              onMouseEnter={(e) => { e.currentTarget.style.background = 'var(--c-surface-3)'; }}
+              onMouseLeave={(e) => { e.currentTarget.style.background = 'transparent'; }}
+            >🔎 {term}</button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function EmptyState({ view, query }) {
