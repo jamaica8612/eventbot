@@ -1,0 +1,18 @@
+{
+  "name": "이벤트봇 v2",
+  "short_name": "이벤트봇",
+  "description": "이벤트 응모/결과/수령을 한 화면에서 처리하는 PWA",
+  "start_url": "/v2-shell.html",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#0f1115",
+  "theme_color": "#3366ff",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
