@@ -14,6 +14,7 @@ import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches } from './lib/eventStore.js';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
+import { getStoredTheme, setStoredTheme, applyTheme } from './lib/theme.js';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -280,7 +281,13 @@ export default function AppDemo() {
   const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
   const [helpOpen, setHelpOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [theme, setTheme] = useState(() => getStoredTheme());
   useEscape(() => { setSheetOpen(false); setHelpOpen(false); setDrawerOpen(false); });
+
+  useEffect(() => {
+    applyTheme(theme);
+    setStoredTheme(theme);
+  }, [theme]);
 
   const visibleEvents = useMemo(() => {
     let list = events.filter(VIEWS[selectedView].filter);
@@ -658,7 +665,7 @@ export default function AppDemo() {
 
   return (
     <>
-      <ViewSwitcher onHelp={() => setHelpOpen(true)} />
+      <ViewSwitcher onHelp={() => setHelpOpen(true)} theme={theme} onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
       <AppShell
         nav={nav}
         list={list}
@@ -746,16 +753,22 @@ function EmptyState({ view, query }) {
   );
 }
 
-function ViewSwitcher({ onHelp }) {
+function ViewSwitcher({ onHelp, theme, onToggleTheme }) {
   return (
     <div style={{
       position: 'fixed', top: 12, right: 12, zIndex: 100,
       display: 'flex', gap: 4, padding: 4,
-      background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(8px)',
+      background: theme === 'light' ? 'rgba(255,255,255,0.85)' : 'rgba(0,0,0,0.6)',
+      backdropFilter: 'blur(8px)',
       border: '1px solid var(--c-line)', borderRadius: 'var(--r-md)',
     }}>
       <a href="/v2-shell.html" className="v2-pill v2-pill--on" style={{ textDecoration: 'none' }}>App</a>
       <a href="/v2.html" className="v2-pill" style={{ textDecoration: 'none' }}>Tokens</a>
+      {onToggleTheme && (
+        <button onClick={onToggleTheme} className="v2-pill" aria-label="테마 토글" title={`${theme === 'light' ? '다크' : '라이트'} 모드로`} style={{ border: 'none', cursor: 'pointer' }}>
+          {theme === 'light' ? '☾' : '☀'}
+        </button>
+      )}
       {onHelp && (
         <button onClick={onHelp} className="v2-pill" aria-label="키보드 단축키 도움말" title="키보드 단축키 (?)" style={{ border: 'none', cursor: 'pointer' }}>?</button>
       )}
