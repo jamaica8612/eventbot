@@ -1,6 +1,7 @@
 import './EventCard.css';
 import { Tag, Inline, Card } from './primitives.jsx';
 import { PlatformThumb } from './PlatformChip.jsx';
+import { Highlight } from './Highlight.jsx';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
@@ -26,7 +27,7 @@ function statusTag(event) {
   return null;
 }
 
-export function EventCard({ event, selected, onClick }) {
+export function EventCard({ event, selected, onClick, query }) {
   const variant = selected
     ? 'accent'
     : event.resultStatus === 'won'
@@ -52,7 +53,9 @@ export function EventCard({ event, selected, onClick }) {
           {sTag}
         </div>
 
-        <div className="v2-evcard__title">{event.title}</div>
+        <div className="v2-evcard__title">
+          <Highlight text={event.title} query={query} />
+        </div>
 
         <Inline className="v2-evcard__meta">
           {event.prizeAmount && <span className="v2-evcard__amt">{event.prizeAmount}</span>}
@@ -65,7 +68,9 @@ export function EventCard({ event, selected, onClick }) {
           {event.source && (
             <>
               <span>·</span>
-              <span className="v2-evcard__source">{event.source}</span>
+              <span className="v2-evcard__source">
+                <Highlight text={event.source} query={query} />
+              </span>
             </>
           )}
         </Inline>

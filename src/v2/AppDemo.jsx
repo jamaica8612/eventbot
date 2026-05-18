@@ -11,6 +11,7 @@ import { EventDetailContent } from './components/EventDetailContent.jsx';
 import { PlatformChip } from './components/PlatformChip.jsx';
 import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
+import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches } from './lib/eventStore.js';
 
 /* ============================================================
@@ -274,7 +275,8 @@ export default function AppDemo() {
   const [selectedId, setSelectedId] = useState('e1');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
-  useEscape(() => setSheetOpen(false));
+  const [helpOpen, setHelpOpen] = useState(false);
+  useEscape(() => { setSheetOpen(false); setHelpOpen(false); });
 
   const visibleEvents = useMemo(() => {
     let list = events.filter(VIEWS[selectedView].filter);
@@ -375,6 +377,8 @@ export default function AppDemo() {
         if (prev) setSelectedId(prev.id);
       } else if (k === 'u' && toast) {
         e.preventDefault(); undoToast();
+      } else if (e.key === '?' || (e.shiftKey && k === '/')) {
+        e.preventDefault(); setHelpOpen((v) => !v);
       }
     };
     window.addEventListener('keydown', onKey);
@@ -498,6 +502,7 @@ export default function AppDemo() {
                 event={event}
                 selected={event.id === effectiveSelected.id}
                 onClick={() => handleItemClick(event.id)}
+                query={query}
               />
             ))}
           </Stack>
@@ -622,7 +627,7 @@ export default function AppDemo() {
 
   return (
     <>
-      <ViewSwitcher />
+      <ViewSwitcher onHelp={() => setHelpOpen(true)} />
       <AppShell
         nav={nav}
         list={list}
@@ -632,6 +637,7 @@ export default function AppDemo() {
         onSheetClose={() => setSheetOpen(false)}
       />
       {toast && <ActionToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} />}
+      <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
     </>
   );
 }
@@ -707,7 +713,7 @@ function EmptyState({ view, query }) {
   );
 }
 
-function ViewSwitcher() {
+function ViewSwitcher({ onHelp }) {
   return (
     <div style={{
       position: 'fixed', top: 12, right: 12, zIndex: 100,
@@ -717,6 +723,9 @@ function ViewSwitcher() {
     }}>
       <a href="/v2-shell.html" className="v2-pill v2-pill--on" style={{ textDecoration: 'none' }}>App</a>
       <a href="/v2.html" className="v2-pill" style={{ textDecoration: 'none' }}>Tokens</a>
+      {onHelp && (
+        <button onClick={onHelp} className="v2-pill" aria-label="키보드 단축키 도움말" title="키보드 단축키 (?)" style={{ border: 'none', cursor: 'pointer' }}>?</button>
+      )}
     </div>
   );
 }
