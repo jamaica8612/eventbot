@@ -7,6 +7,20 @@
    ============================================================ */
 
 const STORAGE_KEY = 'eventbot.v2.patches.v1';
+const UI_KEY = 'eventbot.v2.ui.v1';
+
+/* UI state (selectedView, selectedId 등) — 작은 객체 */
+export function loadUiState() {
+  try {
+    const raw = localStorage.getItem(UI_KEY);
+    if (!raw) return {};
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+  } catch { return {}; }
+}
+export function saveUiState(state) {
+  try { localStorage.setItem(UI_KEY, JSON.stringify(state)); } catch {}
+}
 
 /* 저장 대상 필드 — 액션이나 ResultEntry로 사용자가 바꾸는 것들만 */
 const PATCHABLE_KEYS = [

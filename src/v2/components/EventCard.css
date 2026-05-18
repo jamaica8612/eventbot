@@ -39,3 +39,16 @@
 .v2-evcard__status-pill {
   margin-top: var(--sp-2);
 }
+.v2-evcard__match-preview {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mid);
+  background: var(--c-surface-2);
+  border-radius: var(--r-sm);
+  padding: 5px 8px;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  font-style: italic;
+}

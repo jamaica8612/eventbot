@@ -18,6 +18,26 @@ function statusTag(event, todayStr) {
   return null;
 }
 
+/** query가 originalLines 중 매치되는 첫 라인을 짧게 잘라서 반환. 없으면 null. */
+function findMatchPreview(event, query) {
+  const q = (query || '').trim().toLowerCase();
+  if (!q) return null;
+  const titleHit = (event.title || '').toLowerCase().includes(q);
+  if (titleHit) return null; // 제목에서 이미 하이라이트되므로 본문 미리보기 생략
+  const lines = event.originalLines || [];
+  for (const line of lines) {
+    const i = String(line).toLowerCase().indexOf(q);
+    if (i !== -1) {
+      const start = Math.max(0, i - 12);
+      const end = Math.min(line.length, i + q.length + 36);
+      const prefix = start > 0 ? '…' : '';
+      const suffix = end < line.length ? '…' : '';
+      return prefix + line.slice(start, end) + suffix;
+    }
+  }
+  return null;
+}
+
 export function EventCard({ event, selected, onClick, query, now }) {
   const meta = computeDeadlineMeta(event.deadlineDate, now);
   const deadlineLabel = meta?.label ?? event.deadlineText ?? '';
@@ -53,6 +73,15 @@ export function EventCard({ event, selected, onClick, query, now }) {
         <div className="v2-evcard__title">
           <Highlight text={event.title} query={query} />
         </div>
+
+        {(() => {
+          const preview = findMatchPreview(event, query);
+          return preview ? (
+            <div className="v2-evcard__match-preview">
+              <Highlight text={preview} query={query} />
+            </div>
+          ) : null;
+        })()}
 
         <Inline className="v2-evcard__meta">
           {event.prizeAmount && <span className="v2-evcard__amt">{event.prizeAmount}</span>}

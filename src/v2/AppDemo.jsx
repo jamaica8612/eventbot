@@ -12,7 +12,7 @@ import { PlatformChip } from './components/PlatformChip.jsx';
 import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
-import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches } from './lib/eventStore.js';
+import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches, loadUiState, saveUiState } from './lib/eventStore.js';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
 import { getStoredTheme, setStoredTheme, applyTheme } from './lib/theme.js';
 
@@ -219,6 +219,7 @@ const VIEWS = {
   received: { icon: '📬', label: '수령함',   filter: (e) => e.status === 'done',                  title: '📬 수령함' },
   won:      { icon: '🏆', label: '당첨',     filter: (e) => e.resultStatus === 'won',             title: '🏆 당첨' },
   lost:     { icon: '❌', label: '미당첨',   filter: (e) => e.resultStatus === 'lost',            title: '❌ 미당첨' },
+  skipped:  { icon: '🗑',  label: '제외함',  filter: (e) => e.status === 'skipped',              title: '🗑 제외함' },
 };
 
 /* 액션 → 상태 변경 매핑 */
@@ -271,12 +272,13 @@ export default function AppDemo() {
     const patches = diffToPatches(MOCK_EVENTS, events);
     savePatches(patches);
   }, [events]);
-  const [selectedView, setSelectedView] = useState('today');
-  const [selectedPlatform, setSelectedPlatform] = useState(null);
-  const [pillId, setPillId] = useState('all');
-  const [sortId, setSortId] = useState('default');
+  const initialUi = useMemo(() => loadUiState(), []);
+  const [selectedView, setSelectedView] = useState(initialUi.view || 'today');
+  const [selectedPlatform, setSelectedPlatform] = useState(initialUi.platform || null);
+  const [pillId, setPillId] = useState(initialUi.pill || 'all');
+  const [sortId, setSortId] = useState(initialUi.sort || 'default');
   const [query, setQuery] = useState('');
-  const [selectedId, setSelectedId] = useState('e1');
+  const [selectedId, setSelectedId] = useState(initialUi.selectedId || 'e1');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
   const [helpOpen, setHelpOpen] = useState(false);
@@ -288,6 +290,10 @@ export default function AppDemo() {
     applyTheme(theme);
     setStoredTheme(theme);
   }, [theme]);
+
+  useEffect(() => {
+    saveUiState({ view: selectedView, platform: selectedPlatform, pill: pillId, sort: sortId, selectedId });
+  }, [selectedView, selectedPlatform, pillId, sortId, selectedId]);
 
   const visibleEvents = useMemo(() => {
     let list = events.filter(VIEWS[selectedView].filter);
@@ -421,6 +427,7 @@ export default function AppDemo() {
         viewItem('received', counts, selectedView, handleViewChange),
         viewItem('won', counts, selectedView, handleViewChange),
         viewItem('lost', counts, selectedView, handleViewChange),
+        viewItem('skipped', counts, selectedView, handleViewChange),
       ],
     },
     {
@@ -551,8 +558,9 @@ export default function AppDemo() {
     </Inline>
   );
 
-  const inLater = effectiveSelected?.status === 'later';
-  const inDone  = effectiveSelected?.status === 'done';
+  const inLater   = effectiveSelected?.status === 'later';
+  const inDone    = effectiveSelected?.status === 'done';
+  const inSkipped = effectiveSelected?.status === 'skipped';
 
   const currentIdx = visibleEvents.findIndex((e) => e.id === effectiveSelected?.id);
   const canGoPrev = currentIdx > 0;
@@ -567,7 +575,11 @@ export default function AppDemo() {
           <Button variant="primary" onClick={handleApply}>참여하기 ↗</Button>
           <Button kbd="E" disabled={inDone} onClick={() => applyAction(effectiveSelected?.id, 'complete')}>참여완료</Button>
           <Button kbd="L" disabled={inLater} onClick={() => applyAction(effectiveSelected?.id, 'later')}>임시저장</Button>
-          <Button variant="ghost" kbd="⌫" onClick={() => applyAction(effectiveSelected?.id, 'skip')}>제외</Button>
+          {inSkipped ? (
+            <Button variant="ghost" onClick={() => applyAction(effectiveSelected?.id, 'ready')}>↩ 복원</Button>
+          ) : (
+            <Button variant="ghost" kbd="⌫" onClick={() => applyAction(effectiveSelected?.id, 'skip')}>제외</Button>
+          )}
           <IconButton aria-label="이전" disabled={!canGoPrev} onClick={goPrev}>↑</IconButton>
           <IconButton aria-label="다음" disabled={!canGoNext} onClick={goNext}>↓</IconButton>
           <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)', marginLeft: 4 }}>
