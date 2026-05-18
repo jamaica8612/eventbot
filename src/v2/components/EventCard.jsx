@@ -2,21 +2,12 @@ import './EventCard.css';
 import { Tag, Inline, Card } from './primitives.jsx';
 import { PlatformThumb } from './PlatformChip.jsx';
 import { Highlight } from './Highlight.jsx';
+import { computeDeadlineMeta, todayISO } from '../lib/deadline.js';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
-function pickDeadlineVariant(event) {
-  const t = (event.deadlineText || '').toLowerCase();
-  if (t.includes('오늘')) return 'danger';
-  if (t.includes('내일')) return 'warn';
-  return 'outline';
-}
-
-const TODAY = '2026-05-18';
-
-function statusTag(event) {
-  // 오늘 결과 발표 + 아직 모름이면 가장 우선
-  if (event.resultAnnouncementDate === TODAY && event.resultStatus === 'unknown' && event.status === 'done') {
+function statusTag(event, todayStr) {
+  if (event.resultAnnouncementDate === todayStr && event.resultStatus === 'unknown' && event.status === 'done') {
     return <Tag variant="warn">⏰ 오늘 발표!</Tag>;
   }
   if (event.resultStatus === 'won')  return <Tag variant="success">🏆 당첨{event.receiptStatus === 'unclaimed' ? ' · 미수령' : ''}</Tag>;
@@ -27,16 +18,22 @@ function statusTag(event) {
   return null;
 }
 
-export function EventCard({ event, selected, onClick, query }) {
+export function EventCard({ event, selected, onClick, query, now }) {
+  const meta = computeDeadlineMeta(event.deadlineDate, now);
+  const deadlineLabel = meta?.label ?? event.deadlineText ?? '';
+  const deadlineVariant = meta?.variant === 'past' ? 'outline' : (meta?.variant ?? 'outline');
+  const isToday = meta?.daysLeft === 0;
+  const todayStr = todayISO(now);
+
   const variant = selected
     ? 'accent'
     : event.resultStatus === 'won'
       ? 'success'
-      : (event.deadlineText || '').includes('오늘')
+      : isToday
         ? 'urgent'
         : undefined;
 
-  const sTag = statusTag(event);
+  const sTag = statusTag(event, todayStr);
 
   return (
     <Card
@@ -49,7 +46,7 @@ export function EventCard({ event, selected, onClick, query }) {
 
       <div className="v2-evcard__main">
         <div className="v2-evcard__head">
-          <Tag variant={pickDeadlineVariant(event)}>{event.deadlineText}</Tag>
+          <Tag variant={deadlineVariant}>{deadlineLabel}</Tag>
           {sTag}
         </div>
 

@@ -13,6 +13,7 @@ import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches } from './lib/eventStore.js';
+import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -205,7 +206,9 @@ const MOCK_EVENTS = [
 /* ============================================================
    Views — 사이드 네비 항목별 필터 정의
    ============================================================ */
-const TODAY = '2026-05-18';
+// 데모 기준일. 실제 배포 시 new Date() 로 바꾸면 됨.
+const DEMO_NOW = new Date(2026, 4, 18);
+const TODAY = todayISO(DEMO_NOW);
 
 const VIEWS = {
   inbox:    { icon: '📥', label: '받은함',   filter: (e) => e.status !== 'skipped',               title: '📥 받은함' },
@@ -503,6 +506,7 @@ export default function AppDemo() {
                 selected={event.id === effectiveSelected.id}
                 onClick={() => handleItemClick(event.id)}
                 query={query}
+                now={DEMO_NOW}
               />
             ))}
           </Stack>
@@ -511,9 +515,13 @@ export default function AppDemo() {
     </ListPanel>
   );
 
+  const selectedMeta = computeDeadlineMeta(effectiveSelected?.deadlineDate, DEMO_NOW);
+  const selectedDeadlineLabel = selectedMeta?.label ?? effectiveSelected?.deadlineText ?? '';
+  const selectedDeadlineVariant = selectedMeta?.variant === 'past' ? 'outline' : (selectedMeta?.variant ?? 'outline');
+
   const detailHeader = (
     <Inline style={{ flexWrap: 'wrap' }}>
-      <Tag variant="danger">{effectiveSelected.deadlineText}</Tag>
+      <Tag variant={selectedDeadlineVariant}>{selectedDeadlineLabel}</Tag>
       <PlatformChip platform={effectiveSelected.platform} />
       {effectiveSelected.totalWinnerCount != null && (
         <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
@@ -599,7 +607,9 @@ export default function AppDemo() {
       <Inline style={{ fontSize: 'var(--fs-xs)', marginBottom: 'var(--sp-3)' }}>
         <PlatformChip platform={effectiveSelected.platform} />
         <span className="v2-muted">·</span>
-        <span style={{ color: 'var(--c-danger)' }}>{effectiveSelected.deadlineText}</span>
+        <span style={{ color: selectedDeadlineVariant === 'danger' ? 'var(--c-danger)' : 'var(--c-text-mid)' }}>
+          {selectedDeadlineLabel}
+        </span>
       </Inline>
       <h2 className="v2-h2" style={{ marginBottom: 'var(--sp-3)' }}>{effectiveSelected.title}</h2>
       <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-4)' }}>
