@@ -9,6 +9,8 @@ import {
 import { EventCard } from './components/EventCard.jsx';
 import { EventDetailContent } from './components/EventDetailContent.jsx';
 import { PlatformChip } from './components/PlatformChip.jsx';
+import { ResultEntry } from './components/ResultEntry.jsx';
+import { InboxSummary } from './components/InboxSummary.jsx';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -327,6 +329,12 @@ export default function AppDemo() {
     if (url) window.open(url, '_blank', 'noopener,noreferrer');
   }, [effectiveSelected]);
 
+  /* -------- 일반 필드 업데이트 (ResultEntry 등) -------- */
+  const updateEvent = useCallback((id, patch) => {
+    if (!id || !patch) return;
+    setEvents((cur) => cur.map((e) => (e.id === id ? { ...e, ...patch } : e)));
+  }, []);
+
   /* -------- 키보드 단축키 -------- */
   useEffect(() => {
     const onKey = (e) => {
@@ -418,6 +426,9 @@ export default function AppDemo() {
       }/>
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
+        {['received', 'won', 'lost'].includes(selectedView) && (
+          <InboxSummary events={events} />
+        )}
         <div style={{ position: 'relative', marginBottom: 'var(--sp-3)' }}>
           <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-text-faint)', pointerEvents: 'none' }}>🔎</span>
           <Input
@@ -490,6 +501,7 @@ export default function AppDemo() {
         {detailHeader}
         <h1 className="v2-h1">{effectiveSelected.title}</h1>
         <Divider />
+        <ResultEntry event={effectiveSelected} onChange={updateEvent} />
         <EventDetailContent event={effectiveSelected} />
       </Stack>
     </DetailPanel>
@@ -513,7 +525,10 @@ export default function AppDemo() {
           <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
         )}
       </Inline>
-      <EventDetailContent event={effectiveSelected} />
+      <ResultEntry event={effectiveSelected} onChange={updateEvent} />
+      <div style={{ marginTop: 'var(--sp-4)' }}>
+        <EventDetailContent event={effectiveSelected} />
+      </div>
       <Stack style={{ marginTop: 'var(--sp-5)' }}>
         <Button variant="primary" size="lg" block onClick={handleApply}>응모하러 가기 ↗</Button>
         <Button size="lg" block disabled={inDone}
