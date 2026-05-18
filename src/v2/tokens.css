@@ -1,0 +1,153 @@
+/* ============================================================
+   EventBot v2 — Design Tokens
+   02 (PC 인박스) + 06 (모바일 바텀시트) 하이브리드 기반.
+   다크 우선. 모든 색·간격·타이포가 여기서 출발한다.
+   ============================================================ */
+
+:root {
+  /* ---------- Color: Neutral (다크 우선) ---------- */
+  --c-bg:           #0a0c12;   /* 페이지 배경 (가장 어두움) */
+  --c-surface:      #14171f;   /* 카드/패널 */
+  --c-surface-2:    #1c2029;   /* 카드 위 카드, 입력 필드 */
+  --c-surface-3:    #262b37;   /* hover/active */
+  --c-line:         rgba(255,255,255,0.07);
+  --c-line-strong:  rgba(255,255,255,0.14);
+
+  --c-text:         #f0f1f5;   /* 본문 강조 */
+  --c-text-mid:     #b1b5c2;   /* 일반 본문 */
+  --c-text-mute:    #6b7388;   /* 부가 정보 */
+  --c-text-faint:   #4a5066;   /* placeholder */
+
+  /* ---------- Color: Brand & Semantic ---------- */
+  /* Brand: indigo — CTA/링크/포커스 */
+  --c-brand:        #818cf8;
+  --c-brand-strong: #6366f1;
+  --c-brand-soft:   rgba(129,140,248,0.16);
+  --c-brand-line:   rgba(129,140,248,0.35);
+  --c-brand-on:     #1a1740;   /* brand 배경 위의 텍스트 */
+
+  /* Success: green — 당첨/완료/수령 */
+  --c-success:      #3ddc97;
+  --c-success-strong:#10b981;
+  --c-success-soft: rgba(61,220,151,0.15);
+  --c-success-on:   #002418;
+
+  /* Warning: amber — 임시저장/내일마감 */
+  --c-warn:         #ffb454;
+  --c-warn-soft:    rgba(255,180,84,0.15);
+  --c-warn-on:      #2b1700;
+
+  /* Danger: red — 오늘마감/제외/미당첨 */
+  --c-danger:       #ff5d6c;
+  --c-danger-soft:  rgba(255,93,108,0.14);
+  --c-danger-on:    #2b0008;
+
+  /* Info: blue — 정보/플랫폼 */
+  --c-info:         #5b9dff;
+  --c-info-soft:    rgba(91,157,255,0.14);
+
+  /* Plain neutral chips */
+  --c-chip-bg:      rgba(255,255,255,0.05);
+  --c-chip-text:    var(--c-text-mid);
+
+  /* ---------- Typography ---------- */
+  --font-sans: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui,
+               'Segoe UI', 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  --font-mono: 'JetBrains Mono', ui-monospace, 'Consolas', monospace;
+
+  --fs-xs:   11px;
+  --fs-sm:   12px;
+  --fs-base: 14px;
+  --fs-md:   15px;
+  --fs-lg:   17px;
+  --fs-xl:   20px;
+  --fs-2xl:  24px;
+  --fs-3xl:  30px;
+  --fs-4xl:  38px;
+
+  --lh-tight:  1.25;
+  --lh-snug:   1.4;
+  --lh-normal: 1.55;
+  --lh-loose:  1.75;
+
+  --fw-regular: 400;
+  --fw-medium:  500;
+  --fw-semibold:600;
+  --fw-bold:    700;
+  --fw-black:   800;
+
+  /* tracking */
+  --tracking-tight:  -0.02em;
+  --tracking-normal: 0;
+  --tracking-wide:   0.04em;
+  --tracking-caps:   0.08em;
+
+  /* ---------- Spacing (4px base) ---------- */
+  --sp-0:  0;
+  --sp-1:  4px;
+  --sp-2:  8px;
+  --sp-3:  12px;
+  --sp-4:  16px;
+  --sp-5:  20px;
+  --sp-6:  24px;
+  --sp-7:  32px;
+  --sp-8:  40px;
+  --sp-9:  48px;
+  --sp-10: 64px;
+  --sp-11: 80px;
+
+  /* ---------- Radius ---------- */
+  --r-sm:   4px;
+  --r-md:   8px;
+  --r-lg:   12px;
+  --r-xl:   16px;
+  --r-2xl:  22px;
+  --r-full: 9999px;
+
+  /* ---------- Shadow ---------- */
+  --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+  --shadow-md: 0 4px 12px rgba(0,0,0,0.35);
+  --shadow-lg: 0 10px 30px rgba(0,0,0,0.45);
+  --shadow-pop: 0 -10px 40px rgba(0,0,0,0.5);          /* 바텀시트 위 */
+  --shadow-focus: 0 0 0 3px var(--c-brand-soft);
+
+  /* ---------- Motion ---------- */
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --dur-fast: 120ms;
+  --dur-base: 180ms;
+  --dur-slow: 320ms;
+
+  /* ---------- Layout ---------- */
+  --layout-pc-nav: 220px;          /* 02 사이드 폴더 폭 */
+  --layout-pc-list: 380px;         /* 02 가운데 리스트 */
+  --layout-mobile-max: 480px;      /* 06 모바일 폭 */
+  --layout-page-max: 1400px;
+  --touch-min: 44px;               /* iOS HIG */
+
+  /* ---------- Z ---------- */
+  --z-bottom-nav: 40;
+  --z-sheet:      50;
+  --z-overlay:    49;
+  --z-toast:      60;
+  --z-modal:      70;
+}
+
+/* ============================================================
+   Base reset (v2 루트 안에서만 적용)
+   ============================================================ */
+.v2 {
+  background: var(--c-bg);
+  color: var(--c-text);
+  font-family: var(--font-sans);
+  font-size: var(--fs-base);
+  line-height: var(--lh-normal);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+.v2 *, .v2 *::before, .v2 *::after { box-sizing: border-box; }
+.v2 button { font-family: inherit; cursor: pointer; }
+.v2 input, .v2 textarea, .v2 select { font-family: inherit; }
+.v2 a { color: inherit; text-decoration: none; }
+.v2 :focus-visible { outline: 2px solid var(--c-brand); outline-offset: 2px; border-radius: var(--r-sm); }

@@ -1,0 +1,142 @@
+/* Showcase 페이지 전용 레이아웃. 토큰만 사용. */
+
+.sc-root {
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: 240px 1fr;
+}
+
+/* ---------- Nav (왼쪽 TOC) ---------- */
+.sc-nav {
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-line);
+  padding: var(--sp-5) var(--sp-3);
+  position: sticky; top: 0; height: 100vh; overflow: auto;
+  display: flex; flex-direction: column;
+}
+.sc-brand {
+  display: flex; align-items: center; gap: var(--sp-2);
+  font-weight: var(--fw-bold); padding: var(--sp-2) var(--sp-3);
+  margin-bottom: var(--sp-4);
+}
+.sc-brand-mark {
+  width: 28px; height: 28px; border-radius: var(--r-md);
+  background: var(--c-brand); color: var(--c-brand-on);
+  display: grid; place-items: center;
+  font-weight: var(--fw-black); font-size: var(--fs-xs);
+}
+.sc-toc { display: flex; flex-direction: column; flex: 1; }
+.sc-toc a {
+  padding: 7px var(--sp-3);
+  border-radius: var(--r-sm);
+  color: var(--c-text-mid);
+  font-size: var(--fs-sm);
+}
+.sc-toc a:hover { background: var(--c-surface-2); color: var(--c-text); }
+
+.sc-footnote {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+  line-height: var(--lh-normal);
+  padding: var(--sp-3);
+  border-top: 1px solid var(--c-line);
+  margin-top: var(--sp-3);
+}
+.sc-footnote code { background: var(--c-surface-2); padding: 1px 5px; border-radius: 3px; }
+
+/* ---------- Main ---------- */
+.sc-main { padding: var(--sp-7) var(--sp-8) var(--sp-11); max-width: 1100px; }
+
+.sc-hero { margin-bottom: var(--sp-9); }
+
+.sc-section { padding: var(--sp-7) 0; border-top: 1px solid var(--c-line); }
+.sc-section:first-of-type { border-top: 0; padding-top: 0; }
+.sc-section-head { margin-bottom: var(--sp-5); }
+.sc-section-body { display: flex; flex-direction: column; gap: var(--sp-5); }
+
+/* ---------- Colors ---------- */
+.sc-color-group { display: flex; flex-direction: column; gap: var(--sp-3); }
+.sc-color-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: var(--sp-3);
+}
+.sc-swatch {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  overflow: hidden;
+}
+.sc-swatch-color {
+  height: 56px;
+  border-bottom: 1px solid var(--c-line);
+}
+.sc-swatch-meta {
+  padding: var(--sp-2) var(--sp-3);
+  display: flex; flex-direction: column; gap: 2px;
+}
+.sc-swatch-meta code {
+  font-family: var(--font-mono);
+  font-size: var(--fs-xs);
+  color: var(--c-text);
+}
+.sc-swatch-meta span { font-size: var(--fs-xs); }
+
+/* ---------- Table (typography) ---------- */
+.sc-table { width: 100%; border-collapse: collapse; }
+.sc-table th, .sc-table td {
+  padding: var(--sp-3) var(--sp-3);
+  text-align: left;
+  border-bottom: 1px solid var(--c-line);
+  vertical-align: middle;
+}
+.sc-table th {
+  font-size: var(--fs-xs);
+  text-transform: uppercase;
+  letter-spacing: var(--tracking-caps);
+  color: var(--c-text-mute);
+  font-weight: var(--fw-semibold);
+}
+.sc-table code { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-brand); }
+
+/* ---------- Spacing ---------- */
+.sc-sp-grid { display: flex; flex-direction: column; gap: var(--sp-2); }
+.sc-sp-row {
+  display: grid; grid-template-columns: 90px 1fr 60px;
+  align-items: center; gap: var(--sp-3);
+}
+.sc-sp-row code { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-brand); }
+.sc-sp-bar { background: var(--c-surface); border-radius: var(--r-sm); height: 22px; padding: 3px; }
+.sc-sp-bar > div { height: 100%; background: var(--c-brand); border-radius: 2px; }
+
+/* ---------- Radius ---------- */
+.sc-radius-grid {
+  display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: var(--sp-4);
+}
+.sc-radius-item { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; }
+.sc-radius-shape { width: 80px; height: 80px; background: var(--c-brand-soft); border: 1px solid var(--c-brand-line); }
+.sc-radius-item code { font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-brand); }
+.sc-radius-item span { font-size: var(--fs-xs); }
+
+/* ---------- Card grid ---------- */
+.sc-card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: var(--sp-3);
+}
+
+/* ---------- Badge overlay (Icon button + count) ---------- */
+.sc-badge-overlay {
+  position: absolute; top: -4px; right: -4px;
+}
+
+/* ---------- Footer ---------- */
+.sc-footer { margin-top: var(--sp-9); }
+
+@media (max-width: 900px) {
+  .sc-root { grid-template-columns: 1fr; }
+  .sc-nav { position: relative; height: auto; }
+  .sc-toc { flex-direction: row; flex-wrap: wrap; }
+  .sc-main { padding: var(--sp-5); }
+}
