@@ -1,0 +1,238 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 03 · 칸반 보드 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #f5f6f8;
+    --board: #eef0f4;
+    --col: #ffffff;
+    --card: #ffffff;
+    --line: #e3e6ec;
+    --text: #1a1f2e;
+    --text-mid: #4b5366;
+    --text-mute: #8993a8;
+    --accent: #10b981;       /* emerald */
+    --accent-soft: #d1fae5;
+    --blue: #3b82f6;
+    --amber: #f59e0b;
+    --red: #ef4444;
+    --purple: #8b5cf6;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', system-ui, sans-serif; }
+
+  .top { background: white; border-bottom: 1px solid var(--line); padding: 14px 24px; display: flex; align-items: center; gap: 16px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 800; font-size: 1.1rem; }
+  .brand-mark { width: 28px; height: 28px; background: var(--accent); border-radius: 8px; display: grid; place-items: center; color: white; font-weight: 900; }
+  .tabs { display: flex; gap: 6px; margin-left: 12px; }
+  .tabs a { padding: 6px 12px; border-radius: 8px; color: var(--text-mid); font-size: 0.88rem; }
+  .tabs a.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .top .spacer { flex: 1; }
+  .top .filter-btn { background: white; border: 1px solid var(--line); padding: 7px 12px; border-radius: 8px; font-size: 0.84rem; cursor: pointer; font-family: inherit; }
+  .avatar { width: 32px; height: 32px; border-radius: 50%; background: var(--purple); color: white; display: grid; place-items: center; font-weight: 700; font-size: 0.82rem; }
+
+  .board-head { padding: 16px 24px 8px; display: flex; align-items: center; justify-content: space-between; }
+  .board-head h1 { margin: 0; font-size: 1.4rem; }
+  .board-head .summary { color: var(--text-mute); font-size: 0.85rem; margin-top: 4px; }
+
+  .board { display: grid; grid-template-columns: repeat(5, minmax(280px, 1fr)); gap: 14px; padding: 12px 24px 40px; overflow-x: auto; }
+
+  .col { background: var(--col); border: 1px solid var(--line); border-radius: 12px; padding: 14px 12px; min-height: 70vh; display: flex; flex-direction: column; gap: 10px; }
+  .col-head { display: flex; align-items: center; gap: 8px; padding: 4px 4px 8px; border-bottom: 1px dashed var(--line); }
+  .col-head .dot { width: 10px; height: 10px; border-radius: 50%; }
+  .col-head .name { font-weight: 700; font-size: 0.92rem; }
+  .col-head .ct { background: var(--bg); padding: 1px 8px; border-radius: 999px; font-size: 0.74rem; color: var(--text-mid); font-weight: 600; }
+  .col-head .add { margin-left: auto; color: var(--text-mute); cursor: pointer; font-size: 1.05rem; }
+
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px; cursor: grab; box-shadow: 0 1px 2px rgba(0,0,0,0.03); }
+  .card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.07); transform: translateY(-1px); transition: all 0.15s; }
+  .card.dragging { opacity: 0.6; transform: rotate(2deg); }
+  .card .head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+  .pf-pill { display: inline-flex; align-items: center; gap: 4px; font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: var(--bg); color: var(--text-mid); }
+  .deadline-pill { font-size: 0.72rem; font-weight: 600; padding: 2px 8px; border-radius: 6px; }
+  .deadline-pill.today { background: #fee2e2; color: var(--red); }
+  .deadline-pill.soon  { background: #fef3c7; color: var(--amber); }
+  .deadline-pill.far   { background: var(--bg); color: var(--text-mute); }
+  .deadline-pill.win   { background: var(--accent-soft); color: var(--accent); }
+
+  .card .title { font-weight: 600; font-size: 0.92rem; line-height: 1.4; margin-bottom: 8px; }
+  .card .meta { display: flex; justify-content: space-between; align-items: center; color: var(--text-mute); font-size: 0.78rem; }
+  .card .amt { color: var(--text); font-weight: 700; }
+  .card .icons { display: flex; gap: 4px; font-size: 0.78rem; color: var(--text-mute); }
+
+  .card.win { border-color: var(--accent); }
+  .card.lose { opacity: 0.7; }
+
+  .add-card { text-align: center; padding: 8px; color: var(--text-mute); font-size: 0.84rem; cursor: pointer; border-radius: 8px; }
+  .add-card:hover { background: var(--bg); }
+
+  .drop-hint { border: 2px dashed var(--accent); border-radius: 10px; padding: 24px; text-align: center; color: var(--accent); font-size: 0.84rem; font-weight: 600; background: var(--accent-soft); }
+
+  @media (max-width: 900px) { .board { grid-template-columns: repeat(2, minmax(260px, 1fr)); } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand"><span class="brand-mark">E</span> EventBot</div>
+  <nav class="tabs">
+    <a>대시보드</a>
+    <a class="active">보드</a>
+    <a>리스트</a>
+    <a>달력</a>
+    <a>수령함</a>
+  </nav>
+  <div class="spacer"></div>
+  <button class="filter-btn">🔍 검색</button>
+  <button class="filter-btn">⚙ 필터 (2)</button>
+  <div class="avatar">J</div>
+</header>
+
+<div class="board-head">
+  <div>
+    <h1>응모 워크플로우</h1>
+    <div class="summary">총 32건 · 이번 주 신규 14건 · 오늘마감 5건 · 발표대기 3건</div>
+  </div>
+</div>
+
+<div class="board">
+
+  <!-- Column 1 -->
+  <div class="col">
+    <div class="col-head">
+      <span class="dot" style="background:var(--blue)"></span>
+      <span class="name">📥 신규 응모대기</span>
+      <span class="ct">3</span>
+      <span class="add">+</span>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">📷 인스타그램</span>
+        <span class="deadline-pill today">오늘마감</span>
+      </div>
+      <div class="title">신라면 블랙 출시 기념 댓글 이벤트</div>
+      <div class="meta"><span class="amt">2만원</span><span>1,000명</span></div>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">▶️ 유튜브</span>
+        <span class="deadline-pill today">오늘마감</span>
+      </div>
+      <div class="title">편의점 도시락 신메뉴 댓글</div>
+      <div class="meta"><span class="amt">5천원</span><span>2,000명</span></div>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">💬 카카오톡</span>
+        <span class="deadline-pill soon">내일</span>
+      </div>
+      <div class="title">갤럭시 S26 사전예약 응모</div>
+      <div class="meta"><span class="amt">180만원</span><span>100명</span></div>
+    </div>
+
+    <div class="add-card">+ 직접 추가</div>
+  </div>
+
+  <!-- Column 2 -->
+  <div class="col">
+    <div class="col-head">
+      <span class="dot" style="background:var(--amber)"></span>
+      <span class="name">🔖 임시저장</span>
+      <span class="ct">2</span>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">📷 인스타그램</span>
+        <span class="deadline-pill far">5/31</span>
+      </div>
+      <div class="title">여름맞이 다이슨 에어랩 증정</div>
+      <div class="meta"><span class="amt">69만원</span><span>3명</span></div>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">▶️ 유튜브</span>
+        <span class="deadline-pill far">5/22</span>
+      </div>
+      <div class="title">스타벅스 신메뉴 시음 이벤트</div>
+      <div class="meta"><span class="amt">3만원</span><span>500명</span></div>
+    </div>
+  </div>
+
+  <!-- Column 3 -->
+  <div class="col">
+    <div class="col-head">
+      <span class="dot" style="background:var(--purple)"></span>
+      <span class="name">✍ 참여완료</span>
+      <span class="ct">2</span>
+    </div>
+
+    <div class="card">
+      <div class="head">
+        <span class="pf-pill">💬 카카오톡</span>
+        <span class="deadline-pill far">발표 5/18</span>
+      </div>
+      <div class="title">봄맞이 백화점 상품권 추첨</div>
+      <div class="meta"><span class="amt">10만원</span><span class="icons">📝 메모 1</span></div>
+    </div>
+
+    <div class="drop-hint">여기로 드래그</div>
+  </div>
+
+  <!-- Column 4 -->
+  <div class="col">
+    <div class="col-head">
+      <span class="dot" style="background:var(--accent)"></span>
+      <span class="name">🏆 당첨</span>
+      <span class="ct">2</span>
+    </div>
+
+    <div class="card win">
+      <div class="head">
+        <span class="pf-pill">🍎 기타</span>
+        <span class="deadline-pill win">수령완료</span>
+      </div>
+      <div class="title">맥북 프로 M5 출시기념 응모</div>
+      <div class="meta"><span class="amt" style="color:var(--accent)">299만원</span><span>4/28 참여</span></div>
+    </div>
+
+    <div class="card win">
+      <div class="head">
+        <span class="pf-pill">💬 카카오톡</span>
+        <span class="deadline-pill today">미수령</span>
+      </div>
+      <div class="title">봄맞이 백화점 상품권 추첨</div>
+      <div class="meta"><span class="amt" style="color:var(--accent)">10만원</span><span>오늘 발표</span></div>
+    </div>
+  </div>
+
+  <!-- Column 5 -->
+  <div class="col">
+    <div class="col-head">
+      <span class="dot" style="background:#94a3b8"></span>
+      <span class="name">❌ 미당첨</span>
+      <span class="ct">1</span>
+    </div>
+
+    <div class="card lose">
+      <div class="head">
+        <span class="pf-pill">📷 인스타그램</span>
+        <span class="deadline-pill far">5/1 발표</span>
+      </div>
+      <div class="title">러닝화 신제품 체험단 모집</div>
+      <div class="meta"><span>나이키 페가수스 41</span><span>30명</span></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

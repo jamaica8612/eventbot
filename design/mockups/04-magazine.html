@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 04 · 매거진 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #fafafa;
+    --card: #fff;
+    --line: #ececec;
+    --text: #111;
+    --text-mid: #444;
+    --text-mute: #888;
+    --accent: #ff3d57;
+    --accent-soft: #ffe5ea;
+    --amber: #f59e0b;
+    --green: #10b981;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', system-ui, sans-serif; }
+
+  /* Sticky nav */
+  .nav { position: sticky; top: 0; z-index: 10; background: rgba(250,250,250,0.95); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); padding: 14px 32px; display: flex; align-items: center; gap: 24px; }
+  .brand { display: flex; align-items: center; gap: 8px; font-weight: 900; font-size: 1.2rem; letter-spacing: -0.02em; }
+  .brand-mark { width: 30px; height: 30px; background: var(--accent); color: white; display: grid; place-items: center; font-weight: 900; border-radius: 8px; }
+  .nav-links { display: flex; gap: 22px; }
+  .nav-links a { color: var(--text-mid); font-size: 0.92rem; cursor: pointer; }
+  .nav-links a.active { color: var(--text); font-weight: 700; border-bottom: 2px solid var(--accent); padding-bottom: 16px; margin-bottom: -16px; }
+  .nav .spacer { flex: 1; }
+  .nav .search { background: white; border: 1px solid var(--line); padding: 8px 16px; border-radius: 999px; font-size: 0.86rem; color: var(--text-mute); width: 220px; }
+
+  /* Hero */
+  .hero { padding: 48px 32px 28px; max-width: 1400px; margin: 0 auto; }
+  .hero .eyebrow { color: var(--accent); font-weight: 700; font-size: 0.82rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .hero h1 { font-size: 2.6rem; margin: 8px 0 4px; letter-spacing: -0.03em; line-height: 1.15; }
+  .hero p { color: var(--text-mute); font-size: 1rem; max-width: 640px; margin: 0; }
+
+  /* Chips */
+  .chips { display: flex; gap: 8px; padding: 16px 32px 24px; max-width: 1400px; margin: 0 auto; overflow-x: auto; }
+  .chip { background: white; border: 1px solid var(--line); padding: 8px 16px; border-radius: 999px; font-size: 0.86rem; color: var(--text-mid); white-space: nowrap; cursor: pointer; }
+  .chip.on { background: var(--text); color: white; border-color: var(--text); }
+
+  /* Grid (masonry) */
+  .grid { columns: 4 280px; column-gap: 18px; padding: 0 32px 60px; max-width: 1400px; margin: 0 auto; }
+  .card { background: var(--card); border-radius: 16px; overflow: hidden; margin: 0 0 18px; break-inside: avoid; box-shadow: 0 1px 3px rgba(0,0,0,0.04); cursor: pointer; transition: all 0.2s; position: relative; }
+  .card:hover { transform: translateY(-3px); box-shadow: 0 10px 28px rgba(0,0,0,0.09); }
+  .card .img { display: block; width: 100%; aspect-ratio: 4/3; background: #ddd; object-fit: cover; }
+  .card.tall .img { aspect-ratio: 3/4; }
+  .card.wide .img { aspect-ratio: 16/10; }
+  .badge-row { position: absolute; top: 12px; left: 12px; right: 12px; display: flex; justify-content: space-between; gap: 8px; }
+  .badge { background: rgba(0,0,0,0.7); color: white; padding: 4px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 600; backdrop-filter: blur(8px); }
+  .badge.urgent { background: var(--accent); }
+  .badge.win { background: var(--green); }
+  .badge.platform { background: rgba(255,255,255,0.92); color: var(--text); }
+  .save-btn { position: absolute; bottom: calc(100% - var(--img-end, 0)); right: 12px; width: 36px; height: 36px; background: white; border-radius: 50%; display: grid; place-items: center; box-shadow: 0 2px 8px rgba(0,0,0,0.15); cursor: pointer; }
+  .card-body { padding: 14px 16px 16px; }
+  .card .title { font-weight: 700; font-size: 1rem; line-height: 1.4; margin: 0 0 8px; }
+  .card .row { display: flex; justify-content: space-between; align-items: center; font-size: 0.84rem; color: var(--text-mute); }
+  .card .amt { color: var(--text); font-weight: 800; font-size: 1.05rem; }
+  .card .actions { display: flex; gap: 6px; margin-top: 12px; }
+  .card .actions button { flex: 1; background: var(--text); color: white; border: 0; padding: 9px; border-radius: 8px; font-size: 0.84rem; font-weight: 600; cursor: pointer; font-family: inherit; }
+  .card .actions button.ghost { background: transparent; color: var(--text); border: 1px solid var(--line); }
+
+  .card.featured { background: linear-gradient(180deg, #1a1a1a, #2a2a2a); color: white; }
+  .card.featured .title { color: white; }
+  .card.featured .row { color: rgba(255,255,255,0.7); }
+  .card.featured .amt { color: white; }
+
+  .stats-strip { background: var(--text); color: white; padding: 22px 32px; max-width: 1400px; margin: 0 auto 24px; border-radius: 18px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 24px; }
+  .stat .lbl { font-size: 0.78rem; opacity: 0.7; text-transform: uppercase; letter-spacing: 0.06em; }
+  .stat .val { font-size: 1.8rem; font-weight: 900; margin-top: 4px; letter-spacing: -0.02em; }
+  .stat .delta { font-size: 0.8rem; color: var(--green); margin-top: 2px; }
+</style>
+</head>
+<body>
+
+<nav class="nav">
+  <div class="brand"><span class="brand-mark">E</span> EventBot</div>
+  <div class="nav-links">
+    <a class="active">발견</a>
+    <a>오늘마감</a>
+    <a>응모대기</a>
+    <a>당첨 / 수령함</a>
+    <a>저장됨</a>
+  </div>
+  <div class="spacer"></div>
+  <input class="search" placeholder="🔎 이벤트 검색" />
+</nav>
+
+<section class="hero">
+  <div class="eyebrow">5월 18일 일요일</div>
+  <h1>오늘의 응모 큐레이션</h1>
+  <p>크롤러가 수집한 오늘의 이벤트 42건 중, 마감 임박 · 고액 · 인기 응모를 추렸어요.</p>
+</section>
+
+<div style="padding: 0 32px; max-width: 1400px; margin: 0 auto 32px;">
+<div class="stats-strip">
+  <div class="stat"><div class="lbl">이번 달 응모</div><div class="val">52</div><div class="delta">▲ 12 vs 지난달</div></div>
+  <div class="stat"><div class="lbl">당첨률</div><div class="val">7.4%</div><div class="delta">▲ 1.2%p</div></div>
+  <div class="stat"><div class="lbl">누적 당첨금</div><div class="val">342만원</div><div class="delta">▲ 41만원</div></div>
+  <div class="stat"><div class="lbl">미수령</div><div class="val">2건</div><div style="color:#fda4af;font-size:0.8rem;margin-top:2px">▼ 발송 지연</div></div>
+</div>
+</div>
+
+<div class="chips">
+  <div class="chip on">전체</div>
+  <div class="chip">🔥 오늘마감</div>
+  <div class="chip">💎 고액 ↑</div>
+  <div class="chip">🎯 당첨률 ↑</div>
+  <div class="chip">📷 인스타그램</div>
+  <div class="chip">▶️ 유튜브</div>
+  <div class="chip">💬 카카오톡</div>
+  <div class="chip">🍔 식음료</div>
+  <div class="chip">📱 전자제품</div>
+  <div class="chip">💄 뷰티</div>
+</div>
+
+<div class="grid">
+
+  <div class="card featured">
+    <img class="img" src="https://picsum.photos/seed/galaxy/600/400" alt="" />
+    <div class="badge-row">
+      <span class="badge urgent">내일 마감</span>
+      <span class="badge platform">💬 카카오톡</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">갤럭시 S26 사전예약 응모 — 100명 추첨</h3>
+      <div class="row"><span>100명 · 삼성전자</span><span class="amt">180만원</span></div>
+      <div class="actions">
+        <button>응모하기 →</button>
+        <button class="ghost" style="border-color:rgba(255,255,255,0.3);color:white">🔖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card tall">
+    <img class="img" src="https://picsum.photos/seed/dyson/600/800" alt="" />
+    <div class="badge-row">
+      <span class="badge">5/31 마감</span>
+      <span class="badge platform">📷 인스타그램</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">여름맞이 다이슨 에어랩 증정</h3>
+      <div class="row"><span>3명 · @beauty_kr</span><span class="amt">69만원</span></div>
+      <div class="actions">
+        <button>응모하기</button>
+        <button class="ghost">🔖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <img class="img" src="https://picsum.photos/seed/ramen/600/400" alt="" />
+    <div class="badge-row">
+      <span class="badge urgent">오늘 23:59</span>
+      <span class="badge platform">📷 인스타그램</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">신라면 블랙 출시 기념 댓글 이벤트</h3>
+      <div class="row"><span>1,000명 · @nongshim_kr</span><span class="amt">2만원</span></div>
+      <div class="actions">
+        <button>응모하기</button>
+        <button class="ghost">🔖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <img class="img" src="https://picsum.photos/seed/macbook/600/375" alt="" />
+    <div class="badge-row">
+      <span class="badge win">🏆 당첨 · 수령완료</span>
+      <span class="badge platform">🍎 기타</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">맥북 프로 M5 출시기념 응모</h3>
+      <div class="row"><span>4월 28일 참여 · 5월 12일 수령</span><span class="amt" style="color:var(--green)">299만원</span></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <img class="img" src="https://picsum.photos/seed/coffee/600/400" alt="" />
+    <div class="badge-row">
+      <span class="badge">5/22 마감</span>
+      <span class="badge platform">▶️ 유튜브</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">스타벅스 신메뉴 시음 이벤트</h3>
+      <div class="row"><span>500명 · 스타벅스코리아</span><span class="amt">3만원</span></div>
+      <div class="actions">
+        <button>응모하기</button>
+        <button class="ghost">🔖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card tall">
+    <img class="img" src="https://picsum.photos/seed/voucher/600/800" alt="" />
+    <div class="badge-row">
+      <span class="badge win">🏆 당첨 · 미수령</span>
+      <span class="badge platform">💬 카카오톡</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">봄맞이 백화점 상품권 추첨</h3>
+      <div class="row"><span>오늘 발표 · 신세계백화점</span><span class="amt" style="color:var(--green)">10만원</span></div>
+      <div class="actions">
+        <button>📦 수령 확인</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <img class="img" src="https://picsum.photos/seed/lunchbox/600/400" alt="" />
+    <div class="badge-row">
+      <span class="badge urgent">오늘 23:59</span>
+      <span class="badge platform">▶️ 유튜브</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">편의점 도시락 신메뉴 댓글</h3>
+      <div class="row"><span>2,000명 · CU공식</span><span class="amt">5천원</span></div>
+      <div class="actions">
+        <button>응모하기</button>
+        <button class="ghost">🔖</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card wide">
+    <img class="img" src="https://picsum.photos/seed/shoes/600/375" alt="" />
+    <div class="badge-row">
+      <span class="badge" style="background:rgba(0,0,0,0.4)">❌ 미당첨</span>
+      <span class="badge platform">📷 인스타그램</span>
+    </div>
+    <div class="card-body">
+      <h3 class="title">러닝화 신제품 체험단 모집</h3>
+      <div class="row"><span>5월 1일 발표 · 나이키 페가수스 41</span><span class="amt" style="color:var(--text-mute);text-decoration:line-through">16만원</span></div>
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>

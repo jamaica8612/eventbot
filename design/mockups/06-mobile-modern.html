@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 06 · 모바일 모던 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #0a0c12;
+    --surface: #14171f;
+    --surface-2: #1c2029;
+    --line: rgba(255,255,255,0.06);
+    --text: #f0f1f5;
+    --text-mid: #b1b5c2;
+    --text-mute: #6b6f7d;
+    --accent: #3ddc97;
+    --accent-soft: rgba(61,220,151,0.15);
+    --warn: #ffb454;
+    --red: #ff5d6c;
+    --blue: #5b9dff;
+  }
+  * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { margin: 0; background: #1a1d28; font-family: 'Pretendard', system-ui, sans-serif; padding: 24px; min-height: 100vh; }
+  body { display: flex; gap: 24px; justify-content: center; flex-wrap: wrap; }
+
+  /* Phone frame */
+  .phone { width: 390px; height: 820px; background: var(--bg); color: var(--text); border-radius: 38px; overflow: hidden; position: relative; box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 0 12px #25272f, 0 0 0 13px #3a3d48; display: flex; flex-direction: column; }
+  .phone::before { content: ''; position: absolute; top: 12px; left: 50%; transform: translateX(-50%); width: 120px; height: 30px; background: #000; border-radius: 999px; z-index: 50; }
+  .phone-label { text-align: center; color: #888; font-size: 0.78rem; margin-top: 10px; font-family: 'Pretendard', sans-serif; }
+
+  /* Status bar */
+  .status { padding: 14px 24px 6px; display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--text); margin-top: 32px; }
+
+  /* Screen 1 — Home */
+  .screen { flex: 1; overflow: auto; padding: 12px 16px 88px; }
+  .screen::-webkit-scrollbar { display: none; }
+
+  .greet { padding: 10px 4px 16px; }
+  .greet .hi { color: var(--text-mute); font-size: 0.86rem; }
+  .greet .name { font-size: 1.6rem; font-weight: 800; letter-spacing: -0.02em; margin-top: 2px; }
+
+  .balance { background: linear-gradient(135deg, var(--accent), #2bb37c); color: #002418; padding: 18px 20px; border-radius: 20px; margin-bottom: 16px; position: relative; overflow: hidden; }
+  .balance::after { content: ''; position: absolute; right: -40px; top: -40px; width: 160px; height: 160px; background: rgba(255,255,255,0.12); border-radius: 50%; }
+  .balance .lbl { font-size: 0.82rem; font-weight: 600; opacity: 0.7; }
+  .balance .val { font-size: 2rem; font-weight: 900; letter-spacing: -0.03em; margin-top: 4px; }
+  .balance .sub { font-size: 0.82rem; opacity: 0.75; margin-top: 2px; }
+
+  .quick-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 22px; }
+  .quick { background: var(--surface); border-radius: 16px; padding: 14px 8px; text-align: center; }
+  .quick .icon { font-size: 1.3rem; }
+  .quick .lbl { font-size: 0.72rem; color: var(--text-mid); margin-top: 4px; }
+  .quick .badge { display: inline-block; background: var(--red); color: white; font-size: 0.66rem; padding: 0 5px; border-radius: 999px; margin-left: 3px; font-weight: 700; }
+
+  .section { display: flex; align-items: baseline; justify-content: space-between; margin: 18px 4px 10px; }
+  .section h3 { margin: 0; font-size: 1rem; font-weight: 700; }
+  .section a { color: var(--text-mute); font-size: 0.8rem; }
+
+  .deadline-card { background: var(--surface); border-radius: 18px; padding: 16px; margin-bottom: 10px; position: relative; overflow: hidden; }
+  .deadline-card.urgent { border-left: 3px solid var(--red); }
+  .deadline-card .pf-row { display: flex; align-items: center; gap: 8px; font-size: 0.78rem; color: var(--text-mute); margin-bottom: 6px; }
+  .deadline-card .pf-row .pill { background: var(--surface-2); padding: 2px 8px; border-radius: 999px; }
+  .deadline-card .pf-row .urgent-pill { background: var(--red); color: white; font-weight: 700; }
+  .deadline-card .title { font-weight: 700; font-size: 0.96rem; line-height: 1.4; margin-bottom: 10px; }
+  .deadline-card .meta-row { display: flex; justify-content: space-between; align-items: center; }
+  .deadline-card .amt { color: var(--accent); font-weight: 800; font-size: 1.05rem; }
+  .deadline-card .winners { color: var(--text-mute); font-size: 0.78rem; }
+  .deadline-card .swipe-hint { position: absolute; right: 12px; top: 16px; color: var(--text-mute); font-size: 0.7rem; opacity: 0.5; }
+
+  /* Bottom nav */
+  .bnav { position: absolute; bottom: 0; left: 0; right: 0; background: rgba(20,23,31,0.95); backdrop-filter: blur(20px); border-top: 1px solid var(--line); padding: 10px 6px 22px; display: grid; grid-template-columns: repeat(5, 1fr); }
+  .bnav-item { display: flex; flex-direction: column; align-items: center; gap: 3px; color: var(--text-mute); font-size: 0.66rem; padding: 4px; }
+  .bnav-item .icon { font-size: 1.2rem; }
+  .bnav-item.active { color: var(--accent); }
+  .bnav-fab { background: var(--accent); color: #002418; width: 44px; height: 44px; border-radius: 50%; display: grid; place-items: center; font-size: 1.4rem; margin-top: -22px; box-shadow: 0 6px 18px rgba(61,220,151,0.4); }
+
+  /* Screen 2 — Bottom sheet */
+  .sheet-overlay { position: relative; background: var(--bg); padding-top: 32px; }
+  .sheet-bg { padding: 16px; opacity: 0.3; }
+  .sheet { position: absolute; left: 0; right: 0; bottom: 0; background: var(--surface); border-radius: 28px 28px 0 0; padding: 8px 20px 24px; max-height: 80%; overflow: auto; box-shadow: 0 -10px 40px rgba(0,0,0,0.5); }
+  .sheet .grab { width: 36px; height: 4px; background: var(--surface-2); border-radius: 999px; margin: 0 auto 14px; }
+  .sheet .pf-row { display: flex; align-items: center; gap: 6px; font-size: 0.76rem; color: var(--text-mute); margin-bottom: 10px; }
+  .sheet h2 { margin: 0 0 12px; font-size: 1.2rem; line-height: 1.3; }
+  .sheet .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 16px; }
+  .sheet .info { background: var(--surface-2); border-radius: 14px; padding: 12px; }
+  .sheet .info .lbl { color: var(--text-mute); font-size: 0.74rem; }
+  .sheet .info .val { font-weight: 700; font-size: 1.05rem; margin-top: 2px; }
+  .sheet .actions { display: flex; flex-direction: column; gap: 8px; margin-top: 18px; }
+  .sheet .btn { padding: 16px; border-radius: 14px; font-weight: 700; font-size: 0.95rem; text-align: center; border: 0; font-family: inherit; cursor: pointer; }
+  .sheet .btn-primary { background: var(--accent); color: #002418; }
+  .sheet .btn-second { background: var(--surface-2); color: var(--text); }
+  .sheet .btn-ghost { background: transparent; color: var(--text-mute); }
+
+  /* Screen 3 — Inbox */
+  .inbox-head { padding: 8px 4px 14px; }
+  .inbox-head h2 { margin: 0; font-size: 1.6rem; font-weight: 800; }
+  .inbox-stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-bottom: 18px; }
+  .inbox-stats .item { background: var(--surface); padding: 14px; border-radius: 14px; }
+  .inbox-stats .item .lbl { color: var(--text-mute); font-size: 0.74rem; }
+  .inbox-stats .item .val { font-weight: 800; font-size: 1.4rem; margin-top: 2px; letter-spacing: -0.02em; }
+  .inbox-stats .item .val.win { color: var(--accent); }
+
+  .inbox-row { background: var(--surface); border-radius: 14px; padding: 14px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+  .inbox-row .ic { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; font-size: 1.05rem; flex-shrink: 0; }
+  .inbox-row .ic.win { background: var(--accent-soft); }
+  .inbox-row .ic.lost { background: rgba(255,93,108,0.15); }
+  .inbox-row .ic.pending { background: rgba(255,180,84,0.15); }
+  .inbox-row .info { flex: 1; min-width: 0; }
+  .inbox-row .title { font-weight: 600; font-size: 0.9rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .inbox-row .sub { color: var(--text-mute); font-size: 0.76rem; margin-top: 2px; }
+  .inbox-row .right { text-align: right; flex-shrink: 0; }
+  .inbox-row .amt { font-weight: 800; font-size: 0.95rem; }
+  .inbox-row .amt.win { color: var(--accent); }
+  .inbox-row .state { font-size: 0.72rem; color: var(--text-mute); margin-top: 2px; }
+
+  /* Layout helpers for the 3 phones */
+  .stage { display: flex; flex-direction: column; }
+</style>
+</head>
+<body>
+
+<!-- Phone 1: Home / Today -->
+<div class="stage">
+<div class="phone">
+  <div class="status"><span>9:41</span><span>📶 📡 100%</span></div>
+  <main class="screen">
+    <div class="greet">
+      <div class="hi">월요일 오전이에요</div>
+      <div class="name">오늘의 응모 5건 👀</div>
+    </div>
+
+    <div class="balance">
+      <div class="lbl">누적 당첨금</div>
+      <div class="val">3,420,000원</div>
+      <div class="sub">이번 달 +410,000 · 미수령 2건</div>
+    </div>
+
+    <div class="quick-row">
+      <div class="quick"><div class="icon">🔥</div><div class="lbl">오늘마감<span class="badge">5</span></div></div>
+      <div class="quick"><div class="icon">⏰</div><div class="lbl">응모대기</div></div>
+      <div class="quick"><div class="icon">📬</div><div class="lbl">수령함<span class="badge">2</span></div></div>
+      <div class="quick"><div class="icon">🏆</div><div class="lbl">당첨내역</div></div>
+    </div>
+
+    <div class="section"><h3>🔥 지금 처리할 응모</h3><a>5건 →</a></div>
+
+    <div class="deadline-card urgent">
+      <span class="swipe-hint">◀ 스와이프</span>
+      <div class="pf-row"><span class="pill urgent-pill">오늘 23:59</span><span class="pill">📷 인스타</span></div>
+      <div class="title">신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨</div>
+      <div class="meta-row"><span class="amt">2만원</span><span class="winners">1,000명 · 2시간 전</span></div>
+    </div>
+
+    <div class="deadline-card urgent">
+      <div class="pf-row"><span class="pill urgent-pill">오늘 23:59</span><span class="pill">▶️ 유튜브</span></div>
+      <div class="title">편의점 도시락 신메뉴 댓글 이벤트</div>
+      <div class="meta-row"><span class="amt">5천원</span><span class="winners">2,000명 · 5시간 전</span></div>
+    </div>
+
+    <div class="deadline-card">
+      <div class="pf-row"><span class="pill" style="color:var(--warn)">내일 마감</span><span class="pill">💬 카카오톡</span></div>
+      <div class="title">갤럭시 S26 사전예약 응모 — 100명 추첨</div>
+      <div class="meta-row"><span class="amt">180만원</span><span class="winners">100명 · 고액 ⭐</span></div>
+    </div>
+  </main>
+
+  <nav class="bnav">
+    <div class="bnav-item active"><span class="icon">🏠</span><span>홈</span></div>
+    <div class="bnav-item"><span class="icon">🔍</span><span>검색</span></div>
+    <div class="bnav-fab">＋</div>
+    <div class="bnav-item"><span class="icon">📬</span><span>수령함</span></div>
+    <div class="bnav-item"><span class="icon">👤</span><span>나</span></div>
+  </nav>
+</div>
+<div class="phone-label">홈 · 오늘의 응모</div>
+</div>
+
+<!-- Phone 2: Bottom sheet detail -->
+<div class="stage">
+<div class="phone">
+  <div class="status"><span>9:41</span><span>📶 📡 100%</span></div>
+  <main class="screen sheet-bg">
+    <div class="greet"><div class="name">오늘의 응모 5건 👀</div></div>
+    <div class="deadline-card urgent">
+      <div class="pf-row"><span class="pill urgent-pill">오늘 23:59</span><span class="pill">📷 인스타</span></div>
+      <div class="title">신라면 블랙 출시 기념 댓글 이벤트</div>
+      <div class="meta-row"><span class="amt">2만원</span><span class="winners">1,000명</span></div>
+    </div>
+  </main>
+
+  <div class="sheet">
+    <div class="grab"></div>
+    <div class="pf-row"><span>📷 인스타그램</span><span>·</span><span>@nongshim_kr</span><span>·</span><span style="color:var(--red)">오늘 23:59</span></div>
+    <h2>신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨</h2>
+    <div class="info-grid">
+      <div class="info"><div class="lbl">경품</div><div class="val">신라면 블랙 1박스</div></div>
+      <div class="info"><div class="lbl">예상 가치</div><div class="val">2만원</div></div>
+      <div class="info"><div class="lbl">당첨자</div><div class="val">1,000명</div></div>
+      <div class="info"><div class="lbl">발표</div><div class="val">5/25</div></div>
+    </div>
+
+    <div class="actions">
+      <button class="btn btn-primary">응모하러 가기 ↗</button>
+      <button class="btn btn-second">✔ 참여완료로 표시</button>
+      <button class="btn btn-ghost">🔖 임시저장으로 옮기기</button>
+      <button class="btn btn-ghost" style="color:var(--red)">제외</button>
+    </div>
+  </div>
+
+  <nav class="bnav">
+    <div class="bnav-item active"><span class="icon">🏠</span><span>홈</span></div>
+    <div class="bnav-item"><span class="icon">🔍</span><span>검색</span></div>
+    <div class="bnav-fab">＋</div>
+    <div class="bnav-item"><span class="icon">📬</span><span>수령함</span></div>
+    <div class="bnav-item"><span class="icon">👤</span><span>나</span></div>
+  </nav>
+</div>
+<div class="phone-label">바텀시트 · 카드 상세 / 액션</div>
+</div>
+
+<!-- Phone 3: Inbox -->
+<div class="stage">
+<div class="phone">
+  <div class="status"><span>9:41</span><span>📶 📡 100%</span></div>
+  <main class="screen">
+    <div class="inbox-head">
+      <h2>📬 수령함</h2>
+    </div>
+
+    <div class="inbox-stats">
+      <div class="item"><div class="lbl">당첨금 합계</div><div class="val win">342만원</div></div>
+      <div class="item"><div class="lbl">당첨률</div><div class="val">7.4%</div></div>
+      <div class="item"><div class="lbl">오늘 발표</div><div class="val">1건</div></div>
+      <div class="item"><div class="lbl">미수령</div><div class="val" style="color:var(--warn)">2건</div></div>
+    </div>
+
+    <div class="section"><h3>오늘 발표</h3><a>1 →</a></div>
+    <div class="inbox-row">
+      <div class="ic pending">🎉</div>
+      <div class="info">
+        <div class="title">봄맞이 백화점 상품권 추첨</div>
+        <div class="sub">5/3 참여 · 결과 확인 필요</div>
+      </div>
+      <div class="right"><div class="amt">10만원</div><div class="state" style="color:var(--warn)">확인하기 →</div></div>
+    </div>
+
+    <div class="section"><h3>당첨 · 수령 완료</h3><a>14 →</a></div>
+    <div class="inbox-row">
+      <div class="ic win">🏆</div>
+      <div class="info">
+        <div class="title">맥북 프로 M5 출시기념 응모</div>
+        <div class="sub">5/12 수령 · 시리얼 C02XX</div>
+      </div>
+      <div class="right"><div class="amt win">299만원</div><div class="state">수령 ✓</div></div>
+    </div>
+
+    <div class="section"><h3>미당첨</h3><a>31 →</a></div>
+    <div class="inbox-row" style="opacity:0.6">
+      <div class="ic lost">·</div>
+      <div class="info">
+        <div class="title">러닝화 신제품 체험단 모집</div>
+        <div class="sub">5/1 발표 · 나이키 페가수스 41</div>
+      </div>
+      <div class="right"><div class="amt" style="text-decoration:line-through;color:var(--text-mute)">16만원</div></div>
+    </div>
+  </main>
+
+  <nav class="bnav">
+    <div class="bnav-item"><span class="icon">🏠</span><span>홈</span></div>
+    <div class="bnav-item"><span class="icon">🔍</span><span>검색</span></div>
+    <div class="bnav-fab">＋</div>
+    <div class="bnav-item active"><span class="icon">📬</span><span>수령함</span></div>
+    <div class="bnav-item"><span class="icon">👤</span><span>나</span></div>
+  </nav>
+</div>
+<div class="phone-label">수령함 · 결과 추적</div>
+</div>
+
+</body>
+</html>

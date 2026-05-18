@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 01 · 대시보드 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #0b0f1a;
+    --panel: #131826;
+    --panel-2: #1a2030;
+    --line: rgba(255,255,255,0.07);
+    --text: #f4f6fb;
+    --text-mid: rgba(244,246,251,0.78);
+    --text-mute: #7a849c;
+    --accent: #ffd24a;
+    --accent-soft: rgba(255,210,74,0.14);
+    --green: #22c55e;
+    --red: #ff5252;
+    --blue: #6aa9ff;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, sans-serif; }
+  a { color: inherit; text-decoration: none; }
+
+  .app { display: grid; grid-template-columns: 240px 1fr 360px; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar { background: var(--panel); border-right: 1px solid var(--line); padding: 22px 16px; position: sticky; top: 0; height: 100vh; }
+  .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 1.15rem; margin-bottom: 28px; }
+  .brand-mark { width: 32px; height: 32px; background: var(--accent); border-radius: 9px; display: grid; place-items: center; color: #1a1100; font-weight: 900; }
+  .nav-section { font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.06em; color: var(--text-mute); margin: 18px 8px 8px; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: 10px; color: var(--text-mid); font-size: 0.92rem; cursor: pointer; }
+  .nav-item:hover { background: rgba(255,255,255,0.04); }
+  .nav-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .nav-item .count { margin-left: auto; font-size: 0.78rem; color: var(--text-mute); }
+  .nav-item.active .count { color: var(--accent); }
+
+  /* Main */
+  .main { padding: 24px 28px 60px; min-width: 0; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
+  .topbar h1 { margin: 0; font-size: 1.5rem; }
+  .topbar .meta { color: var(--text-mute); font-size: 0.86rem; margin-top: 4px; }
+  .search { background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 10px 16px; color: var(--text-mid); display: flex; align-items: center; gap: 8px; width: 280px; }
+  .search input { background: transparent; border: 0; outline: 0; color: var(--text); flex: 1; font-family: inherit; }
+
+  /* KPI */
+  .kpi-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 24px; }
+  .kpi { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; }
+  .kpi .label { color: var(--text-mute); font-size: 0.82rem; }
+  .kpi .value { font-size: 1.8rem; font-weight: 800; margin-top: 4px; letter-spacing: -0.02em; }
+  .kpi .delta { font-size: 0.78rem; margin-top: 4px; }
+  .kpi .delta.up { color: var(--green); }
+  .kpi .delta.down { color: var(--red); }
+
+  /* Chart */
+  .chart-card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 20px; margin-bottom: 24px; }
+  .chart-head { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 14px; }
+  .chart-head h2 { margin: 0; font-size: 1.05rem; }
+  .chart-head .tabs { display: flex; gap: 4px; }
+  .chart-head .tabs button { background: transparent; border: 1px solid var(--line); color: var(--text-mid); padding: 5px 11px; border-radius: 999px; font-size: 0.78rem; cursor: pointer; font-family: inherit; }
+  .chart-head .tabs button.active { background: var(--accent); color: #1a1100; border-color: var(--accent); }
+  .bars { display: grid; grid-template-columns: repeat(12, 1fr); gap: 6px; align-items: end; height: 160px; padding-top: 8px; }
+  .bar-wrap { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+  .bar { width: 100%; border-radius: 6px 6px 0 0; background: linear-gradient(180deg, var(--accent), rgba(255,210,74,0.4)); }
+  .bar.muted { background: linear-gradient(180deg, #2a3146, #1a2030); }
+  .bar-label { font-size: 0.7rem; color: var(--text-mute); }
+
+  /* Lists */
+  .section-head { display: flex; justify-content: space-between; align-items: center; margin: 6px 0 12px; }
+  .section-head h2 { margin: 0; font-size: 1.05rem; }
+  .section-head a { color: var(--text-mute); font-size: 0.82rem; }
+  .event-list { display: flex; flex-direction: column; gap: 8px; }
+  .event-row { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; grid-template-columns: 56px 1fr auto; gap: 14px; align-items: center; }
+  .event-row .pf { width: 40px; height: 40px; border-radius: 10px; display: grid; place-items: center; font-size: 1.05rem; background: var(--panel-2); }
+  .event-row .title { font-weight: 600; }
+  .event-row .sub { color: var(--text-mute); font-size: 0.8rem; margin-top: 4px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .badge { font-size: 0.72rem; padding: 3px 8px; border-radius: 999px; background: var(--panel-2); color: var(--text-mid); }
+  .badge.warn { background: rgba(255,82,82,0.15); color: #ff8989; }
+  .badge.soon { background: rgba(255,210,74,0.15); color: var(--accent); }
+  .badge.ok { background: rgba(34,197,94,0.14); color: var(--green); }
+  .event-row .amt { font-weight: 700; text-align: right; }
+  .event-row .amt .small { color: var(--text-mute); font-weight: 400; font-size: 0.76rem; display: block; }
+
+  /* Right panel */
+  .right { background: var(--panel); border-left: 1px solid var(--line); padding: 22px 20px; position: sticky; top: 0; height: 100vh; overflow: auto; }
+  .right h3 { margin: 0 0 12px; font-size: 1rem; }
+  .agenda-item { padding: 12px 0; border-bottom: 1px solid var(--line); }
+  .agenda-item:last-child { border-bottom: 0; }
+  .agenda-item .when { font-size: 0.78rem; color: var(--accent); font-weight: 600; }
+  .agenda-item .what { font-weight: 600; margin-top: 4px; }
+  .agenda-item .meta { color: var(--text-mute); font-size: 0.78rem; margin-top: 4px; }
+
+  .donut-wrap { display: flex; align-items: center; gap: 18px; margin-top: 12px; }
+  .donut { width: 110px; height: 110px; border-radius: 50%; background: conic-gradient(var(--green) 0 38%, var(--red) 38% 52%, #2a3146 52% 100%); display: grid; place-items: center; position: relative; }
+  .donut::after { content: ''; position: absolute; inset: 14px; background: var(--panel); border-radius: 50%; }
+  .donut span { position: relative; z-index: 1; font-weight: 800; font-size: 1.15rem; }
+  .legend { font-size: 0.84rem; }
+  .legend div { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; }
+  .legend .dot { width: 10px; height: 10px; border-radius: 3px; }
+
+  @media (max-width: 1200px) { .app { grid-template-columns: 220px 1fr; } .right { display: none; } }
+  @media (max-width: 800px) { .app { grid-template-columns: 1fr; } .sidebar { position: relative; height: auto; } .kpi-grid { grid-template-columns: repeat(2,1fr); } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-mark">E</span> EventBot</div>
+    <div class="nav-section">응모 관리</div>
+    <div class="nav-item active">📊 대시보드 <span class="count">·</span></div>
+    <div class="nav-item">⏰ 응모대기 <span class="count">23</span></div>
+    <div class="nav-item">🔥 오늘마감 <span class="count">5</span></div>
+    <div class="nav-item">🔖 임시저장 <span class="count">12</span></div>
+    <div class="nav-item">🔍 검색 <span class="count"></span></div>
+    <div class="nav-section">결과</div>
+    <div class="nav-item">📬 수령함 <span class="count">8</span></div>
+    <div class="nav-item">🏆 당첨 내역 <span class="count">14</span></div>
+    <div class="nav-section">설정</div>
+    <div class="nav-item">👥 관리자 <span class="count"></span></div>
+    <div class="nav-item">⚙️ 설정 <span class="count"></span></div>
+  </aside>
+
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>대시보드</h1>
+        <div class="meta">2026년 5월 18일 월요일 · 마지막 크롤링 12분 전</div>
+      </div>
+      <div class="search">🔎 <input placeholder="이벤트 검색..." /></div>
+    </div>
+
+    <div class="kpi-grid">
+      <div class="kpi"><div class="label">누적 당첨금</div><div class="value">3,420,000원</div><div class="delta up">▲ 12% vs 지난달</div></div>
+      <div class="kpi"><div class="label">당첨률</div><div class="value">7.4%</div><div class="delta up">▲ 1.2%p</div></div>
+      <div class="kpi"><div class="label">오늘 마감</div><div class="value">5건</div><div class="delta">3건 미응모</div></div>
+      <div class="kpi"><div class="label">미수령</div><div class="value">2건</div><div class="delta down">▼ 1건 발송 지연</div></div>
+    </div>
+
+    <div class="chart-card">
+      <div class="chart-head">
+        <h2>월별 응모 & 당첨 추이</h2>
+        <div class="tabs"><button>주간</button><button class="active">월간</button><button>연간</button></div>
+      </div>
+      <div class="bars">
+        <div class="bar-wrap"><div class="bar muted" style="height:30%"></div><div class="bar-label">1</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:50%"></div><div class="bar-label">2</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:42%"></div><div class="bar-label">3</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:65%"></div><div class="bar-label">4</div></div>
+        <div class="bar-wrap"><div class="bar" style="height:82%"></div><div class="bar-label">5</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:18%"></div><div class="bar-label">6</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:22%"></div><div class="bar-label">7</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:28%"></div><div class="bar-label">8</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:40%"></div><div class="bar-label">9</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:55%"></div><div class="bar-label">10</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:48%"></div><div class="bar-label">11</div></div>
+        <div class="bar-wrap"><div class="bar muted" style="height:60%"></div><div class="bar-label">12</div></div>
+      </div>
+    </div>
+
+    <div class="section-head"><h2>🔥 오늘마감</h2><a href="#">전체 보기 →</a></div>
+    <div class="event-list">
+      <div class="event-row">
+        <div class="pf">📷</div>
+        <div>
+          <div class="title">신라면 블랙 출시 기념 댓글 이벤트</div>
+          <div class="sub"><span class="badge warn">오늘마감</span><span>인스타그램 · @nongshim_kr</span><span>1,000명 추첨</span></div>
+        </div>
+        <div class="amt">2만원<span class="small">신라면 1박스</span></div>
+      </div>
+      <div class="event-row">
+        <div class="pf">▶️</div>
+        <div>
+          <div class="title">편의점 도시락 신메뉴 댓글 이벤트</div>
+          <div class="sub"><span class="badge warn">오늘마감</span><span>유튜브 · CU공식</span><span>2,000명 추첨</span></div>
+        </div>
+        <div class="amt">5천원<span class="small">CU 상품권</span></div>
+      </div>
+      <div class="event-row">
+        <div class="pf">💬</div>
+        <div>
+          <div class="title">갤럭시 S26 사전예약 응모</div>
+          <div class="sub"><span class="badge soon">내일마감</span><span>카카오톡 · 삼성전자</span><span>100명 추첨</span></div>
+        </div>
+        <div class="amt">180만원<span class="small">갤럭시 S26 Ultra</span></div>
+      </div>
+    </div>
+
+    <div class="section-head" style="margin-top:28px"><h2>📬 수령 대기</h2><a href="#">수령함 열기 →</a></div>
+    <div class="event-list">
+      <div class="event-row">
+        <div class="pf">💬</div>
+        <div>
+          <div class="title">봄맞이 백화점 상품권 추첨</div>
+          <div class="sub"><span class="badge ok">당첨</span><span>오늘 발표</span><span>참여 5/3</span></div>
+        </div>
+        <div class="amt">10만원<span class="small">신세계 상품권</span></div>
+      </div>
+    </div>
+  </main>
+
+  <aside class="right">
+    <h3>📅 이번 주 일정</h3>
+    <div class="agenda-item"><div class="when">오늘 · 5/18</div><div class="what">신라면 블랙 마감</div><div class="meta">23:59 까지</div></div>
+    <div class="agenda-item"><div class="when">오늘 · 5/18</div><div class="what">신세계 상품권 결과 발표</div><div class="meta">당첨 확인 필요</div></div>
+    <div class="agenda-item"><div class="when">내일 · 5/19</div><div class="what">갤럭시 S26 마감</div><div class="meta">고액 경품 · 우선 처리</div></div>
+    <div class="agenda-item"><div class="when">5/22</div><div class="what">스타벅스 시음 마감</div><div class="meta">500명 추첨</div></div>
+
+    <h3 style="margin-top:26px">🎯 이번 달 결과</h3>
+    <div class="donut-wrap">
+      <div class="donut"><span>52건</span></div>
+      <div class="legend">
+        <div><span class="dot" style="background:var(--green)"></span> 당첨 20건 (38%)</div>
+        <div><span class="dot" style="background:var(--red)"></span> 미당첨 7건 (14%)</div>
+        <div><span class="dot" style="background:#2a3146"></span> 대기 25건 (48%)</div>
+      </div>
+    </div>
+  </aside>
+
+</div>
+</body>
+</html>

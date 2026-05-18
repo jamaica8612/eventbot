@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 02 · 인박스 트리아지 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #0e1018;
+    --panel: #161927;
+    --panel-2: #1d2133;
+    --hover: rgba(255,255,255,0.04);
+    --line: rgba(255,255,255,0.06);
+    --text: #eef0f7;
+    --text-mid: #b9bfd0;
+    --text-mute: #6b7388;
+    --accent: #818cf8;     /* indigo */
+    --accent-soft: rgba(129,140,248,0.16);
+    --warn: #f59e0b;
+    --green: #10b981;
+    --red: #ef4444;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', system-ui, sans-serif; font-size: 14px; }
+
+  .app { display: grid; grid-template-columns: 220px 380px 1fr; height: 100vh; }
+
+  /* Folders */
+  .folders { background: var(--panel); border-right: 1px solid var(--line); padding: 16px 10px; overflow: auto; }
+  .brand { display: flex; align-items: center; gap: 8px; padding: 6px 10px; font-weight: 700; margin-bottom: 18px; }
+  .brand-mark { width: 26px; height: 26px; background: var(--accent); border-radius: 7px; display: grid; place-items: center; color: #1a1740; font-weight: 900; font-size: 0.85rem; }
+  .f-section { font-size: 0.68rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--text-mute); padding: 14px 10px 6px; }
+  .f-item { display: flex; align-items: center; gap: 8px; padding: 6px 10px; border-radius: 6px; color: var(--text-mid); cursor: pointer; font-size: 0.88rem; }
+  .f-item:hover { background: var(--hover); }
+  .f-item.active { background: var(--accent-soft); color: var(--accent); font-weight: 600; }
+  .f-item .ct { margin-left: auto; font-size: 0.76rem; color: var(--text-mute); }
+  .f-item.active .ct { color: var(--accent); }
+
+  /* List */
+  .list { background: var(--bg); border-right: 1px solid var(--line); display: flex; flex-direction: column; overflow: hidden; }
+  .list-head { padding: 14px 18px; border-bottom: 1px solid var(--line); display: flex; align-items: center; justify-content: space-between; }
+  .list-head h2 { margin: 0; font-size: 1rem; }
+  .list-head .meta { color: var(--text-mute); font-size: 0.78rem; }
+  .filters { display: flex; gap: 6px; padding: 10px 18px; border-bottom: 1px solid var(--line); }
+  .filter-chip { font-size: 0.76rem; padding: 4px 10px; border-radius: 999px; background: var(--panel); color: var(--text-mid); cursor: pointer; border: 1px solid var(--line); }
+  .filter-chip.on { background: var(--accent-soft); color: var(--accent); border-color: var(--accent); }
+  .rows { flex: 1; overflow: auto; }
+  .row { padding: 12px 18px; border-bottom: 1px solid var(--line); cursor: pointer; border-left: 3px solid transparent; }
+  .row:hover { background: var(--hover); }
+  .row.selected { background: var(--accent-soft); border-left-color: var(--accent); }
+  .row.unread .title { font-weight: 700; }
+  .row .top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+  .row .pf { font-size: 0.74rem; color: var(--text-mute); text-transform: uppercase; letter-spacing: 0.04em; }
+  .row .deadline { font-size: 0.74rem; color: var(--warn); font-weight: 600; }
+  .row .deadline.soon { color: var(--red); }
+  .row .title { font-size: 0.92rem; margin: 4px 0; line-height: 1.4; overflow: hidden; text-overflow: ellipsis; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
+  .row .snippet { color: var(--text-mute); font-size: 0.78rem; display: flex; gap: 10px; }
+  .row .snippet .amt { color: var(--accent); font-weight: 600; }
+
+  /* Detail */
+  .detail { display: flex; flex-direction: column; overflow: hidden; }
+  .d-toolbar { display: flex; align-items: center; gap: 6px; padding: 10px 22px; border-bottom: 1px solid var(--line); }
+  .d-toolbar button { background: var(--panel); border: 1px solid var(--line); color: var(--text); padding: 7px 12px; border-radius: 8px; font-size: 0.82rem; cursor: pointer; font-family: inherit; display: inline-flex; align-items: center; gap: 6px; }
+  .d-toolbar button:hover { background: var(--panel-2); }
+  .d-toolbar button.primary { background: var(--accent); color: #1a1740; border-color: var(--accent); font-weight: 700; }
+  .d-toolbar .kbd { font-size: 0.7rem; color: var(--text-mute); padding: 1px 5px; border: 1px solid var(--line); border-radius: 4px; margin-left: 4px; }
+  .d-toolbar .spacer { flex: 1; }
+  .d-body { flex: 1; overflow: auto; padding: 28px 36px; }
+  .d-body h1 { margin: 0 0 8px; font-size: 1.5rem; line-height: 1.3; }
+  .d-meta { color: var(--text-mute); font-size: 0.84rem; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; }
+  .d-meta .pill { background: var(--panel); border: 1px solid var(--line); padding: 3px 9px; border-radius: 999px; }
+  .d-meta .pill.warn { background: rgba(245,158,11,0.13); color: var(--warn); border-color: rgba(245,158,11,0.3); }
+
+  .d-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 24px; }
+  .info { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 14px 16px; }
+  .info .lbl { color: var(--text-mute); font-size: 0.76rem; margin-bottom: 4px; }
+  .info .val { font-weight: 700; font-size: 1rem; }
+
+  .d-section { margin-top: 24px; }
+  .d-section h3 { margin: 0 0 10px; font-size: 0.92rem; color: var(--text-mid); }
+  .timeline { border-left: 2px solid var(--line); padding-left: 16px; }
+  .tl-item { position: relative; padding: 6px 0; }
+  .tl-item::before { content: ''; position: absolute; left: -22px; top: 12px; width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+  .tl-item .when { font-size: 0.76rem; color: var(--text-mute); }
+  .tl-item .what { font-weight: 500; }
+
+  .quick { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+  .quick button { background: var(--panel); border: 1px solid var(--line); color: var(--text-mid); padding: 6px 12px; border-radius: 6px; font-size: 0.82rem; cursor: pointer; font-family: inherit; }
+  .quick button.won { color: var(--green); border-color: rgba(16,185,129,0.4); }
+  .quick button.lost { color: var(--red); border-color: rgba(239,68,68,0.4); }
+
+  @media (max-width: 1100px) { .app { grid-template-columns: 56px 340px 1fr; } .folders { padding: 12px 6px; } .brand span:last-child, .f-item span:not(.ct), .f-section { display: none; } .f-item { justify-content: center; } }
+  @media (max-width: 760px) { .app { grid-template-columns: 1fr; } .folders, .list { display: none; } }
+</style>
+</head>
+<body>
+<div class="app">
+
+  <aside class="folders">
+    <div class="brand"><span class="brand-mark">E</span><span>EventBot</span></div>
+
+    <div class="f-section">응모</div>
+    <div class="f-item">📥 <span>받은함</span><span class="ct">42</span></div>
+    <div class="f-item active">🔥 <span>오늘마감</span><span class="ct">5</span></div>
+    <div class="f-item">⏰ <span>응모대기</span><span class="ct">23</span></div>
+    <div class="f-item">🔖 <span>임시저장</span><span class="ct">12</span></div>
+
+    <div class="f-section">결과</div>
+    <div class="f-item">📬 <span>수령함</span><span class="ct">8</span></div>
+    <div class="f-item">🏆 <span>당첨</span><span class="ct">14</span></div>
+    <div class="f-item">❌ <span>미당첨</span><span class="ct">31</span></div>
+
+    <div class="f-section">플랫폼</div>
+    <div class="f-item">📷 <span>인스타그램</span><span class="ct">18</span></div>
+    <div class="f-item">▶️ <span>유튜브</span><span class="ct">9</span></div>
+    <div class="f-item">💬 <span>카카오톡</span><span class="ct">7</span></div>
+  </aside>
+
+  <section class="list">
+    <div class="list-head"><h2>🔥 오늘마감 · 5건</h2><div class="meta">12분 전 업데이트</div></div>
+    <div class="filters">
+      <span class="filter-chip on">전체</span>
+      <span class="filter-chip">미응모</span>
+      <span class="filter-chip">고액 ↑</span>
+      <span class="filter-chip">인기 ↑</span>
+    </div>
+    <div class="rows">
+      <div class="row selected unread">
+        <div class="top"><span class="pf">📷 인스타그램</span><span class="deadline soon">오늘 23:59</span></div>
+        <div class="title">신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨</div>
+        <div class="snippet"><span class="amt">2만원</span><span>1,000명</span><span>@nongshim_kr</span></div>
+      </div>
+      <div class="row unread">
+        <div class="top"><span class="pf">▶️ 유튜브</span><span class="deadline soon">오늘 23:59</span></div>
+        <div class="title">편의점 도시락 신메뉴 댓글 이벤트</div>
+        <div class="snippet"><span class="amt">5천원</span><span>2,000명</span><span>CU공식</span></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="pf">💬 카카오톡</span><span class="deadline">내일 마감</span></div>
+        <div class="title">갤럭시 S26 사전예약 응모 — 100명 추첨</div>
+        <div class="snippet"><span class="amt">180만원</span><span>100명</span><span>삼성전자</span></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="pf">▶️ 유튜브</span><span class="deadline">5/22 마감</span></div>
+        <div class="title">스타벅스 신메뉴 시음 이벤트</div>
+        <div class="snippet"><span class="amt">3만원</span><span>500명</span><span>스타벅스코리아</span></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="pf">📷 인스타그램</span><span class="deadline">5/31 마감</span></div>
+        <div class="title">여름맞이 다이슨 에어랩 증정 이벤트</div>
+        <div class="snippet"><span class="amt">69만원</span><span>3명</span><span>@beauty_kr</span></div>
+      </div>
+      <div class="row">
+        <div class="top"><span class="pf">💬 카카오톡</span><span class="deadline">5/5 발표</span></div>
+        <div class="title">봄맞이 백화점 상품권 추첨 — 당첨됨</div>
+        <div class="snippet"><span class="amt">10만원</span><span>수령 대기</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="detail">
+    <div class="d-toolbar">
+      <button class="primary">참여하기 ↗</button>
+      <button>참여완료 <span class="kbd">E</span></button>
+      <button>임시저장 <span class="kbd">L</span></button>
+      <button>제외 <span class="kbd">⌫</span></button>
+      <div class="spacer"></div>
+      <button>↑ <span class="kbd">K</span></button>
+      <button>↓ <span class="kbd">J</span></button>
+    </div>
+    <div class="d-body">
+      <div class="d-meta">
+        <span class="pill warn">오늘 23:59 마감</span>
+        <span class="pill">인스타그램</span>
+        <span class="pill">@nongshim_kr</span>
+        <span>·</span>
+        <span>크롤링 5시간 전</span>
+      </div>
+      <h1>신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨</h1>
+
+      <div class="d-grid">
+        <div class="info"><div class="lbl">경품</div><div class="val">신라면 블랙 1박스 + 컵라면 세트</div></div>
+        <div class="info"><div class="lbl">예상 가치</div><div class="val">2만원</div></div>
+        <div class="info"><div class="lbl">당첨자 수</div><div class="val">1,000명</div></div>
+        <div class="info"><div class="lbl">예상 경쟁률</div><div class="val">중하 (1:80)</div></div>
+      </div>
+
+      <div class="d-section">
+        <h3>📅 일정</h3>
+        <div class="timeline">
+          <div class="tl-item"><div class="when">2026-05-15</div><div class="what">이벤트 게시 (크롤러 수집)</div></div>
+          <div class="tl-item"><div class="when">2026-05-18 23:59</div><div class="what">응모 마감 (오늘)</div></div>
+          <div class="tl-item"><div class="when">2026-05-25</div><div class="what">결과 발표 예정</div></div>
+        </div>
+      </div>
+
+      <div class="d-section">
+        <h3>📝 빠른 메모 / 결과 입력</h3>
+        <div class="quick">
+          <button class="won">✔ 당첨으로 표시</button>
+          <button class="lost">✘ 미당첨으로 표시</button>
+          <button>📦 수령 완료</button>
+          <button>💬 메모 추가</button>
+        </div>
+      </div>
+
+      <div class="d-section">
+        <h3>⌨ 키보드 단축키</h3>
+        <div style="color:var(--text-mute);font-size:0.84rem;line-height:1.9">
+          <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">J</kbd> / <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">K</kbd> 다음/이전 ·
+          <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">E</kbd> 참여완료 ·
+          <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">L</kbd> 임시저장 ·
+          <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">⌫</kbd> 제외 ·
+          <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">G</kbd> <kbd style="font-family:inherit;background:var(--panel);padding:2px 6px;border-radius:4px;border:1px solid var(--line)">I</kbd> 받은함으로
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

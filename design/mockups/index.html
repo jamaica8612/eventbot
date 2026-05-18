@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>EventBot 리디자인 시안 6종</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #0e1018;
+    --panel: #181b28;
+    --line: rgba(255,255,255,0.08);
+    --text: #f0f1f5;
+    --text-mid: #b9bfd0;
+    --text-mute: #7a8093;
+    --accent: #ffd24a;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', system-ui, sans-serif; padding: 48px 24px 80px; }
+  .wrap { max-width: 1200px; margin: 0 auto; }
+  header { margin-bottom: 36px; }
+  header .eyebrow { color: var(--accent); font-weight: 700; font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.08em; }
+  header h1 { margin: 6px 0 8px; font-size: 2rem; letter-spacing: -0.02em; }
+  header p { color: var(--text-mid); margin: 0; max-width: 720px; line-height: 1.6; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 18px; margin-top: 32px; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; overflow: hidden; display: flex; flex-direction: column; text-decoration: none; color: inherit; transition: transform 0.15s, box-shadow 0.15s; cursor: pointer; }
+  .card:hover { transform: translateY(-2px); box-shadow: 0 12px 30px rgba(0,0,0,0.4); border-color: var(--accent); }
+  .thumb { aspect-ratio: 16/10; display: grid; place-items: center; font-size: 3rem; position: relative; overflow: hidden; }
+  .thumb .num { position: absolute; top: 12px; left: 14px; background: rgba(0,0,0,0.4); padding: 3px 9px; border-radius: 999px; font-size: 0.78rem; font-weight: 700; backdrop-filter: blur(8px); }
+
+  .body { padding: 16px 18px 18px; }
+  .body h3 { margin: 0 0 4px; font-size: 1.05rem; }
+  .body .tag-row { display: flex; gap: 6px; flex-wrap: wrap; margin: 8px 0; }
+  .tag { font-size: 0.72rem; padding: 2px 8px; border-radius: 999px; background: rgba(255,255,255,0.06); color: var(--text-mid); }
+  .body p { color: var(--text-mid); font-size: 0.86rem; line-height: 1.55; margin: 8px 0 0; }
+  .pros { color: var(--text-mute); font-size: 0.8rem; margin-top: 10px; line-height: 1.5; }
+  .pros b { color: var(--text); }
+
+  footer { margin-top: 60px; color: var(--text-mute); font-size: 0.84rem; line-height: 1.7; border-top: 1px solid var(--line); padding-top: 24px; }
+  footer h4 { color: var(--text); margin: 0 0 8px; }
+  footer ul { padding-left: 18px; margin: 0; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div class="eyebrow">Redesign Mockups · 2026-05-18</div>
+    <h1>EventBot 전체 리디자인 시안 6종</h1>
+    <p>"택배일 중 한 손 딸깍" 초기 컨셉을 벗고 본격 이벤트 관리 도구로 진화하는 방향을 6가지 패러다임으로 풀어봤다. 각 시안을 클릭하면 새 탭에서 열린다. 하나를 선정하면 후속 PR에서 실제 React 컴포넌트로 이식한다.</p>
+  </header>
+
+  <div class="grid">
+
+    <a class="card" href="01-dashboard.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#181d2b,#272f48)">
+        <span class="num">01</span>📊
+      </div>
+      <div class="body">
+        <h3>대시보드 중심</h3>
+        <div class="tag-row"><span class="tag">PC 우선</span><span class="tag">통계 친화</span><span class="tag">3컬럼</span></div>
+        <p>좌측 네비 + 상단 KPI(누적상금/당첨률/오늘마감/미수령) + 차트 + 일정 사이드바.</p>
+        <div class="pros"><b>강점</b> 한눈에 현황 파악, 데이터 의사결정 · <b>약점</b> 행동(응모) 자체는 보조적</div>
+      </div>
+    </a>
+
+    <a class="card" href="02-inbox-triage.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#1a1f3a,#3b3a72)">
+        <span class="num">02</span>📥
+      </div>
+      <div class="body">
+        <h3>인박스 트리아지</h3>
+        <div class="tag-row"><span class="tag">Gmail/Linear 스타일</span><span class="tag">키보드</span><span class="tag">3패널</span></div>
+        <p>좌측 폴더 + 중앙 컴팩트 리스트 + 우측 디테일. J/K 이동, E/L 액션. 처리 속도 최우선.</p>
+        <div class="pros"><b>강점</b> 빠른 처리·컨텍스트 유지 · <b>약점</b> 초보 사용자에게 단축키 학습 비용</div>
+      </div>
+    </a>
+
+    <a class="card" href="03-kanban.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#0d4d3a,#1a8866)">
+        <span class="num">03</span>🗂
+      </div>
+      <div class="body">
+        <h3>칸반 보드</h3>
+        <div class="tag-row"><span class="tag">라이트</span><span class="tag">DnD</span><span class="tag">워크플로우</span></div>
+        <p>응모대기 → 임시저장 → 참여완료 → 당첨 → 미당첨 컬럼. 드래그앤드롭으로 상태 변경.</p>
+        <div class="pros"><b>강점</b> 단계 직관, 진행감 · <b>약점</b> 모바일 약함, 항목 많아지면 세로 스크롤 부담</div>
+      </div>
+    </a>
+
+    <a class="card" href="04-magazine.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#1a0a10,#ff3d57)">
+        <span class="num">04</span>📰
+      </div>
+      <div class="body">
+        <h3>매거진 / 카드 그리드</h3>
+        <div class="tag-row"><span class="tag">라이트</span><span class="tag">메이슨리</span><span class="tag">이미지 강조</span></div>
+        <p>Pinterest 스타일 비대칭 그리드. 플랫폼 아이콘과 경품 이미지로 시각적 매력 극대화.</p>
+        <div class="pros"><b>강점</b> 발견·브라우징, 첫인상 좋음 · <b>약점</b> 정보 밀도 낮고 데이터 작업에 약함</div>
+      </div>
+    </a>
+
+    <a class="card" href="05-data-table.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#0d1b3a,#2563eb)">
+        <span class="num">05</span>📋
+      </div>
+      <div class="body">
+        <h3>밀도형 데이터 테이블</h3>
+        <div class="tag-row"><span class="tag">라이트</span><span class="tag">Airtable</span><span class="tag">인라인 편집</span></div>
+        <p>정렬·필터·그루핑 강력. 한 화면 25행+, 셀 인라인 편집. 분석·정리 흐름 최적.</p>
+        <div class="pros"><b>강점</b> 정보 밀도 최강, 일괄 작업 · <b>약점</b> 시각적 매력↓, 모바일 호환 어려움</div>
+      </div>
+    </a>
+
+    <a class="card" href="06-mobile-modern.html" target="_blank">
+      <div class="thumb" style="background:linear-gradient(135deg,#0a1f17,#3ddc97)">
+        <span class="num">06</span>📱
+      </div>
+      <div class="body">
+        <h3>모바일 모던</h3>
+        <div class="tag-row"><span class="tag">다크</span><span class="tag">바텀시트</span><span class="tag">3화면</span></div>
+        <p>Toss/Linear 모바일 스타일. 홈 + 바텀시트 디테일 + 수령함 3개 화면. 큰 터치 타겟, 스와이프 액션.</p>
+        <div class="pros"><b>강점</b> 모바일 일등급, 익숙한 UX · <b>약점</b> PC 활용도 낮음, 정보 밀도 중하</div>
+      </div>
+    </a>
+
+  </div>
+
+  <footer>
+    <h4>비교 포인트</h4>
+    <ul>
+      <li><b>주 사용 환경</b>이 PC면 01·05, 데스크탑+모바일 균형은 02·03, 모바일 우선은 06, 발견 중심은 04</li>
+      <li><b>핵심 사용자 행동</b>이 빠른 처리 → 02, 진행 추적 → 03, 분석 → 05, 발견 → 04</li>
+      <li><b>구현 비용</b> (대략): 04 ≤ 06 ≤ 01 < 03 < 02 < 05 (DnD/스프레드시트형이 비싸다)</li>
+    </ul>
+    <p>각 HTML은 self-contained — 외부 의존성은 Pretendard CDN과 picsum 이미지뿐. 시안 선정 후 토큰/레이아웃을 styles.css 베이스에 통합한다.</p>
+  </footer>
+
+</div>
+</body>
+</html>

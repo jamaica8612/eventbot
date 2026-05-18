@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>시안 05 · 데이터 테이블 — EventBot</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/static/pretendard.min.css" />
+<style>
+  :root {
+    --bg: #ffffff;
+    --panel: #fafbfc;
+    --hover: #f3f5f7;
+    --line: #e6e8ed;
+    --line-strong: #d4d7dd;
+    --text: #1f2433;
+    --text-mid: #555c6e;
+    --text-mute: #8b93a5;
+    --accent: #2563eb;
+    --accent-soft: #dbeafe;
+    --green: #15803d;
+    --green-soft: #dcfce7;
+    --red: #b91c1c;
+    --red-soft: #fee2e2;
+    --amber: #b45309;
+    --amber-soft: #fef3c7;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--text); font-family: 'Pretendard', system-ui, sans-serif; font-size: 13px; }
+
+  .top { display: flex; align-items: center; gap: 14px; padding: 10px 16px; border-bottom: 1px solid var(--line); height: 48px; }
+  .brand { font-weight: 800; font-size: 0.92rem; display: flex; align-items: center; gap: 6px; }
+  .brand-mark { width: 22px; height: 22px; background: var(--accent); border-radius: 5px; display: grid; place-items: center; color: white; font-weight: 900; font-size: 0.75rem; }
+  .crumbs { color: var(--text-mute); font-size: 0.84rem; }
+  .crumbs span { color: var(--text); font-weight: 600; }
+  .top .spacer { flex: 1; }
+  .icon-btn { width: 28px; height: 28px; border-radius: 5px; display: grid; place-items: center; color: var(--text-mid); cursor: pointer; }
+  .icon-btn:hover { background: var(--hover); }
+
+  /* View tabs (like Airtable) */
+  .views { display: flex; align-items: center; gap: 2px; padding: 6px 12px; border-bottom: 1px solid var(--line); background: var(--panel); }
+  .view-tab { padding: 4px 10px; border-radius: 5px; font-size: 0.82rem; color: var(--text-mid); cursor: pointer; display: inline-flex; align-items: center; gap: 5px; }
+  .view-tab:hover { background: var(--hover); }
+  .view-tab.active { background: white; color: var(--text); font-weight: 600; box-shadow: 0 0 0 1px var(--line); }
+  .views .spacer { flex: 1; }
+
+  /* Toolbar */
+  .toolbar { display: flex; align-items: center; gap: 4px; padding: 6px 12px; border-bottom: 1px solid var(--line); flex-wrap: wrap; }
+  .tb-btn { display: inline-flex; align-items: center; gap: 5px; padding: 4px 9px; border-radius: 5px; font-size: 0.82rem; color: var(--text-mid); cursor: pointer; background: transparent; border: 0; font-family: inherit; }
+  .tb-btn:hover { background: var(--hover); }
+  .tb-btn.on { background: var(--accent-soft); color: var(--accent); }
+  .tb-divider { width: 1px; height: 16px; background: var(--line); margin: 0 4px; }
+  .toolbar .spacer { flex: 1; }
+  .search-box { padding: 4px 10px; background: var(--panel); border: 1px solid var(--line); border-radius: 5px; font-size: 0.82rem; width: 200px; }
+
+  /* Filter pills */
+  .filter-bar { padding: 6px 12px; border-bottom: 1px solid var(--line); background: #fcfaf0; display: flex; gap: 6px; align-items: center; font-size: 0.8rem; }
+  .filter-pill { background: white; border: 1px solid var(--line-strong); padding: 3px 8px; border-radius: 4px; display: inline-flex; align-items: center; gap: 6px; }
+  .filter-pill .x { color: var(--text-mute); cursor: pointer; }
+
+  /* Table */
+  .grid-wrap { overflow: auto; max-height: calc(100vh - 230px); }
+  table { border-collapse: collapse; width: 100%; min-width: 1400px; font-size: 0.84rem; }
+  th, td { border-right: 1px solid var(--line); border-bottom: 1px solid var(--line); padding: 6px 10px; text-align: left; vertical-align: middle; }
+  thead th { background: var(--panel); position: sticky; top: 0; font-weight: 600; color: var(--text-mid); font-size: 0.76rem; text-transform: uppercase; letter-spacing: 0.04em; z-index: 1; }
+  thead th .sort { color: var(--text-mute); margin-left: 4px; }
+  tbody tr:hover { background: var(--hover); }
+  tbody tr.selected { background: var(--accent-soft); }
+  td.col-check, th.col-check { width: 32px; text-align: center; }
+  td.num { text-align: right; font-variant-numeric: tabular-nums; font-weight: 600; }
+  td.col-title { font-weight: 500; max-width: 360px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  tr.group-row { background: #f0f3f7; }
+  tr.group-row td { font-weight: 700; color: var(--text-mid); padding: 5px 10px; font-size: 0.78rem; }
+
+  .tag { display: inline-flex; align-items: center; gap: 4px; padding: 1px 7px; border-radius: 4px; font-size: 0.74rem; font-weight: 600; }
+  .tag.ready { background: var(--accent-soft); color: var(--accent); }
+  .tag.later { background: var(--amber-soft); color: var(--amber); }
+  .tag.done  { background: #e5e7eb; color: #374151; }
+  .tag.won   { background: var(--green-soft); color: var(--green); }
+  .tag.lost  { background: var(--red-soft); color: var(--red); }
+  .tag.unclaimed { background: #fff7ed; color: #c2410c; border: 1px dashed #fdba74; }
+  .tag.received  { background: var(--green-soft); color: var(--green); }
+  .pf { font-size: 0.74rem; color: var(--text-mid); }
+  .deadline.today { color: var(--red); font-weight: 700; }
+  .deadline.soon  { color: var(--amber); font-weight: 600; }
+
+  td.editable { background: white; }
+  td.editable:focus, td.editable:hover { outline: 2px solid var(--accent); outline-offset: -2px; background: white; }
+
+  /* Status bar */
+  .status-bar { border-top: 1px solid var(--line); padding: 6px 16px; font-size: 0.78rem; color: var(--text-mute); display: flex; gap: 20px; background: var(--panel); }
+  .status-bar b { color: var(--text); font-variant-numeric: tabular-nums; }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <div class="brand"><span class="brand-mark">E</span> EventBot</div>
+  <div class="crumbs">워크스페이스 / 이벤트 / <span>모든 이벤트</span></div>
+  <div class="spacer"></div>
+  <div class="icon-btn">🔍</div>
+  <div class="icon-btn">↩</div>
+  <div class="icon-btn">⚙</div>
+</div>
+
+<div class="views">
+  <div class="view-tab active">📋 모든 이벤트</div>
+  <div class="view-tab">🔥 오늘마감</div>
+  <div class="view-tab">📥 수령함</div>
+  <div class="view-tab">🏆 당첨만</div>
+  <div class="view-tab">📊 플랫폼별 그루핑</div>
+  <div class="view-tab">+ 뷰 추가</div>
+  <div class="spacer"></div>
+  <div class="icon-btn">↗ 내보내기</div>
+</div>
+
+<div class="toolbar">
+  <button class="tb-btn">⇕ 정렬 <span style="color:var(--text-mute)">마감일 ↑</span></button>
+  <button class="tb-btn on">▼ 필터 <span>2</span></button>
+  <button class="tb-btn">⊞ 그룹 <span style="color:var(--text-mute)">플랫폼</span></button>
+  <button class="tb-btn">👁 보이기</button>
+  <div class="tb-divider"></div>
+  <button class="tb-btn">+ 새 이벤트</button>
+  <button class="tb-btn">📥 일괄 가져오기</button>
+  <div class="spacer"></div>
+  <input class="search-box" placeholder="제목/경품 검색..." />
+</div>
+
+<div class="filter-bar">
+  <span style="color:var(--text-mute)">필터:</span>
+  <span class="filter-pill"><b>상태</b> = ready, done <span class="x">✕</span></span>
+  <span class="filter-pill"><b>마감일</b> ≥ 오늘 <span class="x">✕</span></span>
+  <span style="color:var(--text-mute);margin-left:4px">+ 필터 추가</span>
+</div>
+
+<div class="grid-wrap">
+<table>
+  <thead>
+    <tr>
+      <th class="col-check"><input type="checkbox" /></th>
+      <th>플랫폼</th>
+      <th>이벤트 제목 <span class="sort">↕</span></th>
+      <th>마감 <span class="sort">↑</span></th>
+      <th>경품</th>
+      <th class="num">금액 <span class="sort">↕</span></th>
+      <th class="num">당첨자 <span class="sort">↕</span></th>
+      <th>상태</th>
+      <th>결과</th>
+      <th>수령</th>
+      <th>참여일</th>
+      <th>메모</th>
+    </tr>
+  </thead>
+  <tbody>
+
+    <tr class="group-row"><td colspan="12">▼ 📷 인스타그램 · 3건 · 합 71만원</td></tr>
+    <tr class="selected">
+      <td class="col-check"><input type="checkbox" checked /></td>
+      <td><span class="pf">📷 인스타그램</span></td>
+      <td class="col-title">신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨</td>
+      <td><span class="deadline today">오늘 23:59</span></td>
+      <td class="editable">신라면 블랙 1박스</td>
+      <td class="num editable">20,000</td>
+      <td class="num">1,000</td>
+      <td><span class="tag ready">대기</span></td>
+      <td><span class="tag">·</span></td>
+      <td>—</td>
+      <td>—</td>
+      <td class="editable" style="color:var(--text-mute)">—</td>
+    </tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">📷 인스타그램</span></td>
+      <td class="col-title">여름맞이 다이슨 에어랩 증정 이벤트</td>
+      <td><span class="deadline">5/31</span></td>
+      <td class="editable">다이슨 에어랩 컴플리트</td>
+      <td class="num editable">690,000</td>
+      <td class="num">3</td>
+      <td><span class="tag later">임시</span></td>
+      <td><span class="tag">·</span></td>
+      <td>—</td>
+      <td>—</td>
+      <td class="editable" style="color:var(--text-mute)">—</td>
+    </tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">📷 인스타그램</span></td>
+      <td class="col-title">러닝화 신제품 체험단 모집</td>
+      <td><span class="deadline">4/20 종료</span></td>
+      <td class="editable">나이키 페가수스 41</td>
+      <td class="num editable">160,000</td>
+      <td class="num">30</td>
+      <td><span class="tag done">완료</span></td>
+      <td><span class="tag lost">미당첨</span></td>
+      <td>—</td>
+      <td>4/15</td>
+      <td class="editable" style="color:var(--text-mute)">—</td>
+    </tr>
+
+    <tr class="group-row"><td colspan="12">▼ ▶️ 유튜브 · 2건 · 합 3.5만원</td></tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">▶️ 유튜브</span></td>
+      <td class="col-title">편의점 도시락 신메뉴 댓글 이벤트</td>
+      <td><span class="deadline today">오늘 23:59</span></td>
+      <td class="editable">CU 모바일 상품권</td>
+      <td class="num editable">5,000</td>
+      <td class="num">2,000</td>
+      <td><span class="tag ready">대기</span></td>
+      <td><span class="tag">·</span></td>
+      <td>—</td>
+      <td>—</td>
+      <td class="editable" style="color:var(--text-mute)">—</td>
+    </tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">▶️ 유튜브</span></td>
+      <td class="col-title">스타벅스 신메뉴 시음 이벤트</td>
+      <td><span class="deadline soon">5/22</span></td>
+      <td class="editable">스타벅스 e-기프트카드 3만원권</td>
+      <td class="num editable">30,000</td>
+      <td class="num">500</td>
+      <td><span class="tag ready">대기</span></td>
+      <td><span class="tag">·</span></td>
+      <td>—</td>
+      <td>—</td>
+      <td class="editable" style="color:var(--text-mute)">—</td>
+    </tr>
+
+    <tr class="group-row"><td colspan="12">▼ 💬 카카오톡 · 2건 · 합 190만원</td></tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">💬 카카오톡</span></td>
+      <td class="col-title">갤럭시 S26 사전예약 응모 — 100명 추첨</td>
+      <td><span class="deadline soon">내일</span></td>
+      <td class="editable">갤럭시 S26 Ultra 256GB</td>
+      <td class="num editable">1,800,000</td>
+      <td class="num">100</td>
+      <td><span class="tag ready">대기</span></td>
+      <td><span class="tag">·</span></td>
+      <td>—</td>
+      <td>—</td>
+      <td class="editable" style="color:var(--text-mute)">— 고액, 우선 응모</td>
+    </tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">💬 카카오톡</span></td>
+      <td class="col-title">봄맞이 백화점 상품권 추첨</td>
+      <td><span class="deadline">5/5 종료</span></td>
+      <td class="editable">신세계 상품권 10만원권</td>
+      <td class="num editable">100,000</td>
+      <td class="num">50</td>
+      <td><span class="tag done">완료</span></td>
+      <td><span class="tag won">당첨</span></td>
+      <td><span class="tag unclaimed">미수령</span></td>
+      <td>5/3</td>
+      <td class="editable" style="color:var(--text-mute)">오늘 발표, 수령 확인</td>
+    </tr>
+
+    <tr class="group-row"><td colspan="12">▼ 🍎 기타 · 1건 · 합 299만원</td></tr>
+    <tr>
+      <td class="col-check"><input type="checkbox" /></td>
+      <td><span class="pf">🍎 기타</span></td>
+      <td class="col-title">맥북 프로 M5 출시기념 응모 이벤트</td>
+      <td><span class="deadline">4/30 종료</span></td>
+      <td class="editable">맥북 프로 14인치 M5</td>
+      <td class="num editable">2,990,000</td>
+      <td class="num">5</td>
+      <td><span class="tag done">완료</span></td>
+      <td><span class="tag won">당첨</span></td>
+      <td><span class="tag received">수령</span></td>
+      <td>4/28</td>
+      <td class="editable">5/12 수령, 시리얼 C02XX</td>
+    </tr>
+
+  </tbody>
+</table>
+</div>
+
+<div class="status-bar">
+  <span>총 <b>8</b>건</span>
+  <span>선택 <b>1</b>건</span>
+  <span>합산 금액 <b>5,795,000원</b></span>
+  <span>당첨 <b>2</b>건 (25.0%)</span>
+  <span>미수령 <b>1</b>건</span>
+  <span style="margin-left:auto;color:var(--text-mute)">↻ 12분 전 동기화</span>
+</div>
+
+</body>
+</html>
