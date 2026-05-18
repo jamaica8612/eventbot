@@ -2,7 +2,7 @@ import './EventDetailContent.css';
 import { useState } from 'react';
 import {
   buildUserContentLines, hasCrawledBody,
-  buildYoutubeLinks, normalizeSavedYoutubeContext,
+  buildYoutubeLinks, extractYoutubeVideoId, normalizeSavedYoutubeContext,
   fetchYoutubeContextPayload, persistYoutubeContext,
   buildYoutubeCommentMaterialText, copyTextToClipboard,
   YOUTUBE_CONTEXT_TIMEOUT_MS, YOUTUBE_INFO_TIMEOUT_MS,
@@ -29,8 +29,11 @@ export function EventDetailContent({ event }) {
   const [areCandidatesVisible, setAreCandidatesVisible] = useState(true);
   const [manualCopyText, setManualCopyText] = useState('');
 
+  const [embedOpen, setEmbedOpen] = useState(false);
+
   const lines = (buildUserContentLines(event) ?? []).slice(0, 24);
   const youtubeLink = buildYoutubeLinks(event)[0];
+  const youtubeVideoId = youtubeLink ? extractYoutubeVideoId(youtubeLink) : '';
   const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
   const originalHref = event.originalUrl ?? event.url;
@@ -173,8 +176,24 @@ export function EventDetailContent({ event }) {
                 ? '댓글 생성 중…'
                 : hasCommentCandidates ? '댓글 보기' : '댓글 만들기'}
             </Button>
+            {youtubeVideoId && (
+              <Button variant="ghost" size="sm" onClick={() => setEmbedOpen((v) => !v)}>
+                {embedOpen ? '◾ 영상 접기' : '▶ 영상 보기'}
+              </Button>
+            )}
           </Inline>
           {transcriptError && <p className="v2-evdetail__error">{transcriptError}</p>}
+          {embedOpen && youtubeVideoId && (
+            <div className="v2-evdetail__embed">
+              <iframe
+                src={`https://www.youtube.com/embed/${youtubeVideoId}?rel=0`}
+                title="YouTube preview"
+                allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                loading="lazy"
+              />
+            </div>
+          )}
         </section>
       )}
 
