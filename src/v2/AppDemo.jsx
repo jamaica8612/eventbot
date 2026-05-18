@@ -4,7 +4,7 @@ import {
   AppShell, SideNav, TopBar, ListPanel, DetailPanel, BottomNav, useEscape,
 } from './shell/AppShell.jsx';
 import {
-  Button, IconButton, Tag, Pill, Inline, Stack, Divider,
+  Button, IconButton, Tag, Pill, Inline, Stack, Divider, Input,
 } from './components/primitives.jsx';
 import { EventCard } from './components/EventCard.jsx';
 import { EventDetailContent } from './components/EventDetailContent.jsx';
@@ -253,6 +253,7 @@ export default function AppDemo() {
   const [selectedView, setSelectedView] = useState('today');
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [pillId, setPillId] = useState('all');
+  const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState('e1');
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
@@ -266,8 +267,10 @@ export default function AppDemo() {
     const pill = PILLS.find((p) => p.id === pillId);
     if (pill?.filter) list = list.filter(pill.filter);
     if (pill?.sort)   list = [...list].sort(pill.sort);
+    const q = query.trim().toLowerCase();
+    if (q) list = list.filter((e) => matchesQuery(e, q));
     return list;
-  }, [events, selectedView, selectedPlatform, pillId]);
+  }, [events, selectedView, selectedPlatform, pillId, query]);
 
   // 선택된 이벤트가 현재 보이지 않으면 첫 항목으로 자동 이동
   const effectiveSelected = useMemo(() => {
@@ -284,6 +287,7 @@ export default function AppDemo() {
     setSelectedView(viewId);
     setSelectedPlatform(null);
     setPillId('all');
+    setQuery('');
   };
 
   /* -------- 액션: 상태 변경 + 다음 카드로 자동 이동 + Undo 토스트 -------- */
@@ -414,13 +418,31 @@ export default function AppDemo() {
       }/>
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
+        <div style={{ position: 'relative', marginBottom: 'var(--sp-3)' }}>
+          <span style={{ position: 'absolute', left: 14, top: '50%', transform: 'translateY(-50%)', color: 'var(--c-text-faint)', pointerEvents: 'none' }}>🔎</span>
+          <Input
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="제목 / 본문 / 경품 / 출처 검색…"
+            style={{ paddingLeft: 38, paddingRight: query ? 36 : 16 }}
+          />
+          {query && (
+            <button
+              type="button"
+              aria-label="검색어 지우기"
+              onClick={() => setQuery('')}
+              className="v2-icon-btn v2-icon-btn--sm"
+              style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)' }}
+            >✕</button>
+          )}
+        </div>
         <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
           {PILLS.map((p) => (
             <Pill key={p.id} on={pillId === p.id} onClick={() => setPillId(p.id)}>{p.label}</Pill>
           ))}
         </Inline>
         {visibleEvents.length === 0 ? (
-          <EmptyState view={viewMeta.title} />
+          <EmptyState view={viewMeta.title} query={query} />
         ) : (
           <Stack size="sm">
             {visibleEvents.map((event) => (
@@ -562,7 +584,21 @@ function viewItem(id, counts, selectedView, onChange) {
   };
 }
 
-function EmptyState({ view }) {
+function matchesQuery(event, q) {
+  if (!q) return true;
+  const haystack = [
+    event.title,
+    event.platform,
+    event.source,
+    event.prizeText,
+    event.prizeTitle,
+    event.prizeAmount,
+    ...(event.originalLines ?? []),
+  ].filter(Boolean).join(' ').toLowerCase();
+  return haystack.includes(q);
+}
+
+function EmptyState({ view, query }) {
   return (
     <div style={{
       padding: 'var(--sp-7) var(--sp-4)',
@@ -571,7 +607,9 @@ function EmptyState({ view }) {
       fontSize: 'var(--fs-sm)',
     }}>
       <div style={{ fontSize: 32, marginBottom: 'var(--sp-2)' }}>·</div>
-      <div>{view}에 해당하는 이벤트가 없어요</div>
+      {query
+        ? <div>"<b style={{ color: 'var(--c-text-mid)' }}>{query}</b>"에 일치하는 이벤트가 없어요</div>
+        : <div>{view}에 해당하는 이벤트가 없어요</div>}
     </div>
   );
 }
