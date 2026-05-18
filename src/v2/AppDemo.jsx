@@ -12,7 +12,8 @@ import { PlatformChip } from './components/PlatformChip.jsx';
 import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
-import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches, loadUiState, saveUiState } from './lib/eventStore.js';
+import { NewEventDialog } from './components/NewEventDialog.jsx';
+import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches, loadUiState, saveUiState, loadCreated, saveCreated } from './lib/eventStore.js';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
 import { getStoredTheme, setStoredTheme, applyTheme } from './lib/theme.js';
 
@@ -263,15 +264,32 @@ const BNAV_TO_VIEW = {
    AppDemo
    ============================================================ */
 export default function AppDemo() {
-  const [events, setEvents] = useState(() =>
-    mergeSeedsWithPatches(MOCK_EVENTS, loadPatches()),
-  );
+  const [events, setEvents] = useState(() => {
+    const patches = loadPatches();
+    const created = loadCreated();
+    // 시드 + 시드패치 + 사용자생성(전체 저장)
+    return [...mergeSeedsWithPatches(MOCK_EVENTS, patches), ...created];
+  });
 
-  /* events 변경 시 patches만 추출해 localStorage 저장 */
+  /* events 변경 시 — 시드 변경만 patches로, 사용자 생성은 통째로 저장 */
   useEffect(() => {
-    const patches = diffToPatches(MOCK_EVENTS, events);
-    savePatches(patches);
+    const seedIds = new Set(MOCK_EVENTS.map((s) => s.id));
+    const seedView   = events.filter((e) => seedIds.has(e.id));
+    const created    = events.filter((e) => !seedIds.has(e.id));
+    savePatches(diffToPatches(MOCK_EVENTS, seedView));
+    saveCreated(created);
   }, [events]);
+
+  const [newOpen, setNewOpen] = useState(false);
+  const handleAddEvent = (newEvent) => {
+    setEvents((cur) => [newEvent, ...cur]);
+    setNewOpen(false);
+    setSelectedId(newEvent.id);
+    setSelectedView('inbox');
+    setSelectedPlatform(null);
+    setPillId('all');
+    setSortId('default');
+  };
   const initialUi = useMemo(() => loadUiState(), []);
   const [selectedView, setSelectedView] = useState(initialUi.view || 'today');
   const [selectedPlatform, setSelectedPlatform] = useState(initialUi.platform || null);
@@ -284,7 +302,7 @@ export default function AppDemo() {
   const [helpOpen, setHelpOpen] = useState(false);
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState(() => getStoredTheme());
-  useEscape(() => { setSheetOpen(false); setHelpOpen(false); setDrawerOpen(false); });
+  useEscape(() => { setSheetOpen(false); setHelpOpen(false); setDrawerOpen(false); setNewOpen(false); });
 
   useEffect(() => {
     applyTheme(theme);
@@ -444,9 +462,9 @@ export default function AppDemo() {
   ], [selectedView, selectedPlatform, counts]);
 
   const handleResetPatches = () => {
-    if (!window.confirm('저장된 상태(액션·결과·메모 등)를 초기화할까요? 시드 데이터로 돌아갑니다.')) return;
+    if (!window.confirm('저장된 상태(액션·결과·메모)를 초기화할까요? 직접 추가한 이벤트는 유지됩니다.')) return;
     clearPatches();
-    setEvents(MOCK_EVENTS);
+    setEvents([...MOCK_EVENTS, ...loadCreated()]);
     setToast(null);
   };
 
@@ -476,6 +494,7 @@ export default function AppDemo() {
         }
         actions={
           <>
+            <IconButton aria-label="새 이벤트 추가" onClick={() => setNewOpen(true)} title="새 이벤트">＋</IconButton>
             <IconButton aria-label="새로고침">↻</IconButton>
             <IconButton aria-label="필터">⚙</IconButton>
           </>
@@ -630,7 +649,7 @@ export default function AppDemo() {
   ];
 
   const bottomNav = (
-    <BottomNav items={bnavItems} fab={{ icon: '＋', label: '새 이벤트', onClick: () => {} }}/>
+    <BottomNav items={bnavItems} fab={{ icon: '＋', label: '새 이벤트', onClick: () => setNewOpen(true) }}/>
   );
 
   const sheet = sheetOpen && (
@@ -690,6 +709,7 @@ export default function AppDemo() {
       />
       {toast && <ActionToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} />}
       <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <NewEventDialog open={newOpen} onClose={() => setNewOpen(false)} onSubmit={handleAddEvent} />
     </>
   );
 }

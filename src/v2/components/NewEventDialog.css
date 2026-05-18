@@ -1,0 +1,76 @@
+.v2-ned-overlay {
+  position: fixed; inset: 0;
+  z-index: var(--z-modal);
+  background: rgba(0,0,0,0.7);
+  backdrop-filter: blur(6px);
+  display: grid; place-items: center;
+  padding: var(--sp-4);
+  animation: v2-fade var(--dur-base) var(--ease-out);
+}
+.v2-ned {
+  background: var(--c-surface);
+  border: 1px solid var(--c-line-strong);
+  border-radius: var(--r-xl);
+  width: min(520px, 100%);
+  max-height: 88vh;
+  overflow: auto;
+  padding: var(--sp-6);
+  box-shadow: var(--shadow-lg);
+}
+.v2-ned__head {
+  display: flex; justify-content: space-between; align-items: baseline;
+  margin-bottom: var(--sp-5);
+}
+.v2-ned__head h2 { margin: 0; font-size: var(--fs-xl); font-weight: var(--fw-bold); }
+.v2-ned__field {
+  display: flex; flex-direction: column; gap: 4px;
+  margin-bottom: var(--sp-4);
+}
+.v2-ned__field-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: var(--sp-3);
+}
+.v2-ned__lbl {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+  font-weight: var(--fw-semibold);
+}
+.v2-ned__lbl .req { color: var(--c-danger); margin-left: 2px; }
+.v2-ned__seg {
+  display: inline-flex; gap: 4px;
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 2px;
+}
+.v2-ned__seg button {
+  background: transparent; color: var(--c-text-mid); border: 0;
+  padding: 6px 10px;
+  font-size: var(--fs-sm); font-weight: var(--fw-semibold);
+  border-radius: var(--r-sm); cursor: pointer; font-family: inherit;
+}
+.v2-ned__seg button.on {
+  background: var(--c-brand); color: var(--c-brand-on);
+}
+.v2-ned__actions {
+  display: flex; gap: var(--sp-2); justify-content: flex-end;
+  margin-top: var(--sp-5);
+  padding-top: var(--sp-3);
+  border-top: 1px solid var(--c-line);
+}
+.v2-ned textarea {
+  min-height: 80px;
+  padding: var(--sp-3);
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  color: var(--c-text);
+  font-family: inherit;
+  font-size: var(--fs-sm);
+  line-height: var(--lh-normal);
+  resize: vertical;
+}
+.v2-ned textarea:focus {
+  outline: none;
+  border-color: var(--c-brand);
+  box-shadow: var(--shadow-focus);
+}

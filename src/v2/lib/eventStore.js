@@ -22,6 +22,20 @@ export function saveUiState(state) {
   try { localStorage.setItem(UI_KEY, JSON.stringify(state)); } catch {}
 }
 
+/* 사용자가 직접 추가한 이벤트들 */
+const CREATED_KEY = 'eventbot.v2.created.v1';
+export function loadCreated() {
+  try {
+    const raw = localStorage.getItem(CREATED_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed : [];
+  } catch { return []; }
+}
+export function saveCreated(list) {
+  try { localStorage.setItem(CREATED_KEY, JSON.stringify(list)); } catch {}
+}
+
 /* 저장 대상 필드 — 액션이나 ResultEntry로 사용자가 바꾸는 것들만 */
 const PATCHABLE_KEYS = [
   'status', 'resultStatus', 'receiptStatus',
