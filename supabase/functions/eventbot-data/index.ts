@@ -84,6 +84,10 @@ Deno.serve(async (request) => {
         await updateEventDetails(String(body.eventId ?? ''), body.patch ?? {});
         return json({ ok: true });
       }
+      if (body.action === 'createEvent') {
+        const created = await createUserEvent(auth.user, body.event ?? {});
+        return json({ event: created });
+      }
       if (body.action === 'saveFilterSettings') {
         await saveSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id), body.settings ?? {});
         return json({ ok: true });
@@ -273,6 +277,74 @@ async function updateEventDetails(eventId: string, patch: Record<string, unknown
     headers: { Prefer: 'return=minimal' },
     body: JSON.stringify(rowPatch),
   });
+}
+
+async function createUserEvent(user: AuthUser, input: Record<string, unknown>) {
+  const title = typeof input.title === 'string' ? input.title.trim() : '';
+  if (!title) throw new HttpError('Title is required.', 400);
+  if (title.length > 240) throw new HttpError('Title is too long.', 400);
+
+  const sourceEventId = crypto.randomUUID();
+  const applyUrl = typeof input.applyUrl === 'string' ? input.applyUrl.trim() : '';
+  const url = applyUrl || `local://user/${sourceEventId}`;
+  const platformRaw = typeof input.platform === 'string' ? input.platform.trim() : '';
+  const platform = platformRaw || 'event';
+
+  const deadlineDate =
+    typeof input.deadlineDate === 'string' && input.deadlineDate ? input.deadlineDate : null;
+  const deadlineTextInput = typeof input.deadlineText === 'string' ? input.deadlineText.trim() : '';
+  const deadlineText = deadlineTextInput || deadlineDate || '상세 확인 필요';
+
+  const prizeText = typeof input.prizeText === 'string' ? input.prizeText.trim() : '';
+  const prizeAmountRaw = input.prizeAmount;
+  let prizeAmount: number | null = null;
+  if (typeof prizeAmountRaw === 'number' && Number.isFinite(prizeAmountRaw)) {
+    prizeAmount = prizeAmountRaw;
+  } else if (typeof prizeAmountRaw === 'string') {
+    const parsed = Number.parseInt(prizeAmountRaw.replace(/[^\d]/g, ''), 10);
+    prizeAmount = Number.isFinite(parsed) ? parsed : null;
+  } else if (typeof input.prizeAmountValue === 'number' && Number.isFinite(input.prizeAmountValue)) {
+    prizeAmount = input.prizeAmountValue;
+  }
+
+  const rawInput = isPlainObject(input.raw) ? input.raw : {};
+  const raw = {
+    ...rawInput,
+    originalLines: Array.isArray(input.originalLines) ? input.originalLines : undefined,
+    totalWinnerCount: input.totalWinnerCount ?? undefined,
+    userCreated: true,
+    createdBy: user.id,
+  };
+
+  const row = {
+    source_site: 'user',
+    source_name: typeof input.source === 'string' && input.source.trim() ? input.source.trim() : '직접 추가',
+    source_event_id: sourceEventId,
+    title,
+    url,
+    apply_url: applyUrl || null,
+    platform,
+    due_text: deadlineText,
+    deadline_text: deadlineText,
+    deadline_date: deadlineDate,
+    prize_text: prizeText || null,
+    prize_title: prizeText || null,
+    prize_amount: prizeAmount,
+    effort: 'quick',
+    status: 'ready',
+    result_status: 'unknown',
+    raw,
+  };
+
+  const inserted = await restFetch('/rest/v1/events', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify(row),
+  });
+  if (Array.isArray(inserted) && inserted[0]) {
+    return mergeEventState(inserted[0]);
+  }
+  throw new Error('Could not create event.');
 }
 
 async function loadSetting(key: string) {

@@ -274,18 +274,19 @@ export default function AppDemo() {
   } = useDataSource(MOCK_EVENTS);
 
   const [newOpen, setNewOpen] = useState(false);
-  const handleAddEvent = (newEvent) => {
-    if (mode === 'live') {
-      alert('실데이터 모드에선 아직 새 이벤트 추가가 지원되지 않습니다. (크롤러 전용)');
-      return;
+  const handleAddEvent = async (newEvent) => {
+    try {
+      const created = await addEvent(newEvent);
+      const target = created || newEvent;
+      setNewOpen(false);
+      setSelectedId(target.id);
+      setSelectedView('inbox');
+      setSelectedPlatform(null);
+      setPillId('all');
+      setSortId('default');
+    } catch (err) {
+      alert(err?.message || '새 이벤트 추가에 실패했습니다.');
     }
-    addEvent(newEvent);
-    setNewOpen(false);
-    setSelectedId(newEvent.id);
-    setSelectedView('inbox');
-    setSelectedPlatform(null);
-    setPillId('all');
-    setSortId('default');
   };
   const initialUi = useMemo(() => loadUiState(), []);
   const [selectedView, setSelectedView] = useState(initialUi.view || 'today');

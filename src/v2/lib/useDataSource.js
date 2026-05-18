@@ -6,7 +6,7 @@
    ============================================================ */
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  loadSupabaseEvents, updateSupabaseEventState,
+  loadSupabaseEvents, updateSupabaseEventState, createSupabaseEvent,
 } from '../../storage/supabaseEventStorage.js';
 import {
   hasAuthConfig, getCurrentSession, onAuthStateChange,
@@ -205,10 +205,24 @@ export function useDataSource(seeds) {
     };
   }, [mode, refresh]);
 
-  /* 새 이벤트 추가 — demo만 가능 (Supabase에 createEvent 엔드포인트 없음) */
-  const addEvent = useCallback((event) => {
+  /* 새 이벤트 추가
+     - demo: 로컬 상태에만 push (eventStore에서 영속화)
+     - live: Edge Function createEvent 호출, 성공 시 서버에서 변환된 row 사용
+     반환 Promise는 성공/실패를 호출자가 알 수 있게 한다. */
+  const addEvent = useCallback(async (event) => {
+    if (mode === MODE.LIVE) {
+      try {
+        const created = await createSupabaseEvent(event);
+        if (created) setEvents((cur) => [created, ...cur]);
+        return created;
+      } catch (err) {
+        setLiveError(err?.message || '새 이벤트 추가 실패');
+        throw err;
+      }
+    }
     setEvents((cur) => [event, ...cur]);
-  }, []);
+    return event;
+  }, [mode]);
 
   const auth = useMemo(() => ({
     hasConfig: hasAuthConfig,
