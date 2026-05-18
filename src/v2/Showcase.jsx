@@ -127,6 +127,11 @@ export default function Showcase() {
           <p className="v2-muted" style={{ maxWidth: 720, marginTop: 8 }}>
             모든 화면이 의존할 토큰과 기본 컴포넌트. 이게 정해지면 PC 인박스(02)와 모바일(06) 구현이 같은 언어로 붙는다.
           </p>
+          <div style={{ marginTop: 14 }}>
+            <a href="/v2-shell.html" className="v2-btn v2-btn--primary v2-btn--sm" style={{ textDecoration: 'none' }}>
+              → App Shell 보기 (/v2-shell.html)
+            </a>
+          </div>
         </header>
 
         {/* ---------------- Colors ---------------- */}
