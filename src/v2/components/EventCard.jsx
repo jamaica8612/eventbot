@@ -6,6 +6,40 @@ import { computeDeadlineMeta, todayISO } from '../lib/deadline.js';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
+const STEPS = ['응모', '완료', '발표', '결과'];
+function computeStep(event, todayStr) {
+  if (event.resultStatus === 'won' || event.resultStatus === 'lost') return 3;
+  if (event.status === 'done') {
+    if (event.resultAnnouncementDate && event.resultAnnouncementDate <= todayStr) return 2;
+    return 1;
+  }
+  return 0;
+}
+
+function ProgressSteps({ event, todayStr }) {
+  if (event.status === 'skipped') return null;
+  const current = computeStep(event, todayStr);
+  return (
+    <div className="v2-evcard__steps" aria-label={`진행 단계: ${STEPS[current]}`}>
+      {STEPS.map((label, i) => (
+        <span key={label} className="v2-evcard__steps-item">
+          <span
+            className={
+              'v2-evcard__step' +
+              (i < current ? ' v2-evcard__step--done' : '') +
+              (i === current ? ' v2-evcard__step--current' : '')
+            }
+            title={label}
+          />
+          {i < STEPS.length - 1 && (
+            <span className={'v2-evcard__step-line' + (i < current ? ' v2-evcard__step-line--done' : '')} />
+          )}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 function statusTag(event, todayStr) {
   if (event.resultAnnouncementDate === todayStr && event.resultStatus === 'unknown' && event.status === 'done') {
     return <Tag variant="warn">⏰ 오늘 발표!</Tag>;
@@ -113,6 +147,8 @@ export function EventCard({ event, selected, onClick, onQuickAction, query, now 
             </>
           )}
         </Inline>
+
+        <ProgressSteps event={event} todayStr={todayStr} />
       </div>
     </Card>
   );

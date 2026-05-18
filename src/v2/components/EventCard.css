@@ -68,6 +68,42 @@
 .v2-evcard__status-pill {
   margin-top: var(--sp-2);
 }
+.v2-evcard__steps {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  margin-top: 8px;
+}
+.v2-evcard__steps-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+}
+.v2-evcard__step {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--c-line);
+  display: inline-block;
+  transition: background var(--dur-fast) var(--ease-out), box-shadow var(--dur-fast) var(--ease-out);
+}
+.v2-evcard__step--done {
+  background: var(--c-brand);
+}
+.v2-evcard__step--current {
+  background: var(--c-brand);
+  box-shadow: 0 0 0 3px var(--c-brand-soft, rgba(51, 102, 255, 0.18));
+}
+.v2-evcard__step-line {
+  width: 18px;
+  height: 1px;
+  background: var(--c-line);
+  margin: 0 3px;
+  display: inline-block;
+}
+.v2-evcard__step-line--done {
+  background: var(--c-brand);
+}
 .v2-evcard__match-preview {
   font-size: var(--fs-xs);
   color: var(--c-text-mid);
