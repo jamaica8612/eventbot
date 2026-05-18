@@ -11,6 +11,7 @@ import { EventDetailContent } from './components/EventDetailContent.jsx';
 import { PlatformChip } from './components/PlatformChip.jsx';
 import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
+import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches } from './lib/eventStore.js';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -251,7 +252,15 @@ const BNAV_ITEMS = [
    AppDemo
    ============================================================ */
 export default function AppDemo() {
-  const [events, setEvents] = useState(MOCK_EVENTS);
+  const [events, setEvents] = useState(() =>
+    mergeSeedsWithPatches(MOCK_EVENTS, loadPatches()),
+  );
+
+  /* events 변경 시 patches만 추출해 localStorage 저장 */
+  useEffect(() => {
+    const patches = diffToPatches(MOCK_EVENTS, events);
+    savePatches(patches);
+  }, [events]);
   const [selectedView, setSelectedView] = useState('today');
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [pillId, setPillId] = useState('all');
@@ -403,11 +412,18 @@ export default function AppDemo() {
     },
   ], [selectedView, selectedPlatform, counts]);
 
+  const handleResetPatches = () => {
+    if (!window.confirm('저장된 상태(액션·결과·메모 등)를 초기화할까요? 시드 데이터로 돌아갑니다.')) return;
+    clearPatches();
+    setEvents(MOCK_EVENTS);
+    setToast(null);
+  };
+
   const nav = (
     <SideNav
       brand={{ name: 'EventBot', mark: 'v2' }}
       sections={navSections}
-      user={{ initial: 'J', name: '정민', meta: '관리자' }}
+      user={{ initial: 'J', name: '정민', meta: '관리자', onReset: handleResetPatches }}
     />
   );
 

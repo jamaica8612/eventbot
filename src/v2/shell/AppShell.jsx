@@ -56,6 +56,15 @@ export function SideNav({ brand, sections, user }) {
             <div className="v2-nav__user-name">{user.name}</div>
             <div className="v2-nav__user-meta">{user.meta}</div>
           </div>
+          {user.onReset && (
+            <button
+              type="button"
+              onClick={user.onReset}
+              className="v2-icon-btn v2-icon-btn--sm"
+              title="저장된 상태 초기화"
+              aria-label="저장된 상태 초기화"
+            >↺</button>
+          )}
         </div>
       )}
     </div>
