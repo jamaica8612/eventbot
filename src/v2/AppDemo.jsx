@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import './tokens.css';
 import {
   AppShell, SideNav, TopBar, ListPanel, DetailPanel, BottomNav, useEscape,
@@ -9,15 +9,22 @@ import {
 import { EventCard } from './components/EventCard.jsx';
 import { EventDetailContent } from './components/EventDetailContent.jsx';
 
+/* ============================================================
+   Mock 이벤트 8건.
+   status / resultStatus / receiptStatus 필드로 사이드 네비
+   필터가 의미 있게 갈리도록 다양화.
+   ============================================================ */
 const MOCK_EVENTS = [
   {
     id: 'e1',
     title: '신라면 블랙 출시 기념 댓글 이벤트 — 1000명 추첨',
     platform: '인스타그램',
+    status: 'ready', resultStatus: 'unknown',
     deadlineText: '오늘마감',
     deadlineDate: '2026-05-18',
     prizeText: '신라면 블랙 1박스 + 컵라면 세트',
     prizeAmount: '2만원',
+    prizeAmountValue: 20000,
     totalWinnerCount: 1000,
     source: '@nongshim_kr',
     applyUrl: 'https://instagram.com/p/example1',
@@ -35,17 +42,18 @@ const MOCK_EVENTS = [
       '',
       '※ 비공개 계정은 자동 제외',
       '※ 국내 거주자만 응모 가능',
-      '※ 동일인 중복 응모는 1회만 인정',
     ],
   },
   {
     id: 'e8',
     title: '편의점 도시락 신메뉴 댓글 이벤트',
     platform: '유튜브',
+    status: 'ready', resultStatus: 'unknown',
     deadlineText: '오늘마감',
     deadlineDate: '2026-05-18',
     prizeText: 'CU 모바일 상품권 5천원권',
     prizeAmount: '5천원',
+    prizeAmountValue: 5000,
     totalWinnerCount: 2000,
     source: 'CU공식',
     applyUrl: 'https://www.youtube.com/watch?v=gdZLi9oWNZg',
@@ -59,18 +67,18 @@ const MOCK_EVENTS = [
       '',
       '◆ 응모: 5/14 ~ 5/18',
       '◆ 발표: 5/24 댓글 고정',
-      '',
-      '※ 최소 한 줄 이상 정성스러운 댓글만 추첨 대상',
     ],
   },
   {
     id: 'e2',
     title: '갤럭시 S26 사전예약 응모 — 100명 추첨',
     platform: '카카오톡',
+    status: 'ready', resultStatus: 'unknown',
     deadlineText: '내일마감',
     deadlineDate: '2026-05-19',
     prizeText: '갤럭시 S26 Ultra 256GB',
     prizeAmount: '180만원',
+    prizeAmountValue: 1800000,
     totalWinnerCount: 100,
     source: '삼성전자',
     applyUrl: 'https://example.com/galaxy',
@@ -84,10 +92,12 @@ const MOCK_EVENTS = [
     id: 'e3',
     title: '스타벅스 신메뉴 시음 이벤트',
     platform: '유튜브',
+    status: 'later', resultStatus: 'unknown',
     deadlineText: '5/22 마감',
     deadlineDate: '2026-05-22',
     prizeText: '스타벅스 e-기프트카드 3만원권',
     prizeAmount: '3만원',
+    prizeAmountValue: 30000,
     totalWinnerCount: 500,
     source: '스타벅스코리아',
     applyUrl: 'https://www.youtube.com/watch?v=jNQXAC9IVRw',
@@ -95,7 +105,7 @@ const MOCK_EVENTS = [
     originalLines: [
       '스타벅스 신메뉴 시음권 추첨!',
       '',
-      '◆ 영상 시청 후 댓글로 가장 마셔보고 싶은 메뉴 + 한 줄 응원 댓글',
+      '◆ 영상 시청 후 댓글로 가장 마셔보고 싶은 메뉴 + 한 줄 응원',
       '◆ 구독 + 좋아요 필수',
       '◆ 발표: 5/25 스타벅스코리아 공식 채널',
     ],
@@ -104,10 +114,12 @@ const MOCK_EVENTS = [
     id: 'e4',
     title: '여름맞이 다이슨 에어랩 증정 이벤트',
     platform: '인스타그램',
+    status: 'later', resultStatus: 'unknown',
     deadlineText: '5/31 마감',
     deadlineDate: '2026-05-31',
     prizeText: '다이슨 에어랩 컴플리트',
     prizeAmount: '69만원',
+    prizeAmountValue: 690000,
     totalWinnerCount: 3,
     source: '@beauty_kr',
     applyUrl: 'https://instagram.com/p/example4',
@@ -118,25 +130,99 @@ const MOCK_EVENTS = [
       '발표 6/3',
     ],
   },
+  {
+    id: 'e5',
+    title: '맥북 프로 M5 출시기념 응모 이벤트',
+    platform: '인스타그램',
+    status: 'done', resultStatus: 'won', receiptStatus: 'received',
+    deadlineText: '4/30 종료',
+    deadlineDate: '2026-04-30',
+    resultAnnouncementDate: '2026-05-10',
+    resultAnnouncementText: '결과발표 5월 10일',
+    prizeText: '맥북 프로 14인치 M5',
+    prizeAmount: '299만원',
+    prizeAmountValue: 2990000,
+    totalWinnerCount: 5,
+    source: '@apple_kr',
+    participatedAt: '2026-04-28',
+    winningMemo: '5월 12일 수령 완료',
+    applyUrl: 'https://instagram.com/p/example5',
+    originalUrl: 'https://instagram.com/p/example5',
+    originalLines: [
+      '맥북 프로 14인치 M5 출시 기념 5명께 증정.',
+      '게시물 좋아요 + 친구 1명 태그 + 스토리 공유.',
+    ],
+  },
+  {
+    id: 'e6',
+    title: '봄맞이 백화점 상품권 추첨',
+    platform: '카카오톡',
+    status: 'done', resultStatus: 'won', receiptStatus: 'unclaimed',
+    deadlineText: '5/5 종료',
+    deadlineDate: '2026-05-05',
+    resultAnnouncementText: '오늘 발표',
+    prizeText: '신세계 상품권 10만원권',
+    prizeAmount: '10만원',
+    prizeAmountValue: 100000,
+    totalWinnerCount: 50,
+    source: '신세계백화점',
+    participatedAt: '2026-05-03',
+    applyUrl: 'https://example.com/voucher',
+    originalUrl: 'https://example.com/voucher',
+    originalLines: [
+      '신세계 상품권 10만원권 50명 추첨.',
+      '카톡 채널 추가 + 응모 폼 작성.',
+    ],
+  },
+  {
+    id: 'e7',
+    title: '러닝화 신제품 체험단 모집',
+    platform: '인스타그램',
+    status: 'done', resultStatus: 'lost',
+    deadlineText: '4/20 종료',
+    deadlineDate: '2026-04-20',
+    resultAnnouncementDate: '2026-05-01',
+    prizeText: '나이키 페가수스 41',
+    prizeAmount: '16만원',
+    prizeAmountValue: 160000,
+    totalWinnerCount: 30,
+    source: '@nike_kr',
+    participatedAt: '2026-04-15',
+    applyUrl: 'https://instagram.com/p/example7',
+    originalUrl: 'https://instagram.com/p/example7',
+    originalLines: [
+      '나이키 페가수스 41 체험단 30명 모집.',
+      '제품 사진 + 1000자 후기 작성.',
+    ],
+  },
 ];
 
-const NAV_SECTIONS = [
-  { title: '응모', items: [
-    { id: 'inbox', icon: '📥', label: '받은함', count: 42 },
-    { id: 'today', icon: '🔥', label: '오늘마감', count: 5, active: true },
-    { id: 'ready', icon: '⏰', label: '응모대기', count: 23 },
-    { id: 'later', icon: '🔖', label: '임시저장', count: 12 },
-  ] },
-  { title: '결과', items: [
-    { id: 'received', icon: '📬', label: '수령함', count: 8 },
-    { id: 'won', icon: '🏆', label: '당첨', count: 14 },
-    { id: 'lost', icon: '❌', label: '미당첨', count: 31 },
-  ] },
-  { title: '플랫폼', items: [
-    { id: 'ig', icon: '📷', label: '인스타그램', count: 18 },
-    { id: 'yt', icon: '▶️', label: '유튜브', count: 9 },
-    { id: 'kk', icon: '💬', label: '카카오톡', count: 7 },
-  ] },
+/* ============================================================
+   Views — 사이드 네비 항목별 필터 정의
+   ============================================================ */
+const TODAY = '2026-05-18';
+
+const VIEWS = {
+  inbox:    { icon: '📥', label: '받은함',   filter: () => true,                                  title: '📥 받은함' },
+  today:    { icon: '🔥', label: '오늘마감', filter: (e) => e.deadlineDate === TODAY,             title: '🔥 오늘마감' },
+  ready:    { icon: '⏰', label: '응모대기', filter: (e) => e.status === 'ready',                 title: '⏰ 응모대기' },
+  later:    { icon: '🔖', label: '임시저장', filter: (e) => e.status === 'later',                 title: '🔖 임시저장' },
+  received: { icon: '📬', label: '수령함',   filter: (e) => e.status === 'done',                  title: '📬 수령함' },
+  won:      { icon: '🏆', label: '당첨',     filter: (e) => e.resultStatus === 'won',             title: '🏆 당첨' },
+  lost:     { icon: '❌', label: '미당첨',   filter: (e) => e.resultStatus === 'lost',            title: '❌ 미당첨' },
+};
+
+const PLATFORMS = {
+  ig: { icon: '📷', label: '인스타그램', match: '인스타그램' },
+  yt: { icon: '▶️', label: '유튜브',     match: '유튜브' },
+  kk: { icon: '💬', label: '카카오톡',   match: '카카오톡' },
+};
+
+const PILLS = [
+  { id: 'all',  label: '전체' },
+  { id: 'unfinished', label: '미응모', filter: (e) => e.status !== 'done' },
+  { id: 'high', label: '고액 ↑', sort: (a, b) => (b.prizeAmountValue ?? 0) - (a.prizeAmountValue ?? 0) },
+  { id: 'yt',   label: '유튜브만', filter: (e) => e.platform === '유튜브' },
 ];
 
 const BNAV_ITEMS = [
@@ -147,28 +233,100 @@ const BNAV_ITEMS = [
   { id: 'me', icon: '👤', label: '나' },
 ];
 
+/* ============================================================
+   AppDemo
+   ============================================================ */
 export default function AppDemo() {
+  const [selectedView, setSelectedView] = useState('today');
+  const [selectedPlatform, setSelectedPlatform] = useState(null);
+  const [pillId, setPillId] = useState('all');
   const [selectedId, setSelectedId] = useState('e1');
   const [sheetOpen, setSheetOpen] = useState(false);
-  const selected = MOCK_EVENTS.find((e) => e.id === selectedId) || MOCK_EVENTS[0];
   useEscape(() => setSheetOpen(false));
+
+  const visibleEvents = useMemo(() => {
+    let list = MOCK_EVENTS.filter(VIEWS[selectedView].filter);
+    if (selectedPlatform) {
+      list = list.filter((e) => e.platform === PLATFORMS[selectedPlatform].match);
+    }
+    const pill = PILLS.find((p) => p.id === pillId);
+    if (pill?.filter) list = list.filter(pill.filter);
+    if (pill?.sort)   list = [...list].sort(pill.sort);
+    return list;
+  }, [selectedView, selectedPlatform, pillId]);
+
+  // 선택된 이벤트가 현재 보이지 않으면 첫 항목으로 자동 이동
+  const effectiveSelected = useMemo(() => {
+    const found = visibleEvents.find((e) => e.id === selectedId);
+    return found || visibleEvents[0] || MOCK_EVENTS[0];
+  }, [visibleEvents, selectedId]);
 
   const handleItemClick = (id) => {
     setSelectedId(id);
     if (window.matchMedia('(max-width: 959px)').matches) setSheetOpen(true);
   };
 
+  const handleViewChange = (viewId) => {
+    setSelectedView(viewId);
+    setSelectedPlatform(null);
+    setPillId('all');
+  };
+
+  /* -------- 네비 섹션 생성 (카운트 = VIEWS.filter 적용 결과) -------- */
+  const counts = useMemo(() => {
+    const c = {};
+    for (const [id, v] of Object.entries(VIEWS)) c[id] = MOCK_EVENTS.filter(v.filter).length;
+    for (const [id, p] of Object.entries(PLATFORMS)) c[`pf_${id}`] = MOCK_EVENTS.filter((e) => e.platform === p.match).length;
+    return c;
+  }, []);
+
+  const navSections = useMemo(() => [
+    {
+      title: '응모',
+      items: [
+        viewItem('inbox', counts, selectedView, handleViewChange),
+        viewItem('today', counts, selectedView, handleViewChange),
+        viewItem('ready', counts, selectedView, handleViewChange),
+        viewItem('later', counts, selectedView, handleViewChange),
+      ],
+    },
+    {
+      title: '결과',
+      items: [
+        viewItem('received', counts, selectedView, handleViewChange),
+        viewItem('won', counts, selectedView, handleViewChange),
+        viewItem('lost', counts, selectedView, handleViewChange),
+      ],
+    },
+    {
+      title: '플랫폼',
+      items: Object.entries(PLATFORMS).map(([pid, p]) => ({
+        id: pid,
+        icon: p.icon,
+        label: p.label,
+        count: counts[`pf_${pid}`],
+        active: selectedPlatform === pid,
+        onClick: () => setSelectedPlatform((cur) => (cur === pid ? null : pid)),
+      })),
+    },
+  ], [selectedView, selectedPlatform, counts]);
+
   const nav = (
     <SideNav
       brand={{ name: 'EventBot', mark: 'v2' }}
-      sections={NAV_SECTIONS}
+      sections={navSections}
       user={{ initial: 'J', name: '정민', meta: '관리자' }}
     />
   );
 
+  const viewMeta = VIEWS[selectedView];
+  const platformMeta = selectedPlatform ? PLATFORMS[selectedPlatform] : null;
+  const listTitle = viewMeta.title;
+  const listSub = `${visibleEvents.length}건${platformMeta ? ` · ${platformMeta.label}` : ''}`;
+
   const list = (
     <ListPanel topBar={
-      <TopBar title="🔥 오늘마감" sub="5건 · 12분 전 동기화" actions={
+      <TopBar title={listTitle} sub={listSub} actions={
         <>
           <IconButton aria-label="새로고침">↻</IconButton>
           <IconButton aria-label="필터">⚙</IconButton>
@@ -177,23 +335,39 @@ export default function AppDemo() {
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
         <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
-          <Pill on>전체</Pill>
-          <Pill>미응모</Pill>
-          <Pill>고액 ↑</Pill>
-          <Pill>유튜브만</Pill>
-        </Inline>
-        <Stack size="sm">
-          {MOCK_EVENTS.map((event) => (
-            <EventCard
-              key={event.id}
-              event={event}
-              selected={event.id === selectedId}
-              onClick={() => handleItemClick(event.id)}
-            />
+          {PILLS.map((p) => (
+            <Pill key={p.id} on={pillId === p.id} onClick={() => setPillId(p.id)}>{p.label}</Pill>
           ))}
-        </Stack>
+        </Inline>
+        {visibleEvents.length === 0 ? (
+          <EmptyState view={viewMeta.title} />
+        ) : (
+          <Stack size="sm">
+            {visibleEvents.map((event) => (
+              <EventCard
+                key={event.id}
+                event={event}
+                selected={event.id === effectiveSelected.id}
+                onClick={() => handleItemClick(event.id)}
+              />
+            ))}
+          </Stack>
+        )}
       </div>
     </ListPanel>
+  );
+
+  const detailHeader = (
+    <Inline style={{ flexWrap: 'wrap' }}>
+      <Tag variant="danger">{effectiveSelected.deadlineText}</Tag>
+      <Tag variant="info">{effectiveSelected.platform}</Tag>
+      {effectiveSelected.totalWinnerCount != null && (
+        <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
+      )}
+      {effectiveSelected.resultStatus === 'won' && <Tag variant="success">🏆 당첨</Tag>}
+      {effectiveSelected.resultStatus === 'lost' && <Tag variant="outline">미당첨</Tag>}
+      <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)' }}>· {effectiveSelected.source}</span>
+    </Inline>
   );
 
   const detail = (
@@ -208,15 +382,10 @@ export default function AppDemo() {
       </TopBar>
     }>
       <Stack size="lg">
-        <Inline style={{ flexWrap: 'wrap' }}>
-          <Tag variant="danger">{selected.deadlineText}</Tag>
-          <Tag variant="info">{selected.platform}</Tag>
-          {selected.totalWinnerCount != null && <Tag>{selected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>}
-          <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)' }}>· {selected.source}</span>
-        </Inline>
-        <h1 className="v2-h1">{selected.title}</h1>
+        {detailHeader}
+        <h1 className="v2-h1">{effectiveSelected.title}</h1>
         <Divider />
-        <EventDetailContent event={selected} />
+        <EventDetailContent event={effectiveSelected} />
       </Stack>
     </DetailPanel>
   );
@@ -228,17 +397,19 @@ export default function AppDemo() {
   const sheet = sheetOpen && (
     <>
       <Inline style={{ fontSize: 'var(--fs-xs)', marginBottom: 'var(--sp-3)' }}>
-        <span className="v2-muted">{selected.platform}</span>
+        <span className="v2-muted">{effectiveSelected.platform}</span>
         <span className="v2-muted">·</span>
-        <span style={{ color: 'var(--c-danger)' }}>{selected.deadlineText}</span>
+        <span style={{ color: 'var(--c-danger)' }}>{effectiveSelected.deadlineText}</span>
       </Inline>
-      <h2 className="v2-h2" style={{ marginBottom: 'var(--sp-3)' }}>{selected.title}</h2>
+      <h2 className="v2-h2" style={{ marginBottom: 'var(--sp-3)' }}>{effectiveSelected.title}</h2>
       <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-4)' }}>
-        <Tag variant="brand">{selected.prizeAmount}</Tag>
-        {selected.totalWinnerCount != null && <Tag>{selected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>}
-        <Tag variant="info">{selected.platform}</Tag>
+        <Tag variant="brand">{effectiveSelected.prizeAmount}</Tag>
+        {effectiveSelected.totalWinnerCount != null && (
+          <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
+        )}
+        <Tag variant="info">{effectiveSelected.platform}</Tag>
       </Inline>
-      <EventDetailContent event={selected} />
+      <EventDetailContent event={effectiveSelected} />
       <Stack style={{ marginTop: 'var(--sp-5)' }}>
         <Button variant="primary" size="lg" block>응모하러 가기 ↗</Button>
         <Button size="lg" block>✔ 참여완료</Button>
@@ -259,6 +430,30 @@ export default function AppDemo() {
         onSheetClose={() => setSheetOpen(false)}
       />
     </>
+  );
+}
+
+function viewItem(id, counts, selectedView, onChange) {
+  const v = VIEWS[id];
+  return {
+    id, icon: v.icon, label: v.label,
+    count: counts[id],
+    active: selectedView === id,
+    onClick: () => onChange(id),
+  };
+}
+
+function EmptyState({ view }) {
+  return (
+    <div style={{
+      padding: 'var(--sp-7) var(--sp-4)',
+      textAlign: 'center',
+      color: 'var(--c-text-mute)',
+      fontSize: 'var(--fs-sm)',
+    }}>
+      <div style={{ fontSize: 32, marginBottom: 'var(--sp-2)' }}>·</div>
+      <div>{view}에 해당하는 이벤트가 없어요</div>
+    </div>
   );
 }
 
