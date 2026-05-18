@@ -236,17 +236,22 @@ const PLATFORMS = {
 const PILLS = [
   { id: 'all',  label: '전체' },
   { id: 'unfinished', label: '미응모', filter: (e) => e.status !== 'done' },
-  { id: 'high', label: '고액 ↑', sort: (a, b) => (b.prizeAmountValue ?? 0) - (a.prizeAmountValue ?? 0) },
   { id: 'yt',   label: '유튜브만', filter: (e) => e.platform === '유튜브' },
 ];
 
-const BNAV_ITEMS = [
-  { id: 'home', icon: '🏠', label: '홈', active: true },
-  { id: 'search', icon: '🔍', label: '검색' },
-  null,
-  { id: 'inbox', icon: '📬', label: '수령함', dot: true },
-  { id: 'me', icon: '👤', label: '나' },
-];
+const SORTS = {
+  default:  { label: '기본순',     sort: null },
+  deadline: { label: '마감임박 ↑', sort: (a, b) => (a.deadlineDate || '9999').localeCompare(b.deadlineDate || '9999') },
+  high:     { label: '고액 ↑',     sort: (a, b) => (b.prizeAmountValue ?? 0) - (a.prizeAmountValue ?? 0) },
+  winners:  { label: '응모자 적은순', sort: (a, b) => (a.totalWinnerCount ?? 999999) - (b.totalWinnerCount ?? 999999) },
+  recent:   { label: '최근 등록',  sort: (a, b) => b.id.localeCompare(a.id) },
+};
+
+/* Bottom nav 항목 → view 매핑 */
+const BNAV_TO_VIEW = {
+  home: 'today',
+  inbox: 'received',
+};
 
 /* ============================================================
    AppDemo
@@ -264,6 +269,7 @@ export default function AppDemo() {
   const [selectedView, setSelectedView] = useState('today');
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [pillId, setPillId] = useState('all');
+  const [sortId, setSortId] = useState('default');
   const [query, setQuery] = useState('');
   const [selectedId, setSelectedId] = useState('e1');
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -277,11 +283,12 @@ export default function AppDemo() {
     }
     const pill = PILLS.find((p) => p.id === pillId);
     if (pill?.filter) list = list.filter(pill.filter);
-    if (pill?.sort)   list = [...list].sort(pill.sort);
+    const sort = SORTS[sortId]?.sort;
+    if (sort) list = [...list].sort(sort);
     const q = query.trim().toLowerCase();
     if (q) list = list.filter((e) => matchesQuery(e, q));
     return list;
-  }, [events, selectedView, selectedPlatform, pillId, query]);
+  }, [events, selectedView, selectedPlatform, pillId, sortId, query]);
 
   // 선택된 이벤트가 현재 보이지 않으면 첫 항목으로 자동 이동
   const effectiveSelected = useMemo(() => {
@@ -298,6 +305,7 @@ export default function AppDemo() {
     setSelectedView(viewId);
     setSelectedPlatform(null);
     setPillId('all');
+    setSortId('default');
     setQuery('');
   };
 
@@ -463,11 +471,23 @@ export default function AppDemo() {
             >✕</button>
           )}
         </div>
-        <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-3)' }}>
-          {PILLS.map((p) => (
-            <Pill key={p.id} on={pillId === p.id} onClick={() => setPillId(p.id)}>{p.label}</Pill>
-          ))}
-        </Inline>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 'var(--sp-2)', marginBottom: 'var(--sp-3)', flexWrap: 'wrap' }}>
+          <Inline style={{ flexWrap: 'wrap' }}>
+            {PILLS.map((p) => (
+              <Pill key={p.id} on={pillId === p.id} onClick={() => setPillId(p.id)}>{p.label}</Pill>
+            ))}
+          </Inline>
+          <select
+            value={sortId}
+            onChange={(e) => setSortId(e.target.value)}
+            className="v2-select"
+            aria-label="정렬"
+          >
+            {Object.entries(SORTS).map(([id, s]) => (
+              <option key={id} value={id}>↕ {s.label}</option>
+            ))}
+          </select>
+        </div>
         {visibleEvents.length === 0 ? (
           <EmptyState view={viewMeta.title} query={query} />
         ) : (
@@ -502,6 +522,12 @@ export default function AppDemo() {
   const inLater = effectiveSelected?.status === 'later';
   const inDone  = effectiveSelected?.status === 'done';
 
+  const currentIdx = visibleEvents.findIndex((e) => e.id === effectiveSelected?.id);
+  const canGoPrev = currentIdx > 0;
+  const canGoNext = currentIdx >= 0 && currentIdx < visibleEvents.length - 1;
+  const goPrev = () => { if (canGoPrev) setSelectedId(visibleEvents[currentIdx - 1].id); };
+  const goNext = () => { if (canGoNext) setSelectedId(visibleEvents[currentIdx + 1].id); };
+
   const detail = (
     <DetailPanel topBar={
       <TopBar>
@@ -510,6 +536,11 @@ export default function AppDemo() {
           <Button kbd="E" disabled={inDone} onClick={() => applyAction(effectiveSelected?.id, 'complete')}>참여완료</Button>
           <Button kbd="L" disabled={inLater} onClick={() => applyAction(effectiveSelected?.id, 'later')}>임시저장</Button>
           <Button variant="ghost" kbd="⌫" onClick={() => applyAction(effectiveSelected?.id, 'skip')}>제외</Button>
+          <IconButton aria-label="이전" disabled={!canGoPrev} onClick={goPrev}>↑</IconButton>
+          <IconButton aria-label="다음" disabled={!canGoNext} onClick={goNext}>↓</IconButton>
+          <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)', marginLeft: 4 }}>
+            {currentIdx >= 0 ? `${currentIdx + 1}/${visibleEvents.length}` : ''}
+          </span>
         </Inline>
       </TopBar>
     }>
@@ -523,8 +554,39 @@ export default function AppDemo() {
     </DetailPanel>
   );
 
+  const focusSearch = () => {
+    // 검색 input에 포커스. ListPanel 안의 input을 셀렉터로 찾는다.
+    setTimeout(() => {
+      document.querySelector('.v2-list-panel__body input')?.focus();
+    }, 0);
+  };
+
+  const bnavItems = [
+    {
+      id: 'home', icon: '🏠', label: '홈',
+      active: selectedView === 'today',
+      onClick: () => handleViewChange('today'),
+    },
+    {
+      id: 'search', icon: '🔍', label: '검색',
+      active: false,
+      onClick: focusSearch,
+    },
+    null,
+    {
+      id: 'inbox', icon: '📬', label: '수령함',
+      active: ['received', 'won', 'lost'].includes(selectedView),
+      dot: events.some((e) => e.resultStatus === 'won' && e.receiptStatus !== 'received'),
+      onClick: () => handleViewChange('received'),
+    },
+    {
+      id: 'me', icon: '👤', label: '나',
+      onClick: () => {},
+    },
+  ];
+
   const bottomNav = (
-    <BottomNav items={BNAV_ITEMS} fab={{ icon: '＋', label: '새 이벤트', onClick: () => {} }}/>
+    <BottomNav items={bnavItems} fab={{ icon: '＋', label: '새 이벤트', onClick: () => {} }}/>
   );
 
   const sheet = sheetOpen && (

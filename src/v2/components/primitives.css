@@ -59,7 +59,8 @@
   color: var(--c-text-mid);
   transition: background var(--dur-fast) var(--ease-out);
 }
-.v2-icon-btn:hover { background: var(--c-surface-2); color: var(--c-text); }
+.v2-icon-btn:hover:not(:disabled) { background: var(--c-surface-2); color: var(--c-text); }
+.v2-icon-btn:disabled { opacity: 0.35; cursor: not-allowed; }
 .v2-icon-btn--sm { width: 28px; height: 28px; border-radius: var(--r-sm); }
 
 /* ---------- Badge (notification dot/count) ---------- */
@@ -172,6 +173,19 @@
 }
 .v2-input::placeholder { color: var(--c-text-faint); }
 .v2-input:focus { outline: none; border-color: var(--c-brand); box-shadow: var(--shadow-focus); }
+
+/* ---------- Select ---------- */
+.v2-select {
+  background: var(--c-surface-2);
+  color: var(--c-text);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: 6px 10px;
+  font-size: var(--fs-sm);
+  font-family: inherit;
+  cursor: pointer;
+}
+.v2-select:focus { outline: none; border-color: var(--c-brand); box-shadow: var(--shadow-focus); }
 
 /* ---------- Text helpers ---------- */
 .v2-h1 { font-size: var(--fs-3xl); font-weight: var(--fw-black); letter-spacing: var(--tracking-tight); line-height: var(--lh-tight); margin: 0; }

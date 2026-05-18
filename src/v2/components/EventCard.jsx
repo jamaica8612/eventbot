@@ -11,7 +11,13 @@ function pickDeadlineVariant(event) {
   return 'outline';
 }
 
+const TODAY = '2026-05-18';
+
 function statusTag(event) {
+  // 오늘 결과 발표 + 아직 모름이면 가장 우선
+  if (event.resultAnnouncementDate === TODAY && event.resultStatus === 'unknown' && event.status === 'done') {
+    return <Tag variant="warn">⏰ 오늘 발표!</Tag>;
+  }
   if (event.resultStatus === 'won')  return <Tag variant="success">🏆 당첨{event.receiptStatus === 'unclaimed' ? ' · 미수령' : ''}</Tag>;
   if (event.resultStatus === 'lost') return <Tag variant="outline">미당첨</Tag>;
   if (event.status === 'done')       return <Tag>참여완료</Tag>;
