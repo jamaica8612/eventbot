@@ -1,7 +1,15 @@
-.v2-evcard__pf {
-  font-size: var(--fs-xs);
-  color: var(--c-text-mute);
-  font-weight: var(--fw-medium);
+.v2-evcard {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--sp-3);
+  align-items: flex-start;
+}
+.v2-evcard__main {
+  min-width: 0;       /* allow ellipsis on title */
+}
+.v2-evcard__head {
+  display: flex; justify-content: space-between; align-items: center; gap: var(--sp-2);
+  margin-bottom: var(--sp-2);
 }
 .v2-evcard__title {
   font-size: var(--fs-base);
@@ -16,6 +24,7 @@
 .v2-evcard__meta {
   font-size: var(--fs-xs);
   flex-wrap: wrap;
+  color: var(--c-text-mute);
 }
 .v2-evcard__amt {
   color: var(--c-brand);
@@ -26,4 +35,7 @@
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+.v2-evcard__status-pill {
+  margin-top: var(--sp-2);
 }

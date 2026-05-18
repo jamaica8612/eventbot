@@ -8,6 +8,7 @@ import {
 } from './components/primitives.jsx';
 import { EventCard } from './components/EventCard.jsx';
 import { EventDetailContent } from './components/EventDetailContent.jsx';
+import { PlatformChip } from './components/PlatformChip.jsx';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -439,7 +440,7 @@ export default function AppDemo() {
   const detailHeader = (
     <Inline style={{ flexWrap: 'wrap' }}>
       <Tag variant="danger">{effectiveSelected.deadlineText}</Tag>
-      <Tag variant="info">{effectiveSelected.platform}</Tag>
+      <PlatformChip platform={effectiveSelected.platform} />
       {effectiveSelected.totalWinnerCount != null && (
         <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
       )}
@@ -479,7 +480,7 @@ export default function AppDemo() {
   const sheet = sheetOpen && (
     <>
       <Inline style={{ fontSize: 'var(--fs-xs)', marginBottom: 'var(--sp-3)' }}>
-        <span className="v2-muted">{effectiveSelected.platform}</span>
+        <PlatformChip platform={effectiveSelected.platform} />
         <span className="v2-muted">·</span>
         <span style={{ color: 'var(--c-danger)' }}>{effectiveSelected.deadlineText}</span>
       </Inline>
@@ -489,7 +490,6 @@ export default function AppDemo() {
         {effectiveSelected.totalWinnerCount != null && (
           <Tag>{effectiveSelected.totalWinnerCount.toLocaleString('ko-KR')}명</Tag>
         )}
-        <Tag variant="info">{effectiveSelected.platform}</Tag>
       </Inline>
       <EventDetailContent event={effectiveSelected} />
       <Stack style={{ marginTop: 'var(--sp-5)' }}>

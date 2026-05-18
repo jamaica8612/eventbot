@@ -1,0 +1,76 @@
+.v2-pfchip {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 2px 8px 2px 6px;
+  border-radius: var(--r-full);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  letter-spacing: 0;
+  text-transform: none;
+  line-height: 1.4;
+  border: 1px solid transparent;
+}
+.v2-pfchip__dot {
+  width: 14px; height: 14px;
+  border-radius: 50%;
+  display: grid; place-items: center;
+  font-size: 9px; line-height: 1;
+  flex-shrink: 0;
+}
+
+/* 인스타그램 — gradient pink */
+.v2-pfchip--ig {
+  background: linear-gradient(135deg, rgba(225,48,108,0.16), rgba(238,170,79,0.14));
+  color: #f08aa8;
+  border-color: rgba(225,48,108,0.3);
+}
+.v2-pfchip--ig .v2-pfchip__dot {
+  background: linear-gradient(135deg, #e1306c, #f7b733);
+  color: white;
+}
+
+/* 유튜브 — red */
+.v2-pfchip--yt {
+  background: rgba(255,0,0,0.12);
+  color: #ff6b6b;
+  border-color: rgba(255,0,0,0.28);
+}
+.v2-pfchip--yt .v2-pfchip__dot {
+  background: #ff0000;
+  color: white;
+}
+
+/* 카카오톡 — yellow */
+.v2-pfchip--kk {
+  background: rgba(254,229,0,0.13);
+  color: #ffe75c;
+  border-color: rgba(254,229,0,0.3);
+}
+.v2-pfchip--kk .v2-pfchip__dot {
+  background: #fee500;
+  color: #181600;
+}
+
+/* 기타 */
+.v2-pfchip--other {
+  background: var(--c-chip-bg);
+  color: var(--c-text-mid);
+  border-color: var(--c-line);
+}
+.v2-pfchip--other .v2-pfchip__dot {
+  background: var(--c-surface-3);
+  color: var(--c-text-mid);
+}
+
+/* ---- Thumb (카드 좌측 큰 platform 아이콘) ---- */
+.v2-pfthumb {
+  width: 44px; height: 44px;
+  border-radius: var(--r-md);
+  display: grid; place-items: center;
+  font-size: 20px;
+  flex-shrink: 0;
+  border: 1px solid var(--c-line);
+}
+.v2-pfthumb--ig { background: linear-gradient(135deg, #e1306c, #f7b733); color: white; border-color: transparent; }
+.v2-pfthumb--yt { background: #ff0000; color: white; border-color: transparent; }
+.v2-pfthumb--kk { background: #fee500; color: #181600; border-color: transparent; }
+.v2-pfthumb--other { background: var(--c-surface-2); color: var(--c-text-mid); }
