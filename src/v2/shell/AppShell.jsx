@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
-export function AppShell({ nav, list, detail, bottomNav, sheet, onSheetClose }) {
+export function AppShell({ nav, list, detail, bottomNav, sheet, onSheetClose, drawerOpen, onDrawerClose }) {
   return (
     <div className="v2 v2-shell">
       <aside className="v2-shell__nav">{nav}</aside>
@@ -17,6 +17,14 @@ export function AppShell({ nav, list, detail, bottomNav, sheet, onSheetClose }) 
             <div className="v2-sheet__grab" />
             {sheet}
           </div>
+        </>
+      )}
+      {drawerOpen && (
+        <>
+          <div className="v2-drawer-overlay" onClick={onDrawerClose} />
+          <aside className="v2-drawer" role="dialog" aria-label="네비게이션">
+            {nav}
+          </aside>
         </>
       )}
     </div>
@@ -71,9 +79,10 @@ export function SideNav({ brand, sections, user }) {
   );
 }
 
-export function TopBar({ title, sub, actions, children }) {
+export function TopBar({ title, sub, actions, leftIcon, children }) {
   return (
     <header className="v2-topbar">
+      {leftIcon}
       {title && (
         <div>
           <h2 className="v2-topbar__title">{title}</h2>

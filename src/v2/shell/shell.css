@@ -26,7 +26,29 @@
   .v2-shell__list   { display: flex; flex-direction: column; }
   .v2-shell__detail { display: none; }
   .v2-shell__bnav   { display: grid !important; }
+  .v2-shell__hamburger { display: inline-flex !important; }
 }
+.v2-shell__hamburger { display: none; }
+
+/* ---------- Mobile drawer ---------- */
+.v2-drawer-overlay {
+  position: fixed; inset: 0;
+  z-index: var(--z-overlay);
+  background: rgba(0,0,0,0.55);
+  animation: v2-fade var(--dur-base) var(--ease-out);
+}
+.v2-drawer {
+  position: fixed; top: 0; left: 0; bottom: 0;
+  z-index: var(--z-sheet);
+  width: min(80vw, 320px);
+  background: var(--c-surface);
+  border-right: 1px solid var(--c-line);
+  box-shadow: var(--shadow-lg);
+  animation: v2-slide-right var(--dur-slow) var(--ease-out);
+  overflow: hidden;
+}
+.v2-drawer .v2-nav { height: 100%; border-right: 0; }
+@keyframes v2-slide-right { from { transform: translateX(-100%); } to { transform: translateX(0); } }
 
 /* ---------- Side Nav ---------- */
 .v2-nav {

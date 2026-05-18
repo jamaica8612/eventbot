@@ -279,7 +279,8 @@ export default function AppDemo() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
   const [helpOpen, setHelpOpen] = useState(false);
-  useEscape(() => { setSheetOpen(false); setHelpOpen(false); });
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  useEscape(() => { setSheetOpen(false); setHelpOpen(false); setDrawerOpen(false); });
 
   const visibleEvents = useMemo(() => {
     let list = events.filter(VIEWS[selectedView].filter);
@@ -312,6 +313,7 @@ export default function AppDemo() {
     setPillId('all');
     setSortId('default');
     setQuery('');
+    setDrawerOpen(false);
   };
 
   /* -------- 액션: 상태 변경 + 다음 카드로 자동 이동 + Undo 토스트 -------- */
@@ -449,12 +451,22 @@ export default function AppDemo() {
 
   const list = (
     <ListPanel topBar={
-      <TopBar title={listTitle} sub={listSub} actions={
-        <>
-          <IconButton aria-label="새로고침">↻</IconButton>
-          <IconButton aria-label="필터">⚙</IconButton>
-        </>
-      }/>
+      <TopBar
+        title={listTitle} sub={listSub}
+        leftIcon={
+          <IconButton
+            className="v2-shell__hamburger"
+            aria-label="메뉴 열기"
+            onClick={() => setDrawerOpen(true)}
+          >☰</IconButton>
+        }
+        actions={
+          <>
+            <IconButton aria-label="새로고침">↻</IconButton>
+            <IconButton aria-label="필터">⚙</IconButton>
+          </>
+        }
+      />
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
         {['received', 'won', 'lost'].includes(selectedView) && (
@@ -604,13 +616,22 @@ export default function AppDemo() {
 
   const sheet = sheetOpen && (
     <>
-      <Inline style={{ fontSize: 'var(--fs-xs)', marginBottom: 'var(--sp-3)' }}>
-        <PlatformChip platform={effectiveSelected.platform} />
-        <span className="v2-muted">·</span>
-        <span style={{ color: selectedDeadlineVariant === 'danger' ? 'var(--c-danger)' : 'var(--c-text-mid)' }}>
-          {selectedDeadlineLabel}
-        </span>
-      </Inline>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-3)' }}>
+        <Inline style={{ fontSize: 'var(--fs-xs)' }}>
+          <PlatformChip platform={effectiveSelected.platform} />
+          <span className="v2-muted">·</span>
+          <span style={{ color: selectedDeadlineVariant === 'danger' ? 'var(--c-danger)' : 'var(--c-text-mid)' }}>
+            {selectedDeadlineLabel}
+          </span>
+        </Inline>
+        <Inline>
+          <IconButton aria-label="이전" disabled={!canGoPrev} onClick={goPrev}>←</IconButton>
+          <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)' }}>
+            {currentIdx >= 0 ? `${currentIdx + 1}/${visibleEvents.length}` : ''}
+          </span>
+          <IconButton aria-label="다음" disabled={!canGoNext} onClick={goNext}>→</IconButton>
+        </Inline>
+      </div>
       <h2 className="v2-h2" style={{ marginBottom: 'var(--sp-3)' }}>{effectiveSelected.title}</h2>
       <Inline style={{ flexWrap: 'wrap', marginBottom: 'var(--sp-4)' }}>
         <Tag variant="brand">{effectiveSelected.prizeAmount}</Tag>
@@ -645,6 +666,8 @@ export default function AppDemo() {
         bottomNav={bottomNav}
         sheet={sheet}
         onSheetClose={() => setSheetOpen(false)}
+        drawerOpen={drawerOpen}
+        onDrawerClose={() => setDrawerOpen(false)}
       />
       {toast && <ActionToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} />}
       <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
