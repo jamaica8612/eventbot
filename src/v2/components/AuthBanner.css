@@ -1,0 +1,34 @@
+.v2-authbar {
+  display: flex; align-items: center; gap: var(--sp-2);
+  padding: var(--sp-2) var(--sp-3);
+  border-bottom: 1px solid var(--c-line);
+  font-size: var(--fs-xs);
+  background: var(--c-surface);
+  color: var(--c-text-mid);
+  min-height: 36px;
+}
+.v2-authbar__dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--c-text-mute);
+  flex-shrink: 0;
+}
+.v2-authbar__dot--live { background: var(--c-success); box-shadow: 0 0 0 3px var(--c-success-soft); }
+.v2-authbar__dot--demo { background: var(--c-warn); }
+.v2-authbar__dot--loading { background: var(--c-brand); animation: v2-pulse 1.4s var(--ease-in-out) infinite; }
+.v2-authbar__label { font-weight: var(--fw-semibold); color: var(--c-text); }
+.v2-authbar__spacer { flex: 1; }
+.v2-authbar__action {
+  background: transparent; border: 0;
+  color: var(--c-brand);
+  font-size: var(--fs-xs);
+  font-weight: var(--fw-semibold);
+  cursor: pointer; padding: 4px 8px;
+  border-radius: var(--r-sm);
+}
+.v2-authbar__action:hover { background: var(--c-brand-soft); }
+.v2-authbar__error {
+  color: var(--c-danger);
+  font-size: var(--fs-xs);
+}
+
+@keyframes v2-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }

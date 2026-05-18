@@ -13,7 +13,9 @@ import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { NewEventDialog } from './components/NewEventDialog.jsx';
-import { loadPatches, savePatches, clearPatches, mergeSeedsWithPatches, diffToPatches, loadUiState, saveUiState, loadCreated, saveCreated } from './lib/eventStore.js';
+import { clearPatches, loadCreated, loadUiState, saveUiState } from './lib/eventStore.js';
+import { useDataSource } from './lib/useDataSource.js';
+import { AuthBanner } from './components/AuthBanner.jsx';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
 import { getStoredTheme, setStoredTheme, applyTheme } from './lib/theme.js';
 
@@ -264,25 +266,20 @@ const BNAV_TO_VIEW = {
    AppDemo
    ============================================================ */
 export default function AppDemo() {
-  const [events, setEvents] = useState(() => {
-    const patches = loadPatches();
-    const created = loadCreated();
-    // 시드 + 시드패치 + 사용자생성(전체 저장)
-    return [...mergeSeedsWithPatches(MOCK_EVENTS, patches), ...created];
-  });
-
-  /* events 변경 시 — 시드 변경만 patches로, 사용자 생성은 통째로 저장 */
-  useEffect(() => {
-    const seedIds = new Set(MOCK_EVENTS.map((s) => s.id));
-    const seedView   = events.filter((e) => seedIds.has(e.id));
-    const created    = events.filter((e) => !seedIds.has(e.id));
-    savePatches(diffToPatches(MOCK_EVENTS, seedView));
-    saveCreated(created);
-  }, [events]);
+  const {
+    events, setEvents,
+    mode, isFetching, liveError,
+    updateEvent: dsUpdateEvent, refresh, addEvent,
+    auth,
+  } = useDataSource(MOCK_EVENTS);
 
   const [newOpen, setNewOpen] = useState(false);
   const handleAddEvent = (newEvent) => {
-    setEvents((cur) => [newEvent, ...cur]);
+    if (mode === 'live') {
+      alert('실데이터 모드에선 아직 새 이벤트 추가가 지원되지 않습니다. (크롤러 전용)');
+      return;
+    }
+    addEvent(newEvent);
     setNewOpen(false);
     setSelectedId(newEvent.id);
     setSelectedView('inbox');
@@ -355,22 +352,21 @@ export default function AppDemo() {
     if (!before) return;
     const prevPatch = { status: before.status, resultStatus: before.resultStatus };
 
-    // 액션 전에 다음 선택 후보 계산 (현재 visibleEvents에서 이 항목을 제외했을 때 다음)
     const idx = visibleEvents.findIndex((e) => e.id === eventId);
     const nextCandidate = visibleEvents[idx + 1] || visibleEvents[idx - 1];
 
-    setEvents((cur) => cur.map((e) => (e.id === eventId ? { ...e, ...patch } : e)));
+    dsUpdateEvent(eventId, patch);
     if (nextCandidate && nextCandidate.id !== eventId) setSelectedId(nextCandidate.id);
     setSheetOpen(false);
     setToast({ action, eventId, prevPatch, ts: Date.now() });
-  }, [events, visibleEvents]);
+  }, [events, visibleEvents, dsUpdateEvent]);
 
   const undoToast = useCallback(() => {
     if (!toast) return;
-    setEvents((cur) => cur.map((e) => (e.id === toast.eventId ? { ...e, ...toast.prevPatch } : e)));
+    dsUpdateEvent(toast.eventId, toast.prevPatch);
     setSelectedId(toast.eventId);
     setToast(null);
-  }, [toast]);
+  }, [toast, dsUpdateEvent]);
 
   // 토스트 자동 소멸 (4s)
   useEffect(() => {
@@ -385,10 +381,7 @@ export default function AppDemo() {
   }, [effectiveSelected]);
 
   /* -------- 일반 필드 업데이트 (ResultEntry 등) -------- */
-  const updateEvent = useCallback((id, patch) => {
-    if (!id || !patch) return;
-    setEvents((cur) => cur.map((e) => (e.id === id ? { ...e, ...patch } : e)));
-  }, []);
+  const updateEvent = dsUpdateEvent;
 
   /* -------- 키보드 단축키 -------- */
   useEffect(() => {
@@ -462,6 +455,10 @@ export default function AppDemo() {
   ], [selectedView, selectedPlatform, counts]);
 
   const handleResetPatches = () => {
+    if (mode === 'live') {
+      alert('실데이터 모드에선 초기화 기능을 쓸 수 없습니다. 로그아웃 후 데모 모드에서 사용.');
+      return;
+    }
     if (!window.confirm('저장된 상태(액션·결과·메모)를 초기화할까요? 직접 추가한 이벤트는 유지됩니다.')) return;
     clearPatches();
     setEvents([...MOCK_EVENTS, ...loadCreated()]);
@@ -483,23 +480,26 @@ export default function AppDemo() {
 
   const list = (
     <ListPanel topBar={
-      <TopBar
-        title={listTitle} sub={listSub}
-        leftIcon={
-          <IconButton
-            className="v2-shell__hamburger"
-            aria-label="메뉴 열기"
-            onClick={() => setDrawerOpen(true)}
-          >☰</IconButton>
-        }
-        actions={
-          <>
-            <IconButton aria-label="새 이벤트 추가" onClick={() => setNewOpen(true)} title="새 이벤트">＋</IconButton>
-            <IconButton aria-label="새로고침">↻</IconButton>
-            <IconButton aria-label="필터">⚙</IconButton>
-          </>
-        }
-      />
+      <>
+        <AuthBanner mode={mode} isFetching={isFetching} liveError={liveError} auth={auth} onRefresh={refresh} />
+        <TopBar
+          title={listTitle} sub={listSub}
+          leftIcon={
+            <IconButton
+              className="v2-shell__hamburger"
+              aria-label="메뉴 열기"
+              onClick={() => setDrawerOpen(true)}
+            >☰</IconButton>
+          }
+          actions={
+            <>
+              <IconButton aria-label="새 이벤트 추가" onClick={() => setNewOpen(true)} title="새 이벤트">＋</IconButton>
+              <IconButton aria-label="새로고침" onClick={mode === 'live' ? refresh : undefined} disabled={isFetching}>↻</IconButton>
+              <IconButton aria-label="필터">⚙</IconButton>
+            </>
+          }
+        />
+      </>
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
         {['received', 'won', 'lost'].includes(selectedView) && (
@@ -565,7 +565,7 @@ export default function AppDemo() {
   const selectedDeadlineLabel = selectedMeta?.label ?? effectiveSelected?.deadlineText ?? '';
   const selectedDeadlineVariant = selectedMeta?.variant === 'past' ? 'outline' : (selectedMeta?.variant ?? 'outline');
 
-  const detailHeader = (
+  const detailHeader = effectiveSelected && (
     <Inline style={{ flexWrap: 'wrap' }}>
       <Tag variant={selectedDeadlineVariant}>{selectedDeadlineLabel}</Tag>
       <PlatformChip platform={effectiveSelected.platform} />
@@ -574,7 +574,9 @@ export default function AppDemo() {
       )}
       {effectiveSelected.resultStatus === 'won' && <Tag variant="success">🏆 당첨</Tag>}
       {effectiveSelected.resultStatus === 'lost' && <Tag variant="outline">미당첨</Tag>}
-      <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)' }}>· {effectiveSelected.source}</span>
+      {effectiveSelected.source && (
+        <span className="v2-muted" style={{ fontSize: 'var(--fs-xs)' }}>· {effectiveSelected.source}</span>
+      )}
     </Inline>
   );
 
@@ -608,13 +610,19 @@ export default function AppDemo() {
         </Inline>
       </TopBar>
     }>
-      <Stack size="lg">
-        {detailHeader}
-        <h1 className="v2-h1">{effectiveSelected.title}</h1>
-        <Divider />
-        <ResultEntry event={effectiveSelected} onChange={updateEvent} />
-        <EventDetailContent event={effectiveSelected} />
-      </Stack>
+      {effectiveSelected ? (
+        <Stack size="lg">
+          {detailHeader}
+          <h1 className="v2-h1">{effectiveSelected.title}</h1>
+          <Divider />
+          <ResultEntry event={effectiveSelected} onChange={updateEvent} />
+          <EventDetailContent event={effectiveSelected} />
+        </Stack>
+      ) : (
+        <div style={{ padding: 'var(--sp-7)', color: 'var(--c-text-mute)', textAlign: 'center' }}>
+          {isFetching ? '이벤트 로드 중…' : '선택된 이벤트가 없습니다'}
+        </div>
+      )}
     </DetailPanel>
   );
 
@@ -653,7 +661,7 @@ export default function AppDemo() {
     <BottomNav items={bnavItems} fab={{ icon: '＋', label: '새 이벤트', onClick: () => setNewOpen(true) }}/>
   );
 
-  const sheet = sheetOpen && (
+  const sheet = sheetOpen && effectiveSelected && (
     <>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--sp-3)' }}>
         <Inline style={{ fontSize: 'var(--fs-xs)' }}>
