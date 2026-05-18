@@ -1,6 +1,25 @@
 import './AuthBanner.css';
+import { useEffect, useState } from 'react';
+import { getNotificationPermission, requestNotificationPermission } from '../lib/notifications.js';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
+
+function NotificationToggle() {
+  const [permission, setPermission] = useState(() => getNotificationPermission());
+  useEffect(() => {
+    setPermission(getNotificationPermission());
+  }, []);
+  if (permission === 'unsupported' || permission === 'denied' || permission === 'granted') return null;
+  const handleClick = async () => {
+    const next = await requestNotificationPermission();
+    setPermission(next);
+  };
+  return (
+    <button type="button" className="v2-authbar__action" onClick={handleClick} title="마감 임박 24시간 전 알림">
+      🔔 알림 켜기
+    </button>
+  );
+}
 
 export function AuthBanner({ mode, isFetching, liveError, auth, onRefresh }) {
   if (!auth.hasConfig) {
@@ -39,6 +58,7 @@ export function AuthBanner({ mode, isFetching, liveError, auth, onRefresh }) {
         <span className="v2-authbar__label">데모 모드</span>
         <span>· 시드 데이터 + 로컬 저장. 실데이터를 보려면 로그인.</span>
         <div className="v2-authbar__spacer" />
+        <NotificationToggle />
         <button type="button" className="v2-authbar__action" onClick={handleSignIn}>
           Google 로그인 →
         </button>
@@ -55,6 +75,7 @@ export function AuthBanner({ mode, isFetching, liveError, auth, onRefresh }) {
       {email && <span>· {email}</span>}
       {liveError && <span className="v2-authbar__error">· {liveError}</span>}
       <div className="v2-authbar__spacer" />
+      <NotificationToggle />
       {onRefresh && (
         <button type="button" className="v2-authbar__action" onClick={onRefresh} disabled={isFetching}>
           ↻ 새로고침

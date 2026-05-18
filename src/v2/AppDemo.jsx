@@ -21,6 +21,7 @@ import { useDataSource } from './lib/useDataSource.js';
 import { AuthBanner } from './components/AuthBanner.jsx';
 import { computeDeadlineMeta, todayISO } from './lib/deadline.js';
 import { getStoredTheme, setStoredTheme, applyTheme } from './lib/theme.js';
+import { notifyDueSoon } from './lib/notifications.js';
 
 /* ============================================================
    Mock 이벤트 8건.
@@ -313,6 +314,20 @@ export default function AppDemo() {
   useEffect(() => {
     saveUiState({ view: selectedView, platform: selectedPlatform, pill: pillId, sort: sortId, selectedId });
   }, [selectedView, selectedPlatform, pillId, sortId, selectedId]);
+
+  /* 마감 임박 알림 — events 변경 시 + 1시간 간격 + 페이지 visible 복귀 시 점검 */
+  useEffect(() => {
+    notifyDueSoon(events);
+    const intervalId = window.setInterval(() => notifyDueSoon(events), 60 * 60 * 1000);
+    const onVisible = () => {
+      if (!document.hidden) notifyDueSoon(events);
+    };
+    document.addEventListener('visibilitychange', onVisible);
+    return () => {
+      window.clearInterval(intervalId);
+      document.removeEventListener('visibilitychange', onVisible);
+    };
+  }, [events]);
 
   const visibleEvents = useMemo(() => {
     let list = events.filter(VIEWS[selectedView].filter);
