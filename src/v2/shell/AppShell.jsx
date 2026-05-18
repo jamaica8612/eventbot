@@ -1,9 +1,44 @@
 import './shell.css';
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 const cx = (...c) => c.filter(Boolean).join(' ');
 
-export function AppShell({ nav, list, detail, bottomNav, sheet, onSheetClose, drawerOpen, onDrawerClose }) {
+const SWIPE_THRESHOLD_X = 70;
+const SWIPE_THRESHOLD_Y = 90;
+const SWIPE_MAX_MS = 600;
+
+export function AppShell({
+  nav, list, detail, bottomNav,
+  sheet, onSheetClose, onSheetPrev, onSheetNext,
+  drawerOpen, onDrawerClose,
+}) {
+  const touchRef = useRef(null);
+
+  const handleTouchStart = (e) => {
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    touchRef.current = { x: t.clientX, y: t.clientY, time: Date.now(), target: e.target };
+  };
+
+  const handleTouchEnd = (e) => {
+    const start = touchRef.current;
+    touchRef.current = null;
+    if (!start) return;
+    if (Date.now() - start.time > SWIPE_MAX_MS) return;
+    const t = e.changedTouches?.[0];
+    if (!t) return;
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    // 스크롤 가능한 요소 안에서의 제스처는 무시 (textarea / overflow)
+    if (start.target && start.target.closest?.('textarea, input, [data-no-swipe]')) return;
+    if (Math.abs(dy) > Math.abs(dx)) {
+      if (dy > SWIPE_THRESHOLD_Y) onSheetClose?.();
+    } else {
+      if (dx > SWIPE_THRESHOLD_X) onSheetPrev?.();
+      else if (dx < -SWIPE_THRESHOLD_X) onSheetNext?.();
+    }
+  };
+
   return (
     <div className="v2 v2-shell">
       <aside className="v2-shell__nav">{nav}</aside>
@@ -13,7 +48,12 @@ export function AppShell({ nav, list, detail, bottomNav, sheet, onSheetClose, dr
       {sheet && (
         <>
           <div className="v2-sheet-overlay" onClick={onSheetClose} />
-          <div className="v2-sheet" role="dialog">
+          <div
+            className="v2-sheet"
+            role="dialog"
+            onTouchStart={handleTouchStart}
+            onTouchEnd={handleTouchEnd}
+          >
             <div className="v2-sheet__grab" />
             {sheet}
           </div>

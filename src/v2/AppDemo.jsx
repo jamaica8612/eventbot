@@ -720,6 +720,8 @@ export default function AppDemo() {
         bottomNav={bottomNav}
         sheet={sheet}
         onSheetClose={() => setSheetOpen(false)}
+        onSheetPrev={canGoPrev ? goPrev : undefined}
+        onSheetNext={canGoNext ? goNext : undefined}
         drawerOpen={drawerOpen}
         onDrawerClose={() => setDrawerOpen(false)}
       />
