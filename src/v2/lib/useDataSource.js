@@ -11,6 +11,7 @@ import {
 import {
   hasAuthConfig, getCurrentSession, onAuthStateChange,
   signInWithGoogle, signOut, onAuthRequired,
+  getSupabaseClient,
 } from '../../storage/supabaseAuthStorage.js';
 import {
   enqueueSyncPatch, readSyncQueue, writeSyncQueue, markSyncAttempt,
@@ -134,16 +135,75 @@ export function useDataSource(seeds) {
     };
   }, [mode]);
 
-  /* live 모드에서 수동 새로고침 */
-  const refresh = useCallback(() => {
+  /* live 모드에서 수동/자동 새로고침. silent=true 면 spinner 토글 없이 무음 갱신. */
+  const refresh = useCallback((options) => {
     if (mode !== MODE.LIVE) return;
-    setIsFetching(true);
+    const silent = options && options.silent === true;
+    if (!silent) setIsFetching(true);
     setLiveError('');
     loadSupabaseEvents()
       .then((list) => setEvents(list))
       .catch((err) => setLiveError(err?.message || '이벤트 로드 실패'))
-      .finally(() => setIsFetching(false));
+      .finally(() => { if (!silent) setIsFetching(false); });
   }, [mode]);
+
+  /* Supabase realtime 구독 — 다른 디바이스/세션 변경 자동 반영.
+     - user_event_states: 본인 액션 결과 (RLS로 본인 row만 수신)
+     - events: 새 이벤트 / 메타데이터 변경
+     - 디바운스 800ms로 묶어서 refresh, 페이지 hidden 시 채널 해제. */
+  useEffect(() => {
+    if (mode !== MODE.LIVE) return;
+    const supabase = getSupabaseClient();
+    if (!supabase) return;
+
+    let channel = null;
+    let debounceId = null;
+
+    function scheduleRefresh() {
+      if (debounceId) window.clearTimeout(debounceId);
+      debounceId = window.setTimeout(() => {
+        debounceId = null;
+        refresh({ silent: true });
+      }, 800);
+    }
+
+    function subscribe() {
+      if (channel) return;
+      channel = supabase
+        .channel('eventbot-v2-changes')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_event_states' }, scheduleRefresh)
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'events' }, scheduleRefresh)
+        .subscribe();
+    }
+
+    function unsubscribe() {
+      if (!channel) return;
+      supabase.removeChannel(channel);
+      channel = null;
+    }
+
+    function onVisibility() {
+      if (typeof document === 'undefined') return;
+      if (document.hidden) {
+        unsubscribe();
+      } else {
+        subscribe();
+        refresh({ silent: true });
+      }
+    }
+
+    subscribe();
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', onVisibility);
+    }
+    return () => {
+      if (typeof document !== 'undefined') {
+        document.removeEventListener('visibilitychange', onVisibility);
+      }
+      if (debounceId) window.clearTimeout(debounceId);
+      unsubscribe();
+    };
+  }, [mode, refresh]);
 
   /* 새 이벤트 추가 — demo만 가능 (Supabase에 createEvent 엔드포인트 없음) */
   const addEvent = useCallback((event) => {
