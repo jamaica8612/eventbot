@@ -13,6 +13,9 @@ import {
   signInWithGoogle, signOut, onAuthRequired,
 } from '../../storage/supabaseAuthStorage.js';
 import {
+  enqueueSyncPatch, readSyncQueue, writeSyncQueue, markSyncAttempt,
+} from '../../storage/syncQueueStorage.js';
+import {
   loadPatches, savePatches, mergeSeedsWithPatches, diffToPatches,
   loadCreated, saveCreated,
 } from './eventStore.js';
@@ -91,10 +94,44 @@ export function useDataSource(seeds) {
     setEvents((cur) => cur.map((e) => (e.id === id ? { ...e, ...patch } : e)));
     if (mode === MODE.LIVE) {
       updateSupabaseEventState(id, patch).catch((err) => {
-        // 실패해도 로컬 상태는 유지. v1 처럼 sync queue 도입은 후속 작업.
-        console.warn('[v2] supabase sync failed', err);
+        console.warn('[v2] supabase sync failed, queueing for retry', err);
+        enqueueSyncPatch(id, patch);
       });
     }
+  }, [mode]);
+
+  /* sync queue 재시도 — live 모드에서 실패한 patch를 온라인 복귀 + 10초 간격으로 flush */
+  useEffect(() => {
+    if (mode !== MODE.LIVE) return;
+    let isRetrying = false;
+    let active = true;
+
+    async function flushQueue() {
+      if (!active || isRetrying) return;
+      const queue = readSyncQueue();
+      if (queue.length === 0) return;
+      isRetrying = true;
+
+      const failedItems = [];
+      for (const item of queue) {
+        try {
+          await updateSupabaseEventState(item.eventId, item.patch);
+        } catch (error) {
+          failedItems.push(markSyncAttempt(item, error?.message || 'unknown'));
+        }
+      }
+      if (active) writeSyncQueue(failedItems);
+      isRetrying = false;
+    }
+
+    flushQueue();
+    window.addEventListener('online', flushQueue);
+    const intervalId = window.setInterval(flushQueue, 10000);
+    return () => {
+      active = false;
+      window.removeEventListener('online', flushQueue);
+      window.clearInterval(intervalId);
+    };
   }, [mode]);
 
   /* live 모드에서 수동 새로고침 */
