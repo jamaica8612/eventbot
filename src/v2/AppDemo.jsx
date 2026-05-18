@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import './tokens.css';
 import {
   AppShell, SideNav, TopBar, ListPanel, DetailPanel, BottomNav, useEscape,
@@ -203,13 +203,24 @@ const MOCK_EVENTS = [
 const TODAY = '2026-05-18';
 
 const VIEWS = {
-  inbox:    { icon: '📥', label: '받은함',   filter: () => true,                                  title: '📥 받은함' },
-  today:    { icon: '🔥', label: '오늘마감', filter: (e) => e.deadlineDate === TODAY,             title: '🔥 오늘마감' },
+  inbox:    { icon: '📥', label: '받은함',   filter: (e) => e.status !== 'skipped',               title: '📥 받은함' },
+  today:    { icon: '🔥', label: '오늘마감', filter: (e) => e.deadlineDate === TODAY && e.status !== 'skipped', title: '🔥 오늘마감' },
   ready:    { icon: '⏰', label: '응모대기', filter: (e) => e.status === 'ready',                 title: '⏰ 응모대기' },
   later:    { icon: '🔖', label: '임시저장', filter: (e) => e.status === 'later',                 title: '🔖 임시저장' },
   received: { icon: '📬', label: '수령함',   filter: (e) => e.status === 'done',                  title: '📬 수령함' },
   won:      { icon: '🏆', label: '당첨',     filter: (e) => e.resultStatus === 'won',             title: '🏆 당첨' },
   lost:     { icon: '❌', label: '미당첨',   filter: (e) => e.resultStatus === 'lost',            title: '❌ 미당첨' },
+};
+
+/* 액션 → 상태 변경 매핑 */
+const ACTION_TO_PATCH = {
+  ready:    { status: 'ready' },
+  complete: { status: 'done', resultStatus: 'unknown' },
+  later:    { status: 'later' },
+  skip:     { status: 'skipped' },
+};
+const ACTION_LABEL = {
+  ready: '대기로 복원', complete: '참여완료', later: '임시저장', skip: '제외',
 };
 
 const PLATFORMS = {
@@ -237,15 +248,17 @@ const BNAV_ITEMS = [
    AppDemo
    ============================================================ */
 export default function AppDemo() {
+  const [events, setEvents] = useState(MOCK_EVENTS);
   const [selectedView, setSelectedView] = useState('today');
   const [selectedPlatform, setSelectedPlatform] = useState(null);
   const [pillId, setPillId] = useState('all');
   const [selectedId, setSelectedId] = useState('e1');
   const [sheetOpen, setSheetOpen] = useState(false);
+  const [toast, setToast] = useState(null); // {action, eventId, prevPatch}
   useEscape(() => setSheetOpen(false));
 
   const visibleEvents = useMemo(() => {
-    let list = MOCK_EVENTS.filter(VIEWS[selectedView].filter);
+    let list = events.filter(VIEWS[selectedView].filter);
     if (selectedPlatform) {
       list = list.filter((e) => e.platform === PLATFORMS[selectedPlatform].match);
     }
@@ -253,13 +266,13 @@ export default function AppDemo() {
     if (pill?.filter) list = list.filter(pill.filter);
     if (pill?.sort)   list = [...list].sort(pill.sort);
     return list;
-  }, [selectedView, selectedPlatform, pillId]);
+  }, [events, selectedView, selectedPlatform, pillId]);
 
   // 선택된 이벤트가 현재 보이지 않으면 첫 항목으로 자동 이동
   const effectiveSelected = useMemo(() => {
     const found = visibleEvents.find((e) => e.id === selectedId);
-    return found || visibleEvents[0] || MOCK_EVENTS[0];
-  }, [visibleEvents, selectedId]);
+    return found || visibleEvents[0] || events[0];
+  }, [visibleEvents, selectedId, events]);
 
   const handleItemClick = (id) => {
     setSelectedId(id);
@@ -272,13 +285,79 @@ export default function AppDemo() {
     setPillId('all');
   };
 
-  /* -------- 네비 섹션 생성 (카운트 = VIEWS.filter 적용 결과) -------- */
+  /* -------- 액션: 상태 변경 + 다음 카드로 자동 이동 + Undo 토스트 -------- */
+  const applyAction = useCallback((eventId, action) => {
+    const patch = ACTION_TO_PATCH[action];
+    if (!patch || !eventId) return;
+    const before = events.find((e) => e.id === eventId);
+    if (!before) return;
+    const prevPatch = { status: before.status, resultStatus: before.resultStatus };
+
+    // 액션 전에 다음 선택 후보 계산 (현재 visibleEvents에서 이 항목을 제외했을 때 다음)
+    const idx = visibleEvents.findIndex((e) => e.id === eventId);
+    const nextCandidate = visibleEvents[idx + 1] || visibleEvents[idx - 1];
+
+    setEvents((cur) => cur.map((e) => (e.id === eventId ? { ...e, ...patch } : e)));
+    if (nextCandidate && nextCandidate.id !== eventId) setSelectedId(nextCandidate.id);
+    setSheetOpen(false);
+    setToast({ action, eventId, prevPatch, ts: Date.now() });
+  }, [events, visibleEvents]);
+
+  const undoToast = useCallback(() => {
+    if (!toast) return;
+    setEvents((cur) => cur.map((e) => (e.id === toast.eventId ? { ...e, ...toast.prevPatch } : e)));
+    setSelectedId(toast.eventId);
+    setToast(null);
+  }, [toast]);
+
+  // 토스트 자동 소멸 (4s)
+  useEffect(() => {
+    if (!toast) return;
+    const t = window.setTimeout(() => setToast(null), 4000);
+    return () => window.clearTimeout(t);
+  }, [toast]);
+
+  const handleApply = useCallback(() => {
+    const url = effectiveSelected?.applyUrl || effectiveSelected?.originalUrl;
+    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+  }, [effectiveSelected]);
+
+  /* -------- 키보드 단축키 -------- */
+  useEffect(() => {
+    const onKey = (e) => {
+      const tag = (e.target?.tagName || '').toLowerCase();
+      if (tag === 'input' || tag === 'textarea' || e.target?.isContentEditable) return;
+      if (e.metaKey || e.ctrlKey || e.altKey) return;
+      const k = e.key.toLowerCase();
+      if (k === 'e') { e.preventDefault(); applyAction(effectiveSelected?.id, 'complete'); }
+      else if (k === 'l') { e.preventDefault(); applyAction(effectiveSelected?.id, 'later'); }
+      else if (e.key === 'Backspace' || e.key === 'Delete') {
+        e.preventDefault(); applyAction(effectiveSelected?.id, 'skip');
+      } else if (k === 'j' || k === 'arrowdown') {
+        e.preventDefault();
+        const i = visibleEvents.findIndex((ev) => ev.id === effectiveSelected?.id);
+        const next = visibleEvents[Math.min(i + 1, visibleEvents.length - 1)];
+        if (next) setSelectedId(next.id);
+      } else if (k === 'k' || k === 'arrowup') {
+        e.preventDefault();
+        const i = visibleEvents.findIndex((ev) => ev.id === effectiveSelected?.id);
+        const prev = visibleEvents[Math.max(i - 1, 0)];
+        if (prev) setSelectedId(prev.id);
+      } else if (k === 'u' && toast) {
+        e.preventDefault(); undoToast();
+      }
+    };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [applyAction, effectiveSelected, visibleEvents, toast, undoToast]);
+
+  /* -------- 네비 섹션 생성 (카운트 = 현재 events 기반, 재계산) -------- */
   const counts = useMemo(() => {
     const c = {};
-    for (const [id, v] of Object.entries(VIEWS)) c[id] = MOCK_EVENTS.filter(v.filter).length;
-    for (const [id, p] of Object.entries(PLATFORMS)) c[`pf_${id}`] = MOCK_EVENTS.filter((e) => e.platform === p.match).length;
+    for (const [id, v] of Object.entries(VIEWS)) c[id] = events.filter(v.filter).length;
+    for (const [id, p] of Object.entries(PLATFORMS)) c[`pf_${id}`] = events.filter((e) => e.platform === p.match).length;
     return c;
-  }, []);
+  }, [events]);
 
   const navSections = useMemo(() => [
     {
@@ -370,14 +449,17 @@ export default function AppDemo() {
     </Inline>
   );
 
+  const inLater = effectiveSelected?.status === 'later';
+  const inDone  = effectiveSelected?.status === 'done';
+
   const detail = (
     <DetailPanel topBar={
       <TopBar>
         <Inline>
-          <Button variant="primary">참여하기 ↗</Button>
-          <Button kbd="E">참여완료</Button>
-          <Button kbd="L">임시저장</Button>
-          <Button variant="ghost" kbd="⌫">제외</Button>
+          <Button variant="primary" onClick={handleApply}>참여하기 ↗</Button>
+          <Button kbd="E" disabled={inDone} onClick={() => applyAction(effectiveSelected?.id, 'complete')}>참여완료</Button>
+          <Button kbd="L" disabled={inLater} onClick={() => applyAction(effectiveSelected?.id, 'later')}>임시저장</Button>
+          <Button variant="ghost" kbd="⌫" onClick={() => applyAction(effectiveSelected?.id, 'skip')}>제외</Button>
         </Inline>
       </TopBar>
     }>
@@ -411,8 +493,13 @@ export default function AppDemo() {
       </Inline>
       <EventDetailContent event={effectiveSelected} />
       <Stack style={{ marginTop: 'var(--sp-5)' }}>
-        <Button variant="primary" size="lg" block>응모하러 가기 ↗</Button>
-        <Button size="lg" block>✔ 참여완료</Button>
+        <Button variant="primary" size="lg" block onClick={handleApply}>응모하러 가기 ↗</Button>
+        <Button size="lg" block disabled={inDone}
+          onClick={() => applyAction(effectiveSelected?.id, 'complete')}>✔ 참여완료</Button>
+        <Button size="lg" block disabled={inLater}
+          onClick={() => applyAction(effectiveSelected?.id, 'later')}>🔖 임시저장</Button>
+        <Button variant="ghost" size="lg" block
+          onClick={() => applyAction(effectiveSelected?.id, 'skip')}>제외</Button>
         <Button variant="ghost" size="lg" block onClick={() => setSheetOpen(false)}>닫기</Button>
       </Stack>
     </>
@@ -429,7 +516,39 @@ export default function AppDemo() {
         sheet={sheet}
         onSheetClose={() => setSheetOpen(false)}
       />
+      {toast && <ActionToast toast={toast} onUndo={undoToast} onClose={() => setToast(null)} />}
     </>
+  );
+}
+
+/* ============================================================
+   ActionToast — 액션 후 4초간 표시되는 undo 토스트
+   ============================================================ */
+function ActionToast({ toast, onUndo, onClose }) {
+  return (
+    <div className="v2" style={{
+      position: 'fixed',
+      bottom: 'calc(var(--sp-5) + env(safe-area-inset-bottom, 0px) + 76px)',
+      left: '50%', transform: 'translateX(-50%)',
+      zIndex: 'var(--z-toast)',
+      background: 'var(--c-surface-3)',
+      border: '1px solid var(--c-line-strong)',
+      borderRadius: 'var(--r-lg)',
+      padding: 'var(--sp-3) var(--sp-4)',
+      boxShadow: 'var(--shadow-lg)',
+      display: 'flex', alignItems: 'center', gap: 'var(--sp-3)',
+      maxWidth: 'min(440px, calc(100vw - 24px))',
+      animation: 'v2-fade var(--dur-base) var(--ease-out)',
+    }}>
+      <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--c-text)' }}>
+        ✓ {ACTION_LABEL[toast.action]} 처리됨
+      </span>
+      <button onClick={onUndo} className="v2-btn v2-btn--sm v2-btn--ghost"
+        style={{ color: 'var(--c-brand)', minHeight: 28, padding: '0 10px' }}>
+        실행 취소 <span style={{ fontSize: 'var(--fs-xs)', opacity: 0.7, marginLeft: 4 }}>U</span>
+      </button>
+      <button onClick={onClose} className="v2-icon-btn v2-icon-btn--sm" aria-label="닫기">✕</button>
+    </div>
   );
 }
 
