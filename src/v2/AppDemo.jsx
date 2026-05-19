@@ -688,30 +688,44 @@ export default function AppDemo() {
 
   const bnavItems = [
     {
-      id: 'home', icon: '🏠', label: '홈',
+      id: 'ready', icon: '⏰', label: '대기',
+      count: counts.ready,
+      active: selectedView === 'ready',
+      onClick: () => handleViewChange('ready'),
+    },
+    {
+      id: 'today', icon: '🔥', label: '마감순',
+      count: counts.today,
       active: selectedView === 'today',
       onClick: () => handleViewChange('today'),
     },
     {
-      id: 'search', icon: '🔍', label: '검색',
+      id: 'later', icon: '🔖', label: '임시',
+      count: counts.later,
+      active: selectedView === 'later',
+      onClick: () => handleViewChange('later'),
+    },
+    {
+      id: 'search', icon: '🔎', label: '검색',
       active: false,
       onClick: focusSearch,
     },
-    null,
     {
-      id: 'inbox', icon: '📬', label: '수령함',
+      id: 'inbox', icon: '📬', label: '응모함',
+      count: counts.received,
       active: ['received', 'won', 'lost'].includes(selectedView),
       dot: events.some((e) => e.resultStatus === 'won' && e.receiptStatus !== 'received'),
       onClick: () => handleViewChange('received'),
     },
-    {
-      id: 'me', icon: '👤', label: '나',
-      onClick: () => {},
+    isAdmin && {
+      id: 'admin', icon: '👤', label: '관리자',
+      active: selectedView === 'admin',
+      onClick: () => handleViewChange('admin'),
     },
-  ];
+  ].filter(Boolean);
 
   const bottomNav = (
-    <BottomNav items={bnavItems} fab={{ icon: '＋', label: '새 이벤트', onClick: () => setNewOpen(true) }}/>
+    <BottomNav items={bnavItems} />
   );
 
   const sheet = sheetOpen && effectiveSelected && (

@@ -154,31 +154,25 @@ export function DetailPanel({ topBar, children }) {
   );
 }
 
-export function BottomNav({ items, fab }) {
+export function BottomNav({ items }) {
   return (
     <>
-      {items.map((item, i) => {
-        if (i === 2 && fab) {
-          return (
-            <button key="fab" type="button" className="v2-bnav__fab" onClick={fab.onClick} aria-label={fab.label}>
-              {fab.icon}
-            </button>
-          );
-        }
-        if (!item) return null;
-        return (
-          <button
-            key={item.id}
-            type="button"
-            className={cx('v2-bnav__item', item.active && 'v2-bnav__item--active')}
-            onClick={item.onClick}
-          >
-            {item.dot && <span className="dot" />}
-            <span className="icon">{item.icon}</span>
-            <span>{item.label}</span>
-          </button>
-        );
-      })}
+      {items.filter(Boolean).map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className={cx('v2-bnav__item', item.active && 'v2-bnav__item--active')}
+          onClick={item.onClick}
+          aria-label={item.label}
+        >
+          {item.dot && <span className="dot" />}
+          <span className="icon" aria-hidden>{item.icon}</span>
+          <span className="label">{item.label}</span>
+          {item.count != null && Number(item.count) > 0 && (
+            <strong className="count">{item.count}</strong>
+          )}
+        </button>
+      ))}
     </>
   );
 }

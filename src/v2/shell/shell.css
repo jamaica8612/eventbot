@@ -146,39 +146,55 @@
   min-height: 120px;
 }
 
-/* ---------- Bottom Nav ---------- */
+/* ---------- Bottom Nav (v1 비슷한 균등 분할 + count) ---------- */
 .v2-shell__bnav {
   position: fixed; left: 0; right: 0; bottom: 0;
   z-index: var(--z-bottom-nav);
-  grid-template-columns: repeat(5, 1fr);
-  background: rgba(20, 23, 31, 0.94);
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  background: var(--c-surface);
   backdrop-filter: blur(20px);
   border-top: 1px solid var(--c-line);
   padding: var(--sp-2) var(--sp-1) calc(var(--sp-2) + env(safe-area-inset-bottom, 0px));
-  align-items: center;
+  align-items: stretch;
 }
 .v2-bnav__item {
-  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
   color: var(--c-text-mute);
   font-size: var(--fs-xs);
-  padding: 6px 4px;
+  padding: 6px 2px;
   background: transparent; border: 0;
   position: relative;
+  min-height: var(--touch-min);
 }
-.v2-bnav__item .icon { font-size: 18px; line-height: 1; }
+.v2-bnav__item .icon { font-size: 16px; line-height: 1; }
+.v2-bnav__item .label {
+  font-size: var(--fs-xs);
+  line-height: 1.1;
+}
+.v2-bnav__item .count {
+  display: inline-block;
+  margin-top: 1px;
+  min-width: 18px;
+  padding: 0 5px;
+  border-radius: var(--r-full);
+  background: var(--c-chip-bg);
+  color: var(--c-text-mid);
+  font-size: 10px;
+  font-weight: var(--fw-semibold);
+  line-height: 14px;
+  text-align: center;
+}
 .v2-bnav__item--active { color: var(--c-brand); }
+.v2-bnav__item--active .count {
+  background: var(--c-brand-soft);
+  color: var(--c-brand);
+}
 .v2-bnav__item .dot {
-  position: absolute; top: 4px; right: 32%;
+  position: absolute; top: 4px; right: 28%;
   width: 6px; height: 6px; border-radius: 50%;
   background: var(--c-danger);
-}
-.v2-bnav__fab {
-  background: var(--c-brand); color: var(--c-brand-on);
-  width: 44px; height: 44px; border-radius: 50%;
-  display: grid; place-items: center;
-  font-size: 22px; margin-top: -20px;
-  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.4);
-  border: 0;
 }
 
 /* ---------- Bottom Sheet ---------- */
