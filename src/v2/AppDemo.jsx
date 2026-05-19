@@ -14,6 +14,7 @@ import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { NewEventDialog } from './components/NewEventDialog.jsx';
 import { OnboardingTour, hasSeenOnboarding } from './components/OnboardingTour.jsx';
+import { AdminPanel } from './components/AdminPanel.jsx';
 import {
   clearPatches, loadCreated, loadUiState, saveUiState,
   loadSearchHistory, pushSearchHistory, clearSearchHistory,
@@ -332,6 +333,7 @@ export default function AppDemo() {
   }, [events]);
 
   const visibleEvents = useMemo(() => {
+    if (!VIEWS[selectedView]) return [];
     let list = events.filter(VIEWS[selectedView].filter);
     if (selectedPlatform) {
       list = list.filter((e) => e.platform === PLATFORMS[selectedPlatform].match);
@@ -460,37 +462,53 @@ export default function AppDemo() {
     return c;
   }, [events]);
 
-  const navSections = useMemo(() => [
-    {
-      title: '응모',
-      items: [
-        viewItem('inbox', counts, selectedView, handleViewChange),
-        viewItem('today', counts, selectedView, handleViewChange),
-        viewItem('ready', counts, selectedView, handleViewChange),
-        viewItem('later', counts, selectedView, handleViewChange),
-      ],
-    },
-    {
-      title: '결과',
-      items: [
-        viewItem('received', counts, selectedView, handleViewChange),
-        viewItem('won', counts, selectedView, handleViewChange),
-        viewItem('lost', counts, selectedView, handleViewChange),
-        viewItem('skipped', counts, selectedView, handleViewChange),
-      ],
-    },
-    {
-      title: '플랫폼',
-      items: Object.entries(PLATFORMS).map(([pid, p]) => ({
-        id: pid,
-        icon: p.icon,
-        label: p.label,
-        count: counts[`pf_${pid}`],
-        active: selectedPlatform === pid,
-        onClick: () => setSelectedPlatform((cur) => (cur === pid ? null : pid)),
-      })),
-    },
-  ], [selectedView, selectedPlatform, counts]);
+  const isAdmin = Boolean(auth?.profile?.is_admin);
+  const navSections = useMemo(() => {
+    const sections = [
+      {
+        title: '응모',
+        items: [
+          viewItem('inbox', counts, selectedView, handleViewChange),
+          viewItem('today', counts, selectedView, handleViewChange),
+          viewItem('ready', counts, selectedView, handleViewChange),
+          viewItem('later', counts, selectedView, handleViewChange),
+        ],
+      },
+      {
+        title: '결과',
+        items: [
+          viewItem('received', counts, selectedView, handleViewChange),
+          viewItem('won', counts, selectedView, handleViewChange),
+          viewItem('lost', counts, selectedView, handleViewChange),
+          viewItem('skipped', counts, selectedView, handleViewChange),
+        ],
+      },
+      {
+        title: '플랫폼',
+        items: Object.entries(PLATFORMS).map(([pid, p]) => ({
+          id: pid,
+          icon: p.icon,
+          label: p.label,
+          count: counts[`pf_${pid}`],
+          active: selectedPlatform === pid,
+          onClick: () => setSelectedPlatform((cur) => (cur === pid ? null : pid)),
+        })),
+      },
+    ];
+    if (isAdmin) {
+      sections.push({
+        title: '관리자',
+        items: [{
+          id: 'admin',
+          icon: '👤',
+          label: '사용자 관리',
+          active: selectedView === 'admin',
+          onClick: () => handleViewChange('admin'),
+        }],
+      });
+    }
+    return sections;
+  }, [selectedView, selectedPlatform, counts, isAdmin]);
 
   const handleResetPatches = () => {
     if (mode === 'live') {
@@ -511,10 +529,15 @@ export default function AppDemo() {
     />
   );
 
-  const viewMeta = VIEWS[selectedView];
+  const isAdminView = selectedView === 'admin';
+  const viewMeta = isAdminView
+    ? { title: '👤 사용자 관리' }
+    : VIEWS[selectedView];
   const platformMeta = selectedPlatform ? PLATFORMS[selectedPlatform] : null;
   const listTitle = viewMeta.title;
-  const listSub = `${visibleEvents.length}건${platformMeta ? ` · ${platformMeta.label}` : ''}`;
+  const listSub = isAdminView
+    ? '관리자 전용'
+    : `${visibleEvents.length}건${platformMeta ? ` · ${platformMeta.label}` : ''}`;
 
   const list = (
     <ListPanel topBar={
@@ -540,6 +563,10 @@ export default function AppDemo() {
       </>
     }>
       <div style={{ padding: 'var(--sp-3)' }}>
+        {isAdminView ? (
+          <AdminPanel />
+        ) : (
+        <>
         {['received', 'won', 'lost'].includes(selectedView) && (
           <InboxSummary events={events} />
         )}
@@ -580,6 +607,8 @@ export default function AppDemo() {
               />
             ))}
           </Stack>
+        )}
+        </>
         )}
       </div>
     </ListPanel>

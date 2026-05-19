@@ -11,7 +11,7 @@ import {
 import {
   hasAuthConfig, getCurrentSession, onAuthStateChange,
   signInWithGoogle, signOut, onAuthRequired,
-  getSupabaseClient,
+  getSupabaseClient, loadAuthProfile,
 } from '../../storage/supabaseAuthStorage.js';
 import {
   enqueueSyncPatch, readSyncQueue, writeSyncQueue, markSyncAttempt,
@@ -43,6 +43,7 @@ function persistDemo(seeds, events) {
 
 export function useDataSource(seeds) {
   const [session, setSession] = useState(null);
+  const [profile, setProfile] = useState(null);
   const [mode, setMode] = useState(hasAuthConfig ? MODE.LOADING : MODE.DEMO);
   const [events, setEvents] = useState(() => loadDemo(seeds));
   const [liveError, setLiveError] = useState('');
@@ -59,16 +60,18 @@ export function useDataSource(seeds) {
     const unsub = onAuthStateChange((s) => {
       setSession(s);
       setMode(s ? MODE.LIVE : MODE.DEMO);
+      if (!s) setProfile(null);
     });
     const unsubAuth = onAuthRequired(() => {
       // 토큰 만료/401 → demo로 fallback (사용자가 다시 로그인할 수 있게)
       setSession(null);
+      setProfile(null);
       setMode(MODE.DEMO);
     });
     return () => { active = false; unsub?.(); unsubAuth?.(); };
   }, []);
 
-  /* live 진입 시 Supabase fetch */
+  /* live 진입 시 Supabase fetch + 프로필 로드 */
   useEffect(() => {
     if (mode !== MODE.LIVE) return;
     let active = true;
@@ -81,6 +84,9 @@ export function useDataSource(seeds) {
         setLiveError(err?.message || '이벤트 로드 실패');
       })
       .finally(() => { if (active) setIsFetching(false); });
+    loadAuthProfile()
+      .then((p) => { if (active) setProfile(p); })
+      .catch(() => { if (active) setProfile(null); });
     return () => { active = false; };
   }, [mode]);
 
@@ -227,9 +233,10 @@ export function useDataSource(seeds) {
   const auth = useMemo(() => ({
     hasConfig: hasAuthConfig,
     session,
+    profile,
     signIn: signInWithGoogle,
     signOut,
-  }), [session]);
+  }), [session, profile]);
 
   return {
     events, setEvents,

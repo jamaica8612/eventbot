@@ -1,0 +1,124 @@
+.v2-admin {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-4);
+}
+
+.v2-admin__summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: var(--sp-2);
+}
+
+.v2-admin__summary-card {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: var(--sp-3);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.v2-admin__summary-card.is-attention {
+  border-color: var(--c-warn, var(--c-brand));
+  background: var(--c-warn-soft, var(--c-brand-soft));
+}
+
+.v2-admin__summary-label {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+}
+
+.v2-admin__summary-value {
+  font-size: var(--fs-lg);
+  font-weight: var(--fw-bold);
+  color: var(--c-text);
+}
+
+.v2-admin__user {
+  background: var(--c-surface-2);
+  border: 1px solid var(--c-line);
+  border-radius: var(--r-md);
+  padding: var(--sp-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-3);
+}
+
+.v2-admin__user.is-pending {
+  border-color: var(--c-warn, var(--c-brand));
+}
+
+.v2-admin__user-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.v2-admin__user-id {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.v2-admin__user-name {
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.v2-admin__user-email {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.v2-admin__user-badges {
+  display: flex;
+  gap: 4px;
+  flex-wrap: wrap;
+}
+
+.v2-admin__user-stats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+  gap: var(--sp-2);
+  background: var(--c-surface-3);
+  border-radius: var(--r-sm);
+  padding: var(--sp-2) var(--sp-3);
+}
+
+.v2-admin__user-stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.v2-admin__user-stat-label {
+  font-size: var(--fs-xs);
+  color: var(--c-text-mute);
+}
+
+.v2-admin__user-stat-value {
+  font-size: var(--fs-sm);
+  font-weight: var(--fw-semibold);
+  color: var(--c-text);
+}
+
+.v2-admin__user-actions {
+  display: flex;
+  gap: var(--sp-2);
+  flex-wrap: wrap;
+}
+
+.v2-admin__empty {
+  padding: var(--sp-6) var(--sp-4);
+  text-align: center;
+  color: var(--c-text-mute);
+  font-size: var(--fs-sm);
+}
