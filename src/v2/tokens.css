@@ -139,36 +139,48 @@
    - neutral / surface / line / text 만 교체. brand/semantic 유지.
    ============================================================ */
 :root[data-theme="light"], .v2[data-theme="light"] {
-  --c-bg:           #fafafb;
+  --c-bg:           #f6f7fa;
   --c-surface:      #ffffff;
-  --c-surface-2:    #f3f5f9;
-  --c-surface-3:    #e8ebf2;
-  --c-line:         rgba(15,20,35,0.08);
-  --c-line-strong:  rgba(15,20,35,0.18);
+  --c-surface-2:    #ffffff;
+  --c-surface-3:    #eef0f6;
+  --c-line:         rgba(15,20,35,0.10);
+  --c-line-strong:  rgba(15,20,35,0.22);
 
-  --c-text:         #1a1f2e;
-  --c-text-mid:     #4b5366;
-  --c-text-mute:    #6e7689;
-  --c-text-faint:   #a0a7b8;
+  --c-text:         #15192a;
+  --c-text-mid:     #424b62;
+  --c-text-mute:    #6a7287;
+  --c-text-faint:   #9ba2b4;
 
-  --c-brand:        #6366f1;
-  --c-brand-strong: #4f46e5;
-  --c-brand-soft:   rgba(99,102,241,0.10);
-  --c-brand-line:   rgba(99,102,241,0.28);
+  --c-brand:        #4f46e5;
+  --c-brand-strong: #4338ca;
+  --c-brand-soft:   rgba(79,70,229,0.12);
+  --c-brand-line:   rgba(79,70,229,0.32);
   --c-brand-on:     #ffffff;
 
-  --c-success-soft: rgba(16,185,129,0.12);
-  --c-warn-soft:    rgba(245,158,11,0.13);
-  --c-danger-soft:  rgba(239,68,68,0.10);
-  --c-info-soft:    rgba(59,130,246,0.10);
+  /* semantic: 라이트 환경에서 가독성 좋은 진한 톤으로 교체 */
+  --c-success:      #059669;
+  --c-success-strong:#047857;
+  --c-success-soft: rgba(5,150,105,0.12);
+  --c-success-on:   #ffffff;
 
-  --c-chip-bg:      rgba(15,20,35,0.05);
+  --c-warn:         #d97706;
+  --c-warn-soft:    rgba(217,119,6,0.13);
+  --c-warn-on:      #ffffff;
+
+  --c-danger:       #dc2626;
+  --c-danger-soft:  rgba(220,38,38,0.10);
+  --c-danger-on:    #ffffff;
+
+  --c-info:         #2563eb;
+  --c-info-soft:    rgba(37,99,235,0.10);
+
+  --c-chip-bg:      rgba(15,20,35,0.06);
   --c-chip-text:    var(--c-text-mid);
 
-  --shadow-sm:  0 1px 2px rgba(15,20,35,0.05);
-  --shadow-md:  0 4px 12px rgba(15,20,35,0.08);
-  --shadow-lg:  0 12px 30px rgba(15,20,35,0.12);
-  --shadow-pop: 0 -10px 40px rgba(15,20,35,0.15);
+  --shadow-sm:  0 1px 2px rgba(15,20,35,0.06);
+  --shadow-md:  0 4px 14px rgba(15,20,35,0.10);
+  --shadow-lg:  0 14px 34px rgba(15,20,35,0.14);
+  --shadow-pop: 0 -10px 40px rgba(15,20,35,0.16);
 }
 
 /* ============================================================
