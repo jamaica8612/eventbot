@@ -27,6 +27,11 @@ const MODE = {
   LIVE:    'live',
 };
 
+/* v2 데모 전용 플래그.
+   당분간 v1을 메인으로 쓰기로 했으므로 v2는 로그인 없이 데모 모드만.
+   다시 라이브로 복귀하려면 false 로. */
+const V2_DEMO_ONLY = true;
+
 function loadDemo(seeds) {
   const patches = loadPatches();
   const created = loadCreated();
@@ -44,14 +49,17 @@ function persistDemo(seeds, events) {
 export function useDataSource(seeds) {
   const [session, setSession] = useState(null);
   const [profile, setProfile] = useState(null);
-  const [mode, setMode] = useState(hasAuthConfig ? MODE.LOADING : MODE.DEMO);
+  const [mode, setMode] = useState(
+    V2_DEMO_ONLY ? MODE.DEMO : (hasAuthConfig ? MODE.LOADING : MODE.DEMO),
+  );
   const [events, setEvents] = useState(() => loadDemo(seeds));
   const [liveError, setLiveError] = useState('');
   const [isFetching, setIsFetching] = useState(false);
   const seedsRef = useRef(seeds);
 
-  /* 세션 초기 로드 + 구독 */
+  /* 세션 초기 로드 + 구독 (V2_DEMO_ONLY 켜져있으면 통째로 skip) */
   useEffect(() => {
+    if (V2_DEMO_ONLY) return;
     if (!hasAuthConfig) return;
     let active = true;
     getCurrentSession()
@@ -63,7 +71,6 @@ export function useDataSource(seeds) {
       if (!s) setProfile(null);
     });
     const unsubAuth = onAuthRequired(() => {
-      // 토큰 만료/401 → demo로 fallback (사용자가 다시 로그인할 수 있게)
       setSession(null);
       setProfile(null);
       setMode(MODE.DEMO);

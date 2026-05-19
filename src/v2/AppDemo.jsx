@@ -542,7 +542,7 @@ export default function AppDemo() {
   const list = (
     <ListPanel topBar={
       <>
-        <AuthBanner mode={mode} isFetching={isFetching} liveError={liveError} auth={auth} onRefresh={refresh} />
+        {/* v2 데모 전용 모드 — AuthBanner 비활성. 로그인 복귀하려면 useDataSource.V2_DEMO_ONLY=false */}
         <TopBar
           title={listTitle} sub={listSub}
           leftIcon={
