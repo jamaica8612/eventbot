@@ -14,6 +14,15 @@ export default defineConfig(({ mode }) => {
   return {
     base: process.env.GITHUB_PAGES ? '/eventbot/' : '/',
     plugins: [react(), localApi()],
+    build: {
+      rollupOptions: {
+        input: {
+          main: 'index.html',
+          v2: 'v2.html',
+          v2shell: 'v2-shell.html',
+        },
+      },
+    },
   };
 });
 
