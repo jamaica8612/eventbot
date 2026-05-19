@@ -1,57 +1,93 @@
 @import url("https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css");
 
+/* ============================================================
+   토큰: v2 디자인 시스템 톤으로 매핑 (이름은 v1 호환 유지).
+   변경 가이드:
+   - brand: yellow → indigo (v2)
+   - surface/text/border: v2 톤 (다크 #14171f 계열, 라이트 #fff)
+   - semantic(success/danger/warn): v2 진한 톤
+   다른 룰은 그대로. 컴포넌트 모양은 후속 단계에서.
+   ============================================================ */
 :root {
-  --wanted-blue: #ffd24a;
-  --wanted-blue-soft: rgba(255, 210, 74, 0.13);
-  --text-strong: #f4f6fb;
-  --text-main: rgba(244, 246, 251, 0.82);
-  --text-muted: #94a0b6;
-  --border: rgba(255, 255, 255, 0.08);
+  /* brand (CTA / 링크 / 액센트) */
+  --wanted-blue: #818cf8;                       /* v2 brand */
+  --wanted-blue-soft: rgba(129, 140, 248, 0.16);
+
+  /* text */
+  --text-strong: #f0f1f5;
+  --text-main:   #b1b5c2;
+  --text-muted:  #6b7388;
+
+  /* line */
+  --border:        rgba(255, 255, 255, 0.07);
   --border-strong: rgba(255, 255, 255, 0.14);
-  --surface: #181d2b;
-  --surface-alt: #10141f;
-  --surface-raised: #111724;
-  --success: #22c55e;
-  --danger: #ff5252;
-  --warning: #ffd24a;
-  --cta-text: #151922;
-  --accent-border: rgba(255, 210, 74, 0.38);
-  --page-bg: linear-gradient(180deg, rgba(27, 45, 80, 0.68) 0%, #1a2232 220px, var(--surface-alt) 420px);
-  --nav-bg: rgba(16, 20, 31, 0.96);
-  --soft-panel: rgba(255, 255, 255, 0.04);
-  --shadow-card: 0 2px 12px rgba(0, 0, 0, 0.4);
-  --shadow-cta: 0 4px 14px rgba(255, 210, 74, 0.22);
+
+  /* surface */
+  --surface:        #14171f;     /* card */
+  --surface-alt:    #0a0c12;     /* page bg */
+  --surface-raised: #1c2029;     /* hover / raised */
+
+  /* semantic */
+  --success: #3ddc97;
+  --danger:  #ff5d6c;
+  --warning: #ffb454;
+
+  /* CTA on brand */
+  --cta-text:      #1a1740;
+  --accent-border: rgba(129, 140, 248, 0.35);
+
+  /* compositions */
+  --page-bg:   linear-gradient(180deg, rgba(99, 102, 241, 0.10) 0%, #0d1019 220px, var(--surface-alt) 420px);
+  --nav-bg:    rgba(20, 23, 31, 0.94);
+  --soft-panel: rgba(255, 255, 255, 0.05);
+
+  /* shadow */
+  --shadow-card: 0 4px 12px rgba(0, 0, 0, 0.35);
+  --shadow-cta:  0 6px 18px rgba(99, 102, 241, 0.32);
+
   color-scheme: dark;
   color: var(--text-main);
   background: var(--surface-alt);
   font-family: Pretendard, -apple-system, BlinkMacSystemFont, system-ui, "Segoe UI",
     sans-serif;
   font-synthesis: none;
-  line-height: 1.5;
+  line-height: 1.55;
   text-rendering: optimizeLegibility;
 }
 
 html[data-theme="light"] {
-  --wanted-blue: #1a73e8;
-  --wanted-blue-soft: rgba(26, 115, 232, 0.1);
-  --text-strong: #111827;
-  --text-main: #273142;
-  --text-muted: #6b7280;
-  --border: rgba(17, 24, 39, 0.09);
-  --border-strong: rgba(17, 24, 39, 0.14);
-  --surface: #ffffff;
-  --surface-alt: #f7f7f8;
-  --surface-raised: #f1f5fb;
-  --success: #138a42;
-  --danger: #d92d20;
-  --warning: #1a73e8;
-  --cta-text: #ffffff;
-  --accent-border: rgba(26, 115, 232, 0.28);
-  --page-bg: linear-gradient(180deg, #f3f8ff 0%, #eef5ff 220px, var(--surface-alt) 420px);
-  --nav-bg: rgba(255, 255, 255, 0.94);
-  --soft-panel: rgba(26, 115, 232, 0.06);
-  --shadow-card: 0 4px 18px rgba(17, 24, 39, 0.08);
-  --shadow-cta: 0 6px 16px rgba(26, 115, 232, 0.18);
+  /* brand: v2 indigo-600 */
+  --wanted-blue:      #4f46e5;
+  --wanted-blue-soft: rgba(79, 70, 229, 0.12);
+
+  /* text */
+  --text-strong: #15192a;
+  --text-main:   #424b62;
+  --text-muted:  #6a7287;
+
+  /* line */
+  --border:        rgba(15, 20, 35, 0.10);
+  --border-strong: rgba(15, 20, 35, 0.22);
+
+  /* surface */
+  --surface:        #ffffff;
+  --surface-alt:    #f6f7fa;
+  --surface-raised: #eef0f6;
+
+  /* semantic (라이트에서 가독성 진한 톤) */
+  --success: #059669;
+  --danger:  #dc2626;
+  --warning: #d97706;
+
+  --cta-text:      #ffffff;
+  --accent-border: rgba(79, 70, 229, 0.32);
+
+  --page-bg:    linear-gradient(180deg, rgba(79, 70, 229, 0.06) 0%, #eef0f8 220px, var(--surface-alt) 420px);
+  --nav-bg:     rgba(255, 255, 255, 0.94);
+  --soft-panel: rgba(15, 20, 35, 0.05);
+
+  --shadow-card: 0 4px 14px rgba(15, 20, 35, 0.10);
+  --shadow-cta:  0 6px 16px rgba(79, 70, 229, 0.20);
   color-scheme: light;
 }
 
