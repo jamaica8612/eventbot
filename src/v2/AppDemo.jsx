@@ -13,6 +13,7 @@ import { ResultEntry } from './components/ResultEntry.jsx';
 import { InboxSummary } from './components/InboxSummary.jsx';
 import { KeyboardHelp } from './components/KeyboardHelp.jsx';
 import { NewEventDialog } from './components/NewEventDialog.jsx';
+import { OnboardingTour, hasSeenOnboarding } from './components/OnboardingTour.jsx';
 import {
   clearPatches, loadCreated, loadUiState, saveUiState,
   loadSearchHistory, pushSearchHistory, clearSearchHistory,
@@ -302,6 +303,7 @@ export default function AppDemo() {
   const [sheetOpen, setSheetOpen] = useState(false);
   const [toasts, setToasts] = useState([]); // [{id, action, eventId, prevPatch, ts}], 최근 5개만 유지
   const [helpOpen, setHelpOpen] = useState(false);
+  const [tourOpen, setTourOpen] = useState(() => !hasSeenOnboarding());
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [theme, setTheme] = useState(() => getStoredTheme());
   useEscape(() => { setSheetOpen(false); setHelpOpen(false); setDrawerOpen(false); setNewOpen(false); });
@@ -727,7 +729,7 @@ export default function AppDemo() {
 
   return (
     <>
-      <ViewSwitcher onHelp={() => setHelpOpen(true)} theme={theme} onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
+      <ViewSwitcher onHelp={() => setHelpOpen(true)} onTour={() => setTourOpen(true)} theme={theme} onToggleTheme={() => setTheme((t) => (t === 'light' ? 'dark' : 'light'))} />
       <AppShell
         nav={nav}
         list={list}
@@ -742,6 +744,7 @@ export default function AppDemo() {
       />
       <ActionToastStack toasts={toasts} onUndo={undoToast} onDismiss={dismissToast} />
       <KeyboardHelp open={helpOpen} onClose={() => setHelpOpen(false)} />
+      <OnboardingTour open={tourOpen} onClose={() => setTourOpen(false)} />
       <NewEventDialog open={newOpen} onClose={() => setNewOpen(false)} onSubmit={handleAddEvent} />
     </>
   );
@@ -972,7 +975,7 @@ function EmptyState({ view, query }) {
   );
 }
 
-function ViewSwitcher({ onHelp, theme, onToggleTheme }) {
+function ViewSwitcher({ onHelp, onTour, theme, onToggleTheme }) {
   return (
     <div style={{
       position: 'fixed', top: 12, right: 12, zIndex: 100,
@@ -987,6 +990,9 @@ function ViewSwitcher({ onHelp, theme, onToggleTheme }) {
         <button onClick={onToggleTheme} className="v2-pill" aria-label="테마 토글" title={`${theme === 'light' ? '다크' : '라이트'} 모드로`} style={{ border: 'none', cursor: 'pointer' }}>
           {theme === 'light' ? '☾' : '☀'}
         </button>
+      )}
+      {onTour && (
+        <button onClick={onTour} className="v2-pill" aria-label="투어 다시 보기" title="투어 다시 보기" style={{ border: 'none', cursor: 'pointer' }}>✨</button>
       )}
       {onHelp && (
         <button onClick={onHelp} className="v2-pill" aria-label="키보드 단축키 도움말" title="키보드 단축키 (?)" style={{ border: 'none', cursor: 'pointer' }}>?</button>
