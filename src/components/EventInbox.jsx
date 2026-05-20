@@ -9,6 +9,7 @@ import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
 import { EventCard } from './EventCards.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { GifticonVault } from './GifticonVault.jsx';
 import { PlatformBadge } from './PlatformBadge.jsx';
 
 const deadlineFilters = [
@@ -112,7 +113,9 @@ export function EventInbox({
   onResultChange,
   onMetaChange,
   onDelete,
+  onNotice,
 }) {
+  const [isGifticonOpen, setIsGifticonOpen] = useState(false);
   const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
   const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
   const attentionCounts = useMemo(() => buildInboxAttentionCounts(sortedEvents), [sortedEvents]);
@@ -122,16 +125,25 @@ export function EventInbox({
     [selectedFilter, sortedEvents],
   );
 
+  if (isGifticonOpen) {
+    return <GifticonVault onClose={() => setIsGifticonOpen(false)} onNotice={onNotice} />;
+  }
+
   if (events.length === 0) {
     return (
-      <p className="empty-message">
-        {isLoading ? '이벤트를 불러오는 중입니다.' : '응모함에 담긴 이벤트가 없습니다.'}
-      </p>
+      <div className="inbox-board">
+        <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+        <p className="empty-message">
+          {isLoading ? '이벤트를 불러오는 중입니다.' : '응모함에 담긴 이벤트가 없습니다.'}
+        </p>
+      </div>
     );
   }
 
   return (
     <div className="inbox-board">
+      <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+
       <div className="inbox-summary">
         <div>
           <span>응모완료</span>
@@ -191,6 +203,20 @@ export function EventInbox({
           <p className="empty-message">이 조건에 맞는 응모 내역이 없습니다.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function InboxGifticonEntry({ onOpen }) {
+  return (
+    <div className="inbox-gifticon-entry">
+      <div>
+        <span>가족 공유</span>
+        <strong>기프티콘 공유함</strong>
+      </div>
+      <button type="button" onClick={onOpen}>
+        열기
+      </button>
     </div>
   );
 }

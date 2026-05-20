@@ -553,6 +553,7 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onResultChange={updateResult}
               onMetaChange={updateWinningMeta}
               onDelete={deleteInboxEvent}
+              onNotice={setSyncNotice}
             />
           ) : (
             <div className="event-list">

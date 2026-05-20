@@ -247,6 +247,334 @@ h3 {
   gap: 6px;
 }
 
+.inbox-gifticon-entry,
+.gifticon-family-panel,
+.gifticon-undo {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 12px;
+  box-shadow: var(--shadow-card);
+}
+
+.inbox-gifticon-entry {
+  margin-bottom: 12px;
+}
+
+.inbox-gifticon-entry span,
+.gifticon-family-panel span {
+  display: block;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.inbox-gifticon-entry strong,
+.gifticon-family-panel strong {
+  display: block;
+  margin-top: 3px;
+  color: var(--text-strong);
+  font-size: 1rem;
+}
+
+.inbox-gifticon-entry button,
+.gifticon-header button,
+.gifticon-empty-card button,
+.gifticon-family-panel button,
+.gifticon-form button,
+.gifticon-actions button,
+.gifticon-undo button,
+.gifticon-member-list button {
+  min-height: 38px;
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  padding: 0 13px;
+  font-weight: 900;
+}
+
+.gifticon-vault {
+  display: grid;
+  gap: 12px;
+}
+
+.gifticon-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: start;
+}
+
+.gifticon-header h3 {
+  margin: 2px 0 0;
+  color: var(--text-strong);
+  font-size: 1.25rem;
+}
+
+.gifticon-empty-card,
+.gifticon-form {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 14px;
+  box-shadow: var(--shadow-card);
+}
+
+.gifticon-empty-card span {
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.gifticon-empty-card strong {
+  color: var(--text-strong);
+  font-size: 1.08rem;
+}
+
+.gifticon-empty-card input,
+.gifticon-family-panel input,
+.gifticon-form input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  color: var(--text-main);
+  padding: 0 12px;
+  font: inherit;
+}
+
+.gifticon-family-panel form {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  min-width: 0;
+}
+
+.gifticon-member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.gifticon-member-list span {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  max-width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--text-muted);
+  padding: 6px 8px 6px 11px;
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.gifticon-member-list button {
+  min-height: 26px;
+  padding: 0 8px;
+  font-size: 0.72rem;
+}
+
+.gifticon-form {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.gifticon-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.gifticon-form label span {
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+.gifticon-form-wide,
+.gifticon-form-note,
+.gifticon-form > button,
+.gifticon-image-preview {
+  grid-column: 1 / -1;
+}
+
+.gifticon-form-note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 800;
+}
+
+.gifticon-image-preview,
+.gifticon-thumb,
+.gifticon-lightbox {
+  border: 0;
+  background: none;
+  padding: 0;
+}
+
+.gifticon-image-preview img {
+  width: 100%;
+  max-height: 180px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  object-fit: contain;
+  background: var(--surface-alt);
+}
+
+.gifticon-filters {
+  margin-top: 2px;
+}
+
+.gifticon-undo {
+  background: var(--wanted-blue-soft);
+}
+
+.gifticon-undo span {
+  color: var(--text-strong);
+  font-weight: 850;
+}
+
+.gifticon-list {
+  display: grid;
+  gap: 10px;
+}
+
+.gifticon-card {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr);
+  gap: 12px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.gifticon-thumb {
+  width: 84px;
+  height: 84px;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.gifticon-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.gifticon-main {
+  display: grid;
+  gap: 5px;
+  min-width: 0;
+}
+
+.gifticon-title-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: start;
+}
+
+.gifticon-title-row strong {
+  min-width: 0;
+  color: var(--text-strong);
+  overflow-wrap: anywhere;
+}
+
+.gifticon-title-row span {
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-muted);
+  padding: 4px 8px;
+  font-size: 0.72rem;
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.gifticon-expiry-soon .gifticon-title-row span,
+.gifticon-expiry-today .gifticon-title-row span {
+  background: rgba(255, 210, 74, 0.16);
+  color: var(--warning);
+}
+
+.gifticon-expiry-expired .gifticon-title-row span {
+  background: rgba(255, 82, 82, 0.13);
+  color: var(--danger);
+}
+
+.gifticon-main p {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.gifticon-main code {
+  width: fit-content;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  border-radius: 8px;
+  background: var(--surface-alt);
+  color: var(--text-main);
+  padding: 5px 7px;
+  font-size: 0.78rem;
+}
+
+.gifticon-used-meta {
+  color: var(--success) !important;
+}
+
+.gifticon-actions {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.gifticon-actions button.is-primary {
+  background: rgba(34, 197, 94, 0.13);
+  border-color: rgba(34, 197, 94, 0.28);
+  color: var(--success);
+}
+
+.gifticon-actions button.is-danger {
+  background: rgba(255, 82, 82, 0.13);
+  border-color: rgba(255, 82, 82, 0.3);
+  color: var(--danger);
+}
+
+.gifticon-lightbox {
+  position: fixed;
+  inset: 0;
+  z-index: 90;
+  display: grid;
+  place-items: center;
+  background: rgba(0, 0, 0, 0.72);
+  padding: 18px;
+}
+
+.gifticon-lightbox img {
+  max-width: min(100%, 720px);
+  max-height: 86vh;
+  border-radius: 12px;
+  object-fit: contain;
+  background: #fff;
+}
+
 .auth-form span {
   color: var(--text-muted);
   font-size: 0.8rem;

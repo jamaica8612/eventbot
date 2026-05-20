@@ -121,6 +121,108 @@ export async function updateSupabaseProfileAccess(userId, patch) {
   });
 }
 
+export async function loadGifticonFamily() {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('GET', 'gifticonFamily');
+  return payload.family ?? null;
+}
+
+export async function createGifticonFamily(name) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'createGifticonFamily',
+    name,
+  });
+  return payload.family ?? null;
+}
+
+export async function addGifticonFamilyMember(email) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'addGifticonFamilyMember',
+    email,
+  });
+  return payload.family ?? null;
+}
+
+export async function removeGifticonFamilyMember(memberId) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'removeGifticonFamilyMember',
+    memberId,
+  });
+  return payload.family ?? null;
+}
+
+export async function loadGifticons(filter = 'active') {
+  if (!hasSupabaseConfig) return [];
+  const payload = await callDataFunction('GET', 'gifticons', null, { filter });
+  return Array.isArray(payload.gifticons) ? payload.gifticons : [];
+}
+
+export async function createGifticon(gifticon) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'createGifticon',
+    gifticon,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function updateGifticon(gifticonId, patch) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'updateGifticon',
+    gifticonId,
+    patch,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function markGifticonUsed(gifticonId) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'markGifticonUsed',
+    gifticonId,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function restoreGifticonActive(gifticonId) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'restoreGifticonActive',
+    gifticonId,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function trashGifticon(gifticonId) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'trashGifticon',
+    gifticonId,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function restoreGifticonFromTrash(gifticonId) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'restoreGifticonFromTrash',
+    gifticonId,
+  });
+  return payload.gifticon ?? null;
+}
+
+export async function deleteGifticonPermanently(gifticonId) {
+  if (!hasSupabaseConfig) return;
+  await callDataFunction('POST', '', {
+    action: 'deleteGifticonPermanently',
+    gifticonId,
+  });
+}
+
 export async function triggerSupabaseCrawler() {
   if (!hasSupabaseConfig) {
     throw new Error('Supabase \uC124\uC815\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
@@ -147,7 +249,7 @@ export async function triggerSupabaseCrawler() {
   return payload;
 }
 
-async function callDataFunction(method, resource, body) {
+async function callDataFunction(method, resource, body, query = {}) {
   const token = await getAuthToken();
   if (!token) {
     throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
@@ -156,6 +258,9 @@ async function callDataFunction(method, resource, body) {
   const url = new URL(DATA_FUNCTION_URL);
   if (resource) {
     url.searchParams.set('resource', resource);
+  }
+  for (const [key, value] of Object.entries(query)) {
+    if (value != null && value !== '') url.searchParams.set(key, value);
   }
 
   const response = await fetch(url, {
