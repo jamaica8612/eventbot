@@ -4780,3 +4780,150 @@ html[data-theme="light"] {
 .ready-hero-chip-hot {
   background: rgba(0, 0, 0, 0.20);
 }
+
+/* ============================================================
+   V2 Warm Pop — GifticonVault reskin
+   ============================================================ */
+
+/* 헤더: 큰 타이틀 + 우측 등록 CTA */
+.gifticon-header h3 {
+  font-size: 1.45rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.gifticon-header button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.30);
+}
+
+/* 가족 패널 */
+.gifticon-family-panel {
+  border-radius: 20px;
+}
+
+.gifticon-family-panel strong {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* 빈 카드 / 폼 */
+.gifticon-empty-card,
+.gifticon-form {
+  border-radius: 20px;
+}
+
+.gifticon-form > button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 950;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.28);
+}
+
+/* 필터 칩 */
+.gifticon-filters .filter-chips button.is-active {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--surface);
+}
+
+/* Undo bar */
+.gifticon-undo {
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(62, 196, 163, 0.12), rgba(62, 196, 163, 0.04));
+  border-color: rgba(62, 196, 163, 0.32);
+}
+
+.gifticon-undo span {
+  color: var(--warm-mint);
+}
+
+.gifticon-undo button {
+  border-color: rgba(62, 196, 163, 0.32);
+  background: rgba(62, 196, 163, 0.14);
+  color: var(--warm-mint);
+}
+
+/* 카드 그리드: PC에서 2열 */
+@media (min-width: 720px) {
+  .gifticon-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gifticon-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 기프티콘 카드 자체 */
+.gifticon-card {
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(40, 30, 18, 0.05);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.gifticon-card:hover {
+  box-shadow: 0 12px 26px rgba(40, 30, 18, 0.10);
+  transform: translateY(-1px);
+}
+
+.gifticon-thumb {
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 180, 84, 0.16), rgba(255, 138, 76, 0.04));
+  border-color: rgba(255, 180, 84, 0.24);
+}
+
+.gifticon-title-row strong {
+  font-size: 0.96rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* 만료 배지: 컬러 코딩 */
+.gifticon-title-row span {
+  padding: 4px 10px;
+  font-weight: 900;
+}
+
+.gifticon-expiry-soon .gifticon-title-row span {
+  background: rgba(255, 180, 84, 0.18);
+  color: var(--warm-yellow);
+}
+
+.gifticon-expiry-today .gifticon-title-row span {
+  background: linear-gradient(135deg, #ff8896, var(--danger));
+  color: #fff;
+}
+
+.gifticon-expiry-expired .gifticon-title-row span {
+  background: rgba(255, 93, 108, 0.14);
+  color: var(--danger);
+}
+
+/* 사용가능(만료 임박/오늘) 카드 보더 강조 */
+.gifticon-expiry-today {
+  border-color: rgba(255, 93, 108, 0.32);
+  background: linear-gradient(180deg, rgba(255, 93, 108, 0.06), var(--surface));
+}
+
+.gifticon-expiry-soon {
+  border-color: rgba(255, 180, 84, 0.32);
+}
+
+/* 카드 액션 버튼 */
+.gifticon-actions button.is-primary {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
