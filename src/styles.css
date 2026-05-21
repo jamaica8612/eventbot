@@ -5216,3 +5216,227 @@ html[data-theme="light"] {
 .crawler-status-quiet strong {
   color: var(--warm-yellow);
 }
+
+/* ============================================================
+   V2 ReadyEventCard — 시안과 동일한 카드 구조
+   기능 4개(참여/참여완료/임시저장/제외 + 마감수정) 모두 유지,
+   배치만 시안의 primary CTA + 아이콘 버튼 형태로 변경.
+   ============================================================ */
+.v2-card-ready {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  border-radius: 20px;
+  padding: 16px 16px 14px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: 0 2px 8px rgba(40, 30, 18, 0.04);
+  overflow: visible;
+}
+
+.v2-card-ready.is-featured {
+  border-color: rgba(255, 107, 74, 0.32);
+  box-shadow: 0 10px 24px rgba(40, 30, 18, 0.08);
+}
+
+.v2-featured-ribbon {
+  position: absolute;
+  top: -8px;
+  left: 16px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  box-shadow: 0 4px 10px rgba(255, 107, 74, 0.32);
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.v2-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  padding: 0;
+}
+
+.v2-winner-count {
+  font-size: 0.74rem;
+  color: var(--text-muted);
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.v2-winner-count b {
+  color: var(--text-strong);
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+.v2-card-title {
+  margin: 0;
+  font-size: 1.04rem;
+  line-height: 1.3;
+  font-weight: 800;
+  color: var(--text-strong);
+  letter-spacing: -0.025em;
+}
+
+.v2-chip-row {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+
+.v2-chip-today {
+  background: linear-gradient(135deg, #ff8896, var(--danger));
+  color: #fff;
+}
+
+.v2-chip-tomorrow {
+  background: rgba(255, 180, 84, 0.16);
+  color: var(--warm-yellow);
+  border-color: rgba(255, 180, 84, 0.32);
+}
+
+.v2-chip-soon {
+  background: rgba(129, 140, 248, 0.12);
+  color: #4f46e5;
+}
+
+.v2-chip-prize {
+  background: rgba(255, 180, 84, 0.14);
+  color: var(--warm-yellow);
+  border-color: rgba(255, 180, 84, 0.28);
+}
+
+.v2-summary-box {
+  background: var(--surface-raised);
+  border-radius: 12px;
+  padding: 10px 12px;
+  font-size: 0.78rem;
+  color: var(--text-main);
+  line-height: 1.45;
+}
+
+.v2-summary-box .source-summary,
+.v2-summary-box .event-body-toggle,
+.v2-summary-box .event-body-preview,
+.v2-summary-box .event-body-expanded {
+  background: transparent;
+  border: none;
+  padding: 0;
+  margin: 0;
+}
+
+.v2-action-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.v2-primary-cta {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 44px;
+  border: none;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  font-size: 0.86rem;
+  letter-spacing: -0.01em;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.28);
+  cursor: pointer;
+  text-decoration: none;
+  transition: transform 140ms ease, box-shadow 140ms ease;
+}
+
+.v2-primary-cta:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 22px rgba(255, 107, 74, 0.34);
+}
+
+.v2-primary-cta:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.v2-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  min-height: 44px;
+  padding: 0;
+  border-radius: 14px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--text-main);
+  font-size: 1.1rem;
+  font-weight: 800;
+  cursor: pointer;
+  transition: background 140ms ease, color 140ms ease, border-color 140ms ease;
+}
+
+.v2-icon-btn:hover {
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+.v2-icon-btn-done.is-on,
+.v2-icon-btn-done:hover {
+  background: rgba(62, 196, 163, 0.14);
+  border-color: rgba(62, 196, 163, 0.32);
+  color: var(--warm-mint);
+}
+
+.v2-icon-btn-later.is-on {
+  background: rgba(255, 180, 84, 0.14);
+  border-color: rgba(255, 180, 84, 0.32);
+  color: var(--warm-yellow);
+}
+
+.v2-icon-btn-skip.is-on {
+  background: rgba(255, 93, 108, 0.10);
+  border-color: rgba(255, 93, 108, 0.28);
+  color: var(--danger);
+}
+
+.v2-icon-btn-edit:hover {
+  background: rgba(255, 107, 74, 0.10);
+  border-color: rgba(255, 107, 74, 0.28);
+  color: var(--warm-orange);
+}
+
+@media (max-width: 380px) {
+  .v2-action-row {
+    grid-template-columns: minmax(0, 1fr) auto auto;
+    grid-auto-rows: auto;
+  }
+  .v2-action-row .v2-icon-btn-edit {
+    grid-column: 1 / -1;
+    width: auto;
+  }
+}
