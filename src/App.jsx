@@ -479,8 +479,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             </div>
           </div>
 
-          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
-
           {syncNotice ? (
             <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
           ) : null}
@@ -499,9 +497,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
-              onCrawl={handleManualCrawl}
-              isCrawling={isCrawling}
-              crawlerStatus={crawlerStatus}
               onReset={() => setFilterSettings(defaultFilterSettings)}
             />
           ) : null}
@@ -543,6 +538,9 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             <AdminPanel
               onSummaryChange={setAdminSummary}
               onNotice={setSyncNotice}
+              crawlerStatus={crawlerStatus}
+              isCrawling={isCrawling}
+              onCrawl={handleManualCrawl}
             />
           ) : filter === 'todayDeadline' ? (
             <TodayDeadlineList
@@ -914,9 +912,6 @@ function FilterSettingsPanel({
   onThemeChange,
   onSelectFilter,
   onLock,
-  onCrawl,
-  isCrawling,
-  crawlerStatus,
   onReset,
 }) {
   const platforms = useMemo(
@@ -929,10 +924,6 @@ function FilterSettingsPanel({
   const keywordText = settings.excludedKeywords.join('\n');
   const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
   const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
-  const lastCrawledAt = formatDateTime(
-    crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt,
-  );
-
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
   }
@@ -975,17 +966,6 @@ function FilterSettingsPanel({
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
         </button>
-        <div className="settings-crawl-action">
-          <button
-            type="button"
-            className="settings-action-button"
-            onClick={onCrawl}
-            disabled={isCrawling}
-          >
-            {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
-          </button>
-          <span>{`\uB9C8\uC9C0\uB9C9 \uC131\uACF5 ${lastCrawledAt}`}</span>
-        </div>
         <button
           type="button"
           className={`settings-action-button settings-excluded-button${

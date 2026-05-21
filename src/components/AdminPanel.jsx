@@ -5,7 +5,7 @@ import {
   updateSupabaseProfileAccess,
 } from '../storage/supabaseEventStorage.js';
 
-export function AdminPanel({ onSummaryChange, onNotice }) {
+export function AdminPanel({ onSummaryChange, onNotice, crawlerStatus, isCrawling, onCrawl }) {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState('');
@@ -82,6 +82,20 @@ export function AdminPanel({ onSummaryChange, onNotice }) {
         <div className="admin-control-meter">
           <span>전체 사용자</span>
           <strong>{summary.total}명</strong>
+        </div>
+      </section>
+
+      <section className="admin-crawler-panel" aria-label="크롤링 운영">
+        <div>
+          <span>CRAWLER</span>
+          <strong>{getCrawlerStatusLabel(crawlerStatus)}</strong>
+          <p>{getCrawlerSummary(crawlerStatus)}</p>
+        </div>
+        <div className="admin-crawler-actions">
+          <button type="button" onClick={onCrawl} disabled={isCrawling}>
+            {isCrawling ? '크롤링 중' : '크롤링하기'}
+          </button>
+          <small>마지막 성공 {formatCrawlerDate(crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt)}</small>
         </div>
       </section>
 
@@ -173,6 +187,47 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function getCrawlerStatusLabel(status) {
+  if (!status) return '상태 확인 전';
+  if (status.status === 'failure') return '크롤링 실패';
+  if (status.status === 'requested') return '크롤링 요청됨';
+  const recentSeen = Number.isFinite(status.recentSeen24h)
+    ? status.recentSeen24h
+    : Array.isArray(status.recentEvents)
+      ? status.recentEvents.length
+      : null;
+  if (recentSeen === 0) return '신규 수집 없음';
+  return '크롤링 정상';
+}
+
+function getCrawlerSummary(status) {
+  if (!status) return '아직 크롤링 상태를 불러오지 못했습니다.';
+  if (status.status === 'failure') {
+    return status.failureMessage || '최근 크롤링이 실패했습니다.';
+  }
+  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
+  const recentSeen = Number.isFinite(status.recentSeen24h)
+    ? status.recentSeen24h
+    : Array.isArray(status.recentEvents)
+      ? status.recentEvents.length
+      : '-';
+  const latestSeenAt = formatCrawlerDate(status.latestSeenAt);
+  return `DB ${total}개 · 최근 24시간 ${recentSeen}개 · 최신 수집 ${latestSeenAt}`;
+}
+
+function formatCrawlerDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function buildAdminSummary(users) {

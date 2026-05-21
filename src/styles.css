@@ -6460,10 +6460,58 @@ button.is-selected {
   align-content: center;
 }
 
+.admin-crawler-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 14px;
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--surface) 94%, transparent);
+  box-shadow: var(--shadow-card);
+  padding: 16px;
+}
+
+.admin-crawler-panel span {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--wanted-blue);
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.admin-crawler-panel strong {
+  color: var(--text-strong);
+  font-size: 1.25rem;
+  font-weight: 950;
+}
+
+.admin-crawler-panel p,
+.admin-crawler-actions small {
+  margin: 4px 0 0;
+  color: var(--text-main);
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.admin-crawler-actions {
+  display: grid;
+  gap: 7px;
+  justify-items: end;
+}
+
+.admin-crawler-actions button {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  box-shadow: var(--shadow-cta);
+}
+
 @media (max-width: 760px) {
   .deadline-focus-panel,
   .inbox-hero-panel,
-  .admin-control-panel {
+  .admin-control-panel,
+  .admin-crawler-panel {
     grid-template-columns: 1fr;
     border-radius: 20px;
     padding: 15px;
@@ -6477,5 +6525,9 @@ button.is-selected {
 
   .deadline-focus-strip {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .admin-crawler-actions {
+    justify-items: stretch;
   }
 }
