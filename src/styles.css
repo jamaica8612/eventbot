@@ -4510,3 +4510,273 @@ html[data-theme="light"] {
   background: rgba(62, 196, 163, 0.12);
   color: var(--warm-mint);
 }
+
+/* ============================================================
+   V2 Warm Pop — EventCard 내부 디테일 + Toolbar
+   ============================================================ */
+
+/* 카드 타이틀 강조 */
+.event-card h3,
+.inbox-title-cell strong,
+.manage-row-title {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+/* 당첨자 수 (winner count) chip */
+.score-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 180, 84, 0.14);
+  color: var(--warm-yellow);
+  font-size: 0.78rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 경품 패널: 옐로우 톤 */
+.prize-panel {
+  border-radius: 14px;
+  border-color: rgba(255, 180, 84, 0.24);
+  background: linear-gradient(135deg, rgba(255, 180, 84, 0.12), rgba(255, 180, 84, 0.04));
+}
+
+.prize-panel span {
+  color: var(--warm-yellow);
+  letter-spacing: 0.02em;
+}
+
+/* 발표 결과 버튼 (TodayAnnouncement) */
+.result-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.result-row button {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.result-row button.is-won {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
+
+.result-row button.is-lost {
+  border: none;
+  background: linear-gradient(135deg, #ff8896, #ff5d6c);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(255, 93, 108, 0.28);
+}
+
+/* now-card 액션: primary는 그라데이션, 나머지는 ghost */
+.now-actions {
+  gap: 6px;
+}
+
+.now-actions button:not(.apply-link) {
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+/* announcement-panel (발표일 변경) — 오렌지 톤 */
+.announcement-panel {
+  border-color: rgba(255, 107, 74, 0.22);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.10), var(--surface));
+  border-radius: 16px;
+}
+
+/* announcement card / today announce 강조 */
+.announcement-card {
+  border-color: rgba(255, 107, 74, 0.30);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.08), var(--surface));
+}
+
+/* Announcement state badge */
+.announcement-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.announcement-state-today {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--warm-orange);
+}
+
+.announcement-state-overdue {
+  background: rgba(255, 93, 108, 0.14);
+  color: var(--danger);
+}
+
+.announcement-state-soon {
+  background: rgba(255, 180, 84, 0.16);
+  color: var(--warm-yellow);
+}
+
+/* ----- Toolbar (상단 제목) ----- */
+.toolbar h2 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.section-label {
+  color: var(--text-muted);
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 1024px) {
+  .toolbar {
+    border-radius: 22px;
+    box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+  }
+  .toolbar h2 {
+    font-size: 1.7rem;
+  }
+}
+
+/* ----- 마감 chip 컬러 (deadline-meta) ----- */
+.deadline-meta span:first-child {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--warm-orange);
+}
+
+/* manage-link "확인" 버튼 (응모함 row) */
+.manage-link {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: rgba(255, 107, 74, 0.10);
+  color: var(--warm-orange);
+  font-weight: 900;
+}
+
+/* 발표일 지남 / 오늘발표 row 강조 */
+.inbox-announcement-overdue {
+  border-color: rgba(255, 93, 108, 0.30);
+}
+
+/* ============================================================
+   V2 Warm Pop — 응모대기(ready) Hero
+   ============================================================ */
+.ready-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 18px 20px 16px;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-pink));
+  color: #fff;
+  box-shadow: var(--hero-shadow);
+}
+
+.ready-hero::before,
+.ready-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ready-hero::before {
+  right: -20px;
+  top: -20px;
+  width: 130px;
+  height: 130px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ready-hero::after {
+  right: 30px;
+  bottom: -34px;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.ready-hero-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.ready-hero-head .section-label {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+}
+
+.ready-hero-head span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ready-hero-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.ready-hero-body > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ready-hero-body strong {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ready-hero-body > div:first-child span {
+  font-size: 0.92rem;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.ready-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ready-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 0.76rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ready-hero-chip-hot {
+  background: rgba(0, 0, 0, 0.20);
+}
