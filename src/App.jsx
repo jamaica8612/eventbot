@@ -493,6 +493,13 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             />
           ) : null}
 
+          {filter === 'ready' ? (
+            <ReadyHero
+              total={counts.ready}
+              todayDeadline={counts.todayDeadline}
+            />
+          ) : null}
+
           {filter === 'ready' && platformOptions.length > 1 ? (
             <div className="filter-chips" aria-label="이벤트 종류별 보기">
               <button
@@ -598,6 +605,37 @@ const sortOptions = [
   { value: 'deadline', label: '마감임박순' },
   { value: 'newest', label: '최신수집순' },
 ];
+
+function ReadyHero({ total, todayDeadline }) {
+  const todayLabel = useMemo(() => {
+    const now = new Date();
+    const formatter = new Intl.DateTimeFormat('ko-KR', {
+      timeZone: 'Asia/Seoul',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'long',
+    });
+    return formatter.format(now);
+  }, []);
+
+  return (
+    <section className="ready-hero" aria-label="오늘 응모 요약">
+      <div className="ready-hero-head">
+        <p className="section-label">오늘 응모</p>
+        <span>{todayLabel}</span>
+      </div>
+      <div className="ready-hero-body">
+        <div>
+          <strong>{total}</strong>
+          <span>건 대기중</span>
+        </div>
+        <div className="ready-hero-chips">
+          <span className="ready-hero-chip ready-hero-chip-hot">🔥 오늘마감 {todayDeadline}</span>
+        </div>
+      </div>
+    </section>
+  );
+}
 
 function SortChips({ selectedSort, onSelectSort }) {
   return (

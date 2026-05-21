@@ -9,6 +9,34 @@
    다른 룰은 그대로. 컴포넌트 모양은 후속 단계에서.
    ============================================================ */
 :root {
+  /* === Design tokens (scale) === */
+  /* font-size: 8pt scale */
+  --fs-micro: 0.72rem;   /* 배지/타임스탬프 */
+  --fs-sm:    0.82rem;   /* 메타/캡션 */
+  --fs-md:    0.94rem;   /* 본문 */
+  --fs-lg:    1.04rem;   /* 카드 타이틀 */
+  --fs-xl:    1.25rem;   /* 서브 헤딩 */
+  --fs-2xl:   1.5rem;    /* 페이지 타이틀 */
+  --fs-3xl:   2.2rem;    /* Hero 큰 숫자 */
+
+  /* font-weight: 4단계 */
+  --fw-body:   500;
+  --fw-meta:   700;
+  --fw-title:  800;
+  --fw-strong: 900;
+
+  /* radius */
+  --r-sm:   10px;
+  --r-md:   14px;
+  --r-lg:   20px;
+  --r-xl:   24px;
+  --r-pill: 999px;
+
+  /* button height */
+  --btn-xs: 32px;
+  --btn-sm: 40px;
+  --btn-md: 48px;
+
   /* brand (CTA / 링크 / 액센트) */
   --wanted-blue: #818cf8;                       /* v2 brand */
   --wanted-blue-soft: rgba(129, 140, 248, 0.16);
@@ -129,7 +157,7 @@ a:active {
 }
 
 button.is-selected {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -149,7 +177,7 @@ h1 {
 
 h2 {
   color: var(--text-strong);
-  font-size: 1.22rem;
+  font-size: 1.25rem;
   line-height: 1.25;
 }
 
@@ -204,7 +232,7 @@ h3 {
   min-height: 36px;
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 12px;
   font-size: 0.78rem;
   font-weight: 900;
@@ -293,7 +321,7 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   padding: 0 13px;
   font-weight: 900;
 }
@@ -329,13 +357,13 @@ h3 {
 
 .gifticon-empty-card span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
 .gifticon-empty-card strong {
   color: var(--text-strong);
-  font-size: 1.08rem;
+  font-size: 1.04rem;
 }
 
 .gifticon-empty-card input,
@@ -382,7 +410,7 @@ h3 {
 .gifticon-member-list button {
   min-height: 26px;
   padding: 0 8px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .gifticon-form {
@@ -442,7 +470,7 @@ h3 {
 
 .gifticon-undo span {
   color: var(--text-strong);
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .gifticon-list {
@@ -499,7 +527,7 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-muted);
   padding: 4px 8px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -507,7 +535,7 @@ h3 {
 .gifticon-expiry-soon .gifticon-title-row span,
 .gifticon-expiry-today .gifticon-title-row span {
   background: rgba(255, 210, 74, 0.16);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .gifticon-expiry-expired .gifticon-title-row span {
@@ -519,7 +547,7 @@ h3 {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.82rem;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .gifticon-main code {
@@ -577,7 +605,7 @@ h3 {
 
 .auth-form span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -589,17 +617,17 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-main);
   padding: 0 12px;
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   font-weight: 900;
 }
 
 .auth-form input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
 .auth-form button[type="submit"] {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
   box-shadow: var(--shadow-cta);
@@ -623,7 +651,7 @@ h3 {
 .app-kicker,
 .section-label {
   margin: 0 0 4px;
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0;
@@ -656,7 +684,7 @@ h3 {
 .summary-item.is-active {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .summary-item span {
@@ -672,7 +700,7 @@ h3 {
   display: block;
   margin-top: 2px;
   color: inherit;
-  font-size: 1.18rem;
+  font-size: 1.25rem;
   line-height: 1.1;
 }
 
@@ -692,7 +720,7 @@ h3 {
 .manage-metrics span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
@@ -731,7 +759,7 @@ h3 {
   min-height: 30px;
   border-radius: 999px;
   padding: 0 10px;
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.78rem;
 }
 
@@ -759,7 +787,7 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 10px 12px;
   font-size: 0.86rem;
   font-weight: 800;
@@ -797,7 +825,7 @@ h3 {
 .settings-action-button {
   min-height: 38px;
   border-color: var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 10px;
   font-size: 0.82rem;
 }
@@ -812,7 +840,7 @@ h3 {
 
 .settings-crawl-action span {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1.15;
   text-align: center;
@@ -844,7 +872,7 @@ h3 {
 .settings-panel label span,
 .platform-settings > span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -889,7 +917,7 @@ h3 {
 
 .comment-settings > div:first-child span {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   line-height: 1.35;
 }
@@ -926,17 +954,17 @@ h3 {
 .settings-check-row input {
   width: 18px;
   min-height: 18px;
-  accent-color: var(--warning);
+  accent-color: var(--warm-orange);
 }
 
 .settings-check-row span {
   color: var(--text-main) !important;
-  font-size: 0.8rem !important;
+  font-size: 0.82rem !important;
   line-height: 1.35;
 }
 
 .settings-check-row strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .settings-cleanup-note {
@@ -976,7 +1004,7 @@ h3 {
 .settings-reset {
   justify-self: start;
   border-color: var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .pwa-panel {
@@ -998,13 +1026,13 @@ h3 {
 
 .pwa-panel strong {
   color: var(--text-strong);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
 }
 
 .pwa-panel span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1017,11 +1045,11 @@ h3 {
 
 .pwa-panel button {
   min-height: 36px;
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
   padding: 0 12px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .crawler-status-panel {
@@ -1053,7 +1081,7 @@ h3 {
 
 .crawler-status-panel strong {
   color: var(--success);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
   white-space: nowrap;
 }
@@ -1061,7 +1089,7 @@ h3 {
 .crawler-status-panel span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1072,7 +1100,7 @@ h3 {
   min-width: 0;
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -1094,7 +1122,7 @@ h3 {
 }
 
 .crawler-status-requested strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 @media (max-width: 520px) {
@@ -1134,7 +1162,7 @@ h3 {
 }
 
 .filter-chips button.is-active {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -1159,7 +1187,7 @@ h3 {
 }
 
 .sort-options button.is-active {
-  color: var(--warning);
+  color: var(--warm-orange);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1182,7 +1210,7 @@ h3 {
 
 .filter-chips strong {
   color: inherit;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .event-list {
@@ -1260,7 +1288,7 @@ h3 {
 }
 
 .deadline-row-head span {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.82rem;
   font-weight: 900;
 }
@@ -1342,7 +1370,7 @@ h3 {
 .inbox-summary span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
@@ -1393,7 +1421,7 @@ h3 {
 
 .manual-winning-toggle strong {
   color: var(--text-strong);
-  font-size: 0.95rem;
+  font-size: 0.94rem;
 }
 
 .manual-winning-toggle small {
@@ -1409,10 +1437,10 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   padding: 7px 12px;
   font-size: 0.78rem;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .manual-winning-form {
@@ -1429,7 +1457,7 @@ h3 {
 
 .manual-winning-form label span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1457,7 +1485,7 @@ h3 {
   border-radius: 12px;
   background: var(--wanted-blue);
   color: var(--cta-text);
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .inbox-manual-attention {
@@ -1502,14 +1530,14 @@ h3 {
   background: rgba(255, 82, 82, 0.12);
   color: var(--danger);
   padding: 3px 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
 .inbox-announcement-today .inbox-attention {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-row.is-unreceived-target {
@@ -1518,11 +1546,11 @@ h3 {
 
 .inbox-receipt-attention {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-winning-meta span:first-child {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-date-cell,
@@ -1677,7 +1705,7 @@ h3 {
   border-radius: 8px;
   background: var(--surface-raised);
   padding: 0 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1710,7 +1738,7 @@ h3 {
   overflow: hidden;
   margin-top: 2px;
   color: var(--text-strong);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1739,7 +1767,7 @@ h3 {
 
 .search-box span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1756,7 +1784,7 @@ h3 {
 }
 
 .search-box input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -1771,7 +1799,7 @@ h3 {
 }
 
 .search-result-head strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .search-row {
@@ -1798,7 +1826,7 @@ h3 {
   background: var(--soft-panel);
   color: var(--text-muted);
   padding: 0 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1806,7 +1834,7 @@ h3 {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-strong);
-  font-size: 0.98rem;
+  font-size: 1rem;
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1864,9 +1892,9 @@ h3 {
   min-height: 26px;
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 9px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
 }
 
@@ -1886,7 +1914,7 @@ h3 {
   border-color: rgba(26, 115, 232, 0.18);
   background: rgba(26, 115, 232, 0.06);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .platform-badge {
@@ -1905,7 +1933,7 @@ h3 {
   height: 20px;
   border-radius: 7px;
   place-items: center;
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .platform-badge-icon svg {
@@ -1944,7 +1972,7 @@ h3 {
 
 .platform-badge-event .platform-badge-icon {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .platform-badge-label {
@@ -1969,7 +1997,7 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-main);
   padding: 0 10px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -2077,7 +2105,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 12px;
   font-size: 0.84rem;
   font-weight: 900;
@@ -2085,7 +2113,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .event-body-toggle:focus-visible {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2137,7 +2165,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .youtube-transcript strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.84rem;
   font-weight: 900;
 }
@@ -2161,7 +2189,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .youtube-context strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -2169,7 +2197,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .youtube-context p {
   color: var(--text-muted);
   font-size: 0.84rem;
-  font-weight: 750;
+  font-weight: 700;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
@@ -2183,7 +2211,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   background: var(--warning);
   color: #111827;
   font-size: 0.84rem;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .youtube-transcript-button {
@@ -2193,7 +2221,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: rgba(255, 211, 77, 0.1);
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -2232,7 +2260,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .comment-candidates-head span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
@@ -2274,7 +2302,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 8px;
   background: rgba(120, 200, 140, 0.18);
   color: var(--accent, #6ad391);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
 }
@@ -2323,7 +2351,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .event-body-facts a {
   border: 1px solid var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .quick-actions {
@@ -2345,7 +2373,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 40px;
   overflow: hidden;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2372,7 +2400,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .decision-reason {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.9rem;
   font-weight: 800;
 }
@@ -2399,12 +2427,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .tag-quick {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .tag-home {
   background: rgba(251, 191, 36, 0.15);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .tag-hard {
@@ -2426,7 +2454,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .status-later {
   border-color: rgba(255, 176, 32, 0.28);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .status-skipped {
@@ -2477,7 +2505,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .source-summary summary strong {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.78rem;
 }
 
@@ -2570,7 +2598,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .prize-panel span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -2601,12 +2629,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .announcement-panel > div span,
 .announcement-panel label span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
 .announcement-panel > div strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 1rem;
 }
 
@@ -2627,7 +2655,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .announcement-panel input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2686,7 +2714,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   display: block;
   margin-top: 4px;
   color: var(--text-strong);
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   line-height: 1.1;
 }
 
@@ -2704,7 +2732,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .ledger-view-toggle button.is-active {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -2758,8 +2786,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .ledger-title-block time {
-  color: var(--wanted-blue);
-  font-size: 0.8rem;
+  color: var(--warm-orange);
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -2777,7 +2805,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .ledger-title span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2792,7 +2820,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   gap: 8px;
   align-items: center;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -2814,7 +2842,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .amount-field input:focus,
 .receipt-field select:focus,
 .winning-memo-field input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2875,7 +2903,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .manage-row-meta time {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-weight: 900;
 }
 
@@ -2922,7 +2950,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 38px;
   border-radius: 10px;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.1;
 }
 
@@ -2942,7 +2970,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .manage-result-actions button.is-won {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .manage-result-actions button.is-lost {
@@ -2959,7 +2987,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 38px;
   border-radius: 10px;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
   text-decoration: none;
 }
@@ -2967,7 +2995,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .manage-link {
   border: 1px solid var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .manage-edit-text-button {
@@ -2980,7 +3008,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   background: transparent;
   color: var(--text-muted);
   padding: 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -3006,7 +3034,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 0;
   background: transparent;
   padding: 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
 }
 
@@ -3034,9 +3062,9 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 999px;
   border: 1px solid var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 9px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
   box-shadow: inset 0 0 0 1px rgba(255, 210, 74, 0.08);
 }
@@ -3049,7 +3077,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .announcement-state-today {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .ledger-prize,
@@ -3078,7 +3106,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 32px;
   border-radius: 999px;
   padding: 0 10px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -3091,13 +3119,13 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .ledger-quick-receipt button.is-unreceived {
   border-color: rgba(255, 210, 74, 0.32);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .amount-quick-row button {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 
@@ -3176,30 +3204,30 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .bottom-nav button.is-active {
   background: transparent;
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .bottom-nav span {
   overflow: hidden;
   max-width: 100%;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .bottom-nav-many span {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
 }
 
 .bottom-nav strong {
   color: inherit;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1;
 }
 
 .bottom-nav-many strong {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .ledger-row {
@@ -3269,7 +3297,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   h2 {
-    font-size: 1.42rem;
+    font-size: 1.5rem;
   }
 
   h3 {
@@ -3350,7 +3378,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .summary-item strong {
-    font-size: 1.38rem;
+    font-size: 1.5rem;
   }
 
   .desktop-nav {
@@ -3376,12 +3404,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .desktop-nav button.is-active {
     border-color: var(--accent-border);
     background: var(--wanted-blue-soft);
-    color: var(--warning);
+    color: var(--warm-orange);
   }
 
   .desktop-nav span {
     overflow: hidden;
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3532,7 +3560,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .inbox-title-cell .manage-row-title {
     display: block;
     overflow: hidden;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: 400;
     line-height: 1.35;
     text-overflow: ellipsis;
@@ -3606,7 +3634,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .inbox-action-cell .ledger-quick-receipt button {
     min-height: 28px;
     padding: 0 9px;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
   }
 
   .inbox-row .manage-edit-panel {
@@ -3819,7 +3847,7 @@ button {
 .section-label,
 .app-kicker {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -3831,7 +3859,7 @@ button {
   border-radius: 999px;
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 
 .filter-chips,
@@ -4005,7 +4033,7 @@ button.is-selected {
 .inbox-announcement-today .inbox-attention,
 .inbox-receipt-attention {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .crawler-status-failure,
@@ -4025,7 +4053,7 @@ button.is-selected {
 }
 
 .crawler-status-requested strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .prize-panel,
@@ -4100,4 +4128,1091 @@ button.is-selected {
     min-height: auto;
     padding: 8px 2px 14px;
   }
+}
+
+/* ============================================================
+   V2 Warm Pop — 당첨함 reskin (2단계)
+   Inbox, 기프티콘 entry, 빠진당첨 입력, 결과 카드까지.
+   ============================================================ */
+:root {
+  --warm-orange: #ff6b4a;
+  --warm-orange-2: #ff8a4c;
+  --warm-pink: #ff6b9d;
+  --warm-mint: #3ec4a3;
+  --warm-mint-2: #5dd9b7;
+  --warm-yellow: #ffb454;
+
+  --hero-shadow: 0 14px 28px rgba(255, 107, 74, 0.28);
+  --hero-shadow-mint: 0 14px 28px rgba(62, 196, 163, 0.26);
+}
+
+html[data-theme="light"] {
+  --hero-shadow: 0 12px 26px rgba(255, 107, 74, 0.22);
+  --hero-shadow-mint: 0 12px 26px rgba(62, 196, 163, 0.22);
+}
+
+/* ----- 기프티콘 entry / 빠진당첨: 둥글림 강화 ----- */
+.inbox-gifticon-entry,
+.manual-winning-panel {
+  border-radius: 20px;
+  padding: 14px 16px;
+}
+
+.inbox-gifticon-entry strong,
+.gifticon-family-panel strong {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.inbox-gifticon-entry button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.32);
+}
+
+.manual-winning-panel.is-open {
+  border-color: rgba(255, 107, 74, 0.28);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.10), var(--surface));
+}
+
+.manual-winning-toggle b {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: rgba(255, 107, 74, 0.12);
+  color: var(--warm-orange);
+}
+
+.manual-winning-form > button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.32);
+}
+
+/* ----- Hero 통계 카드 ----- */
+.inbox-summary {
+  position: relative;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 6px;
+  box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+}
+
+.inbox-summary div {
+  position: relative;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  padding: 12px 10px;
+  text-align: center;
+  box-shadow: none;
+}
+
+.inbox-summary div + div::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: var(--border);
+}
+
+.inbox-summary div:first-child {
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  box-shadow: var(--hero-shadow);
+}
+
+.inbox-summary div:first-child::before {
+  display: none;
+}
+
+.inbox-summary div:first-child span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.inbox-summary div:first-child strong {
+  color: #fff;
+  font-size: 1.25rem;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox-summary span {
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.inbox-summary strong {
+  margin-top: 4px;
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox-summary div.is-attention {
+  background: linear-gradient(135deg, rgba(255, 107, 74, 0.18), rgba(255, 107, 74, 0.06));
+  border-radius: 16px;
+}
+
+.inbox-summary div.is-attention span,
+.inbox-summary div.is-attention strong {
+  color: var(--warm-orange);
+}
+
+@media (max-width: 520px) {
+  .inbox-summary {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .inbox-summary div:nth-child(n+4) {
+    grid-column: span 1;
+  }
+  .inbox-summary div:first-child {
+    grid-column: 1 / -1;
+  }
+  .inbox-summary div:first-child::before {
+    display: none;
+  }
+}
+
+/* ----- 필터 칩 (응모함 보기) ----- */
+.inbox-board .filter-chips button,
+.deadline-board .filter-chips button {
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.inbox-board .filter-chips button.is-active,
+.deadline-board .filter-chips button.is-active {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--surface);
+  box-shadow: 0 6px 14px rgba(40, 30, 18, 0.16);
+}
+
+/* ----- Inbox row / Event card: 둥글림 + 그림자 ----- */
+.inbox-row,
+.event-card,
+.deadline-row {
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(40, 30, 18, 0.05);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.inbox-row:hover,
+.event-card:hover {
+  box-shadow: 0 10px 24px rgba(40, 30, 18, 0.10);
+}
+
+.inbox-row.is-check-target {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.06), var(--surface));
+}
+
+.inbox-row-won {
+  border-color: rgba(62, 196, 163, 0.30);
+  background: linear-gradient(180deg, rgba(62, 196, 163, 0.06), var(--surface));
+}
+
+.inbox-row.is-unreceived-target {
+  border-color: rgba(255, 180, 84, 0.36);
+}
+
+.inbox-attention {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 107, 74, 0.12);
+  color: var(--warm-orange);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.inbox-receipt-attention {
+  background: rgba(255, 180, 84, 0.16);
+  color: var(--warm-yellow);
+}
+
+.inbox-manual-attention {
+  background: rgba(62, 196, 163, 0.14);
+  color: var(--warm-mint);
+}
+
+/* ----- 결과 버튼: 당첨/미당첨 ----- */
+.manage-result-actions button.is-won {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
+
+.manage-result-actions button.is-lost {
+  border: none;
+  background: linear-gradient(135deg, #ff8896, #ff5d6c);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(255, 93, 108, 0.28);
+}
+
+.ledger-quick-receipt button.is-received {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+}
+
+.ledger-quick-receipt button.is-unreceived {
+  border-color: rgba(255, 180, 84, 0.36);
+  background: rgba(255, 180, 84, 0.12);
+  color: var(--warm-yellow);
+}
+
+/* ----- Result badge ----- */
+.result-badge.result-won {
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  border-color: transparent;
+  color: #fff;
+}
+
+.result-badge.result-lost {
+  background: rgba(255, 93, 108, 0.14);
+  border-color: rgba(255, 93, 108, 0.30);
+  color: var(--danger);
+}
+
+/* ============================================================
+   V2 Warm Pop — Navigation (BottomNav / DesktopNav)
+   시안의 플로팅 둥근 nav + 상단 indicator bar.
+   ============================================================ */
+.bottom-nav {
+  right: 10px;
+  bottom: max(10px, env(safe-area-inset-bottom));
+  left: 10px;
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  background: var(--surface);
+  padding: 8px 8px calc(8px + env(safe-area-inset-bottom));
+  box-shadow: 0 10px 28px rgba(40, 30, 18, 0.16), 0 2px 8px rgba(40, 30, 18, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.bottom-nav button {
+  position: relative;
+  min-height: 56px;
+  border-radius: 16px;
+  color: var(--text-muted);
+}
+
+.bottom-nav button.is-active {
+  color: var(--warm-orange);
+  background: rgba(255, 107, 74, 0.08);
+}
+
+.bottom-nav button.is-active::before {
+  content: "";
+  position: absolute;
+  top: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 28px;
+  height: 4px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+}
+
+.bottom-nav .nav-icon svg {
+  stroke-width: 1.9;
+}
+
+.bottom-nav strong {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 16px;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: var(--warm-orange);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 900;
+}
+
+.bottom-nav button.is-active strong {
+  background: var(--warm-orange);
+  color: #fff;
+}
+
+/* DesktopNav (≥1024px sidebar) */
+@media (min-width: 1024px) {
+  .desktop-nav button.is-active {
+    background: linear-gradient(135deg, rgba(255, 138, 76, 0.18), rgba(255, 107, 74, 0.08));
+    border-color: rgba(255, 107, 74, 0.32);
+    color: var(--warm-orange);
+  }
+
+  .desktop-nav button.is-active strong {
+    background: var(--warm-orange);
+    color: #fff;
+    padding: 0 8px;
+    border-radius: 999px;
+  }
+}
+
+/* ============================================================
+   V2 Warm Pop — Event card / Now card / Toolbar
+   ============================================================ */
+.event-card {
+  border-radius: 20px;
+}
+
+.event-card:hover {
+  box-shadow: 0 12px 26px rgba(40, 30, 18, 0.10);
+  transform: translateY(-1px);
+}
+
+/* "마감 임박" 등 강조 카드 */
+.event-card.is-deadline-today,
+.event-card.is-featured {
+  border-color: rgba(255, 107, 74, 0.32);
+}
+
+.settings-button {
+  border: 1px solid rgba(255, 107, 74, 0.32);
+  background: rgba(255, 107, 74, 0.10);
+  color: var(--warm-orange);
+  font-weight: 900;
+}
+
+.list-count {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--text-strong);
+}
+
+/* CTA: 참여하러 가기 등 메인 액션 */
+.apply-link,
+.event-card .apply-link,
+.now-card .apply-link {
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  border-color: transparent;
+  color: #fff;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.28);
+  font-weight: 900;
+}
+
+.apply-link:hover {
+  box-shadow: 0 10px 22px rgba(255, 107, 74, 0.34);
+  transform: translateY(-1px);
+}
+
+/* Sort chips / filter chips: 활성 톤 */
+.sort-options button.is-active,
+.filter-chips button.is-active {
+  border-color: var(--text-strong);
+  background: var(--text-strong);
+  color: var(--surface);
+}
+
+/* Sync notice를 Warm Pop 톤으로 */
+.sync-notice.sync-info {
+  border-color: rgba(255, 107, 74, 0.28);
+  background: rgba(255, 138, 76, 0.10);
+  color: var(--warm-orange);
+}
+
+.sync-notice.sync-success {
+  border-color: rgba(62, 196, 163, 0.32);
+  background: rgba(62, 196, 163, 0.12);
+  color: var(--warm-mint);
+}
+
+/* ============================================================
+   V2 Warm Pop — EventCard 내부 디테일 + Toolbar
+   ============================================================ */
+
+/* 카드 타이틀 강조 */
+.event-card h3,
+.inbox-title-cell strong,
+.manage-row-title {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.025em;
+  line-height: 1.3;
+}
+
+/* 당첨자 수 (winner count) chip */
+.score-row strong {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(255, 180, 84, 0.14);
+  color: var(--warm-yellow);
+  font-size: 0.78rem;
+  font-weight: 900;
+  font-variant-numeric: tabular-nums;
+}
+
+/* 경품 패널: 옐로우 톤 */
+.prize-panel {
+  border-radius: 14px;
+  border-color: rgba(255, 180, 84, 0.24);
+  background: linear-gradient(135deg, rgba(255, 180, 84, 0.12), rgba(255, 180, 84, 0.04));
+}
+
+.prize-panel span {
+  color: var(--warm-yellow);
+  letter-spacing: 0.02em;
+}
+
+/* 발표 결과 버튼 (TodayAnnouncement) */
+.result-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.result-row button {
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.result-row button.is-won {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
+
+.result-row button.is-lost {
+  border: none;
+  background: linear-gradient(135deg, #ff8896, #ff5d6c);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(255, 93, 108, 0.28);
+}
+
+/* now-card 액션: primary는 그라데이션, 나머지는 ghost */
+.now-actions {
+  gap: 6px;
+}
+
+.now-actions button:not(.apply-link) {
+  border-radius: 12px;
+  font-weight: 900;
+}
+
+/* announcement-panel (발표일 변경) — 오렌지 톤 */
+.announcement-panel {
+  border-color: rgba(255, 107, 74, 0.22);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.10), var(--surface));
+  border-radius: 16px;
+}
+
+/* announcement card / today announce 강조 */
+.announcement-card {
+  border-color: rgba(255, 107, 74, 0.30);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.08), var(--surface));
+}
+
+/* Announcement state badge */
+.announcement-state {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 900;
+}
+
+.announcement-state-today {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--warm-orange);
+}
+
+.announcement-state-overdue {
+  background: rgba(255, 93, 108, 0.14);
+  color: var(--danger);
+}
+
+.announcement-state-soon {
+  background: rgba(255, 180, 84, 0.16);
+  color: var(--warm-yellow);
+}
+
+/* ----- Toolbar (상단 제목) ----- */
+.toolbar h2 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+  line-height: 1.15;
+}
+
+.section-label {
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+@media (min-width: 1024px) {
+  .toolbar {
+    border-radius: 22px;
+    box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+  }
+  .toolbar h2 {
+    font-size: 1.8rem;
+  }
+}
+
+/* ----- 마감 chip 컬러 (deadline-meta) ----- */
+.deadline-meta span:first-child {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--warm-orange);
+}
+
+/* manage-link "확인" 버튼 (응모함 row) */
+.manage-link {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: rgba(255, 107, 74, 0.10);
+  color: var(--warm-orange);
+  font-weight: 900;
+}
+
+/* 발표일 지남 / 오늘발표 row 강조 */
+.inbox-announcement-overdue {
+  border-color: rgba(255, 93, 108, 0.30);
+}
+
+/* ============================================================
+   V2 Warm Pop — 응모대기(ready) Hero
+   ============================================================ */
+.ready-hero {
+  position: relative;
+  overflow: hidden;
+  border-radius: 24px;
+  padding: 18px 20px 16px;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-pink));
+  color: #fff;
+  box-shadow: var(--hero-shadow);
+}
+
+.ready-hero::before,
+.ready-hero::after {
+  content: "";
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+.ready-hero::before {
+  right: -20px;
+  top: -20px;
+  width: 130px;
+  height: 130px;
+  background: rgba(255, 255, 255, 0.16);
+}
+
+.ready-hero::after {
+  right: 30px;
+  bottom: -34px;
+  width: 70px;
+  height: 70px;
+  background: rgba(255, 255, 255, 0.10);
+}
+
+.ready-hero-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  position: relative;
+  z-index: 1;
+}
+
+.ready-hero-head .section-label {
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 0.74rem;
+  letter-spacing: 0.12em;
+}
+
+.ready-hero-head span {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.ready-hero-body {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.ready-hero-body > div:first-child {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.ready-hero-body strong {
+  font-size: 3rem;
+  font-weight: 900;
+  letter-spacing: -0.04em;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.ready-hero-body > div:first-child span {
+  font-size: 0.94rem;
+  font-weight: 700;
+  opacity: 0.95;
+}
+
+.ready-hero-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  justify-content: flex-end;
+}
+
+.ready-hero-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 11px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.22);
+  color: #fff;
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.ready-hero-chip-hot {
+  background: rgba(0, 0, 0, 0.20);
+}
+
+/* ============================================================
+   V2 Warm Pop — GifticonVault reskin
+   ============================================================ */
+
+/* 헤더: 큰 타이틀 + 우측 등록 CTA */
+.gifticon-header h3 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.gifticon-header button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.30);
+}
+
+/* 가족 패널 */
+.gifticon-family-panel {
+  border-radius: 20px;
+}
+
+.gifticon-family-panel strong {
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* 빈 카드 / 폼 */
+.gifticon-empty-card,
+.gifticon-form {
+  border-radius: 20px;
+}
+
+.gifticon-form > button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.28);
+}
+
+/* 필터 칩 */
+.gifticon-filters .filter-chips button.is-active {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--surface);
+}
+
+/* Undo bar */
+.gifticon-undo {
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(62, 196, 163, 0.12), rgba(62, 196, 163, 0.04));
+  border-color: rgba(62, 196, 163, 0.32);
+}
+
+.gifticon-undo span {
+  color: var(--warm-mint);
+}
+
+.gifticon-undo button {
+  border-color: rgba(62, 196, 163, 0.32);
+  background: rgba(62, 196, 163, 0.14);
+  color: var(--warm-mint);
+}
+
+/* 카드 그리드: PC에서 2열 */
+@media (min-width: 720px) {
+  .gifticon-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+}
+
+@media (min-width: 1024px) {
+  .gifticon-list {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+/* 기프티콘 카드 자체 */
+.gifticon-card {
+  border-radius: 20px;
+  padding: 12px;
+  box-shadow: 0 2px 10px rgba(40, 30, 18, 0.05);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.gifticon-card:hover {
+  box-shadow: 0 12px 26px rgba(40, 30, 18, 0.10);
+  transform: translateY(-1px);
+}
+
+.gifticon-thumb {
+  width: 88px;
+  height: 88px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, rgba(255, 180, 84, 0.16), rgba(255, 138, 76, 0.04));
+  border-color: rgba(255, 180, 84, 0.24);
+}
+
+.gifticon-title-row strong {
+  font-size: 0.96rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* 만료 배지: 컬러 코딩 */
+.gifticon-title-row span {
+  padding: 4px 10px;
+  font-weight: 900;
+}
+
+.gifticon-expiry-soon .gifticon-title-row span {
+  background: rgba(255, 180, 84, 0.18);
+  color: var(--warm-yellow);
+}
+
+.gifticon-expiry-today .gifticon-title-row span {
+  background: linear-gradient(135deg, #ff8896, var(--danger));
+  color: #fff;
+}
+
+.gifticon-expiry-expired .gifticon-title-row span {
+  background: rgba(255, 93, 108, 0.14);
+  color: var(--danger);
+}
+
+/* 사용가능(만료 임박/오늘) 카드 보더 강조 */
+.gifticon-expiry-today {
+  border-color: rgba(255, 93, 108, 0.32);
+  background: linear-gradient(180deg, rgba(255, 93, 108, 0.06), var(--surface));
+}
+
+.gifticon-expiry-soon {
+  border-color: rgba(255, 180, 84, 0.32);
+}
+
+/* 카드 액션 버튼 */
+.gifticon-actions button.is-primary {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
+
+/* ============================================================
+   V2 Warm Pop — 인증 화면 (auth-shell)
+   ============================================================ */
+.auth-card {
+  border-radius: 24px;
+  padding: 22px;
+  box-shadow: 0 12px 28px rgba(40, 30, 18, 0.10);
+}
+
+.auth-head h1 {
+  font-size: 1.5rem;
+  font-weight: 900;
+  letter-spacing: -0.03em;
+}
+
+.app-kicker {
+  color: var(--warm-orange);
+  font-size: 0.74rem;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth-form button[type="submit"],
+.auth-form button:not([disabled]) {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.30);
+  min-height: 48px;
+}
+
+.auth-error {
+  border-radius: 12px;
+  background: rgba(255, 93, 108, 0.10);
+  border: 1px solid rgba(255, 93, 108, 0.32);
+  color: var(--danger);
+  padding: 10px 12px;
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.theme-switch {
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+/* ============================================================
+   V2 Warm Pop — Search
+   ============================================================ */
+.search-box {
+  border-radius: 20px;
+  padding: 14px;
+}
+
+.search-box input {
+  border-radius: 14px;
+  min-height: 48px;
+}
+
+.search-box input:focus {
+  border-color: var(--warm-orange);
+  outline: 2px solid rgba(255, 107, 74, 0.18);
+}
+
+.search-result-head strong {
+  color: var(--warm-orange);
+  font-size: 1rem;
+}
+
+.search-row {
+  border-radius: 20px;
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.search-row:hover {
+  box-shadow: 0 12px 26px rgba(40, 30, 18, 0.10);
+  transform: translateY(-1px);
+}
+
+/* ============================================================
+   V2 Warm Pop — AdminPanel
+   ============================================================ */
+.admin-summary {
+  position: relative;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 6px;
+  box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+}
+
+.admin-summary div {
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  box-shadow: none;
+  padding: 12px 10px;
+  text-align: center;
+}
+
+.admin-summary div + div::before {
+  content: "";
+  position: absolute;
+  width: 1px;
+  background: var(--border);
+}
+
+.admin-summary div:first-child {
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  box-shadow: var(--hero-shadow);
+}
+
+.admin-summary div:first-child span,
+.admin-summary div:first-child strong {
+  color: #fff;
+}
+
+.admin-summary div.is-attention {
+  background: linear-gradient(135deg, rgba(255, 93, 108, 0.18), rgba(255, 93, 108, 0.06));
+}
+
+.admin-summary div.is-attention span,
+.admin-summary div.is-attention strong {
+  color: var(--danger);
+}
+
+.admin-summary strong {
+  font-size: 1.04rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.admin-user-row {
+  border-radius: 20px;
+  padding: 14px 16px;
+  box-shadow: 0 2px 10px rgba(40, 30, 18, 0.05);
+  transition: box-shadow 160ms ease;
+}
+
+.admin-user-row:hover {
+  box-shadow: 0 10px 24px rgba(40, 30, 18, 0.10);
+}
+
+.admin-user-row.is-pending {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.06), var(--surface));
+}
+
+.admin-user-main strong {
+  font-size: 1rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.admin-user-badges span {
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.admin-user-badges .is-pending {
+  background: rgba(255, 107, 74, 0.14);
+  color: var(--warm-orange);
+}
+
+.admin-user-badges .is-approved,
+.admin-user-badges .is-admin {
+  background: rgba(62, 196, 163, 0.14);
+  color: var(--warm-mint);
+}
+
+/* ============================================================
+   V2 Warm Pop — FilterSettingsPanel
+   ============================================================ */
+.settings-panel {
+  border-radius: 22px;
+  padding: 18px;
+  background: var(--surface);
+  box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+}
+
+.settings-action-button {
+  border-radius: 999px;
+  font-weight: 900;
+}
+
+.settings-action-button.is-active,
+.settings-excluded-button.is-active {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--surface);
+}
+
+.settings-panel textarea,
+.settings-panel input {
+  border-radius: 12px;
+}
+
+.settings-panel textarea:focus,
+.settings-panel input:focus {
+  border-color: var(--warm-orange);
+  outline: 2px solid rgba(255, 107, 74, 0.16);
+}
+
+.platform-settings button.is-active {
+  background: rgba(255, 107, 74, 0.12);
+  border-color: rgba(255, 107, 74, 0.32);
+  color: var(--warm-orange);
+}
+
+.comment-settings {
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.05), var(--surface));
+  border: 1px solid rgba(255, 107, 74, 0.16);
+  padding: 14px;
+}
+
+.comment-settings strong {
+  color: var(--warm-orange);
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* CrawlerStatusPanel: 상태별 강조 */
+.crawler-status-panel {
+  border-radius: 20px;
+  padding: 14px 16px;
+}
+
+.crawler-status-success {
+  border-color: rgba(62, 196, 163, 0.30);
+  background: linear-gradient(180deg, rgba(62, 196, 163, 0.06), var(--surface));
+}
+
+.crawler-status-success strong {
+  color: var(--warm-mint);
+}
+
+.crawler-status-failure {
+  border-color: rgba(255, 93, 108, 0.32);
+  background: linear-gradient(180deg, rgba(255, 93, 108, 0.06), var(--surface));
+}
+
+.crawler-status-failure strong {
+  color: var(--danger);
+}
+
+.crawler-status-quiet {
+  border-color: rgba(255, 180, 84, 0.30);
+}
+
+.crawler-status-quiet strong {
+  color: var(--warm-yellow);
 }
