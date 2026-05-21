@@ -8,9 +8,13 @@ import { enrichEvent } from '../utils/eventModel.js';
 
 async function loadRemoteEvents() {
   if (hasSupabaseConfig) {
-    const supabaseEvents = await loadSupabaseEvents();
-    if (supabaseEvents.length > 0) {
-      return supabaseEvents;
+    try {
+      const supabaseEvents = await loadSupabaseEvents();
+      if (supabaseEvents.length > 0) {
+        return supabaseEvents;
+      }
+    } catch (error) {
+      console.warn('Supabase events load failed. Falling back to bundled events.', error);
     }
   }
   const crawledEvents = await loadCrawledEvents();
@@ -23,16 +27,23 @@ export function useEvents() {
 
   useEffect(() => {
     let isMounted = true;
-    loadRemoteEvents().then((remoteEvents) => {
-      if (!isMounted) return;
-      const nextEvents =
-        remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents);
-      const normalizedEvents = hasSupabaseConfig
-        ? nextEvents
-        : nextEvents.map(applyExcludedStatus);
-      setEvents(normalizedEvents.map(enrichEvent));
-      setIsLoading(false);
-    });
+    loadRemoteEvents()
+      .then((remoteEvents) => {
+        if (!isMounted) return;
+        const nextEvents =
+          remoteEvents.length > 0 ? remoteEvents : applyStoredStatuses(initialEvents);
+        const normalizedEvents = hasSupabaseConfig
+          ? nextEvents
+          : nextEvents.map(applyExcludedStatus);
+        setEvents(normalizedEvents.map(enrichEvent));
+      })
+      .catch((error) => {
+        console.warn('Event load failed. Using initial events.', error);
+        if (isMounted) setEvents(applyStoredStatuses(initialEvents).map(enrichEvent));
+      })
+      .finally(() => {
+        if (isMounted) setIsLoading(false);
+      });
     return () => {
       isMounted = false;
     };

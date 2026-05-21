@@ -3389,8 +3389,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .desktop-nav button {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 12px;
+    grid-template-columns: 22px minmax(0, 1fr) auto;
+    gap: 10px;
     align-items: center;
     min-height: 48px;
     border-color: transparent;
@@ -3399,6 +3399,24 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     color: var(--text-muted);
     padding: 0 12px;
     text-align: left;
+  }
+
+  .desktop-nav .nav-icon {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    color: currentColor;
+  }
+
+  .desktop-nav .nav-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
   }
 
   .desktop-nav button.is-active {
@@ -5552,6 +5570,24 @@ html[data-theme="light"] {
     color: var(--text-muted);
     font-weight: 700;
     transition: background 120ms ease, color 120ms ease;
+  }
+
+  .desktop-nav .nav-icon {
+    display: grid;
+    width: 22px;
+    height: 22px;
+    place-items: center;
+    color: currentColor;
+  }
+
+  .desktop-nav .nav-icon svg {
+    width: 18px;
+    height: 18px;
+    fill: none;
+    stroke: currentColor;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+    stroke-width: 2;
   }
 
   .desktop-nav button:hover:not(.is-active) {
