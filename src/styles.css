@@ -9,6 +9,34 @@
    다른 룰은 그대로. 컴포넌트 모양은 후속 단계에서.
    ============================================================ */
 :root {
+  /* === Design tokens (scale) === */
+  /* font-size: 8pt scale */
+  --fs-micro: 0.72rem;   /* 배지/타임스탬프 */
+  --fs-sm:    0.82rem;   /* 메타/캡션 */
+  --fs-md:    0.94rem;   /* 본문 */
+  --fs-lg:    1.04rem;   /* 카드 타이틀 */
+  --fs-xl:    1.25rem;   /* 서브 헤딩 */
+  --fs-2xl:   1.5rem;    /* 페이지 타이틀 */
+  --fs-3xl:   2.2rem;    /* Hero 큰 숫자 */
+
+  /* font-weight: 4단계 */
+  --fw-body:   500;
+  --fw-meta:   700;
+  --fw-title:  800;
+  --fw-strong: 900;
+
+  /* radius */
+  --r-sm:   10px;
+  --r-md:   14px;
+  --r-lg:   20px;
+  --r-xl:   24px;
+  --r-pill: 999px;
+
+  /* button height */
+  --btn-xs: 32px;
+  --btn-sm: 40px;
+  --btn-md: 48px;
+
   /* brand (CTA / 링크 / 액센트) */
   --wanted-blue: #818cf8;                       /* v2 brand */
   --wanted-blue-soft: rgba(129, 140, 248, 0.16);
@@ -129,7 +157,7 @@ a:active {
 }
 
 button.is-selected {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -149,7 +177,7 @@ h1 {
 
 h2 {
   color: var(--text-strong);
-  font-size: 1.22rem;
+  font-size: 1.25rem;
   line-height: 1.25;
 }
 
@@ -204,7 +232,7 @@ h3 {
   min-height: 36px;
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 12px;
   font-size: 0.78rem;
   font-weight: 900;
@@ -293,7 +321,7 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   padding: 0 13px;
   font-weight: 900;
 }
@@ -329,13 +357,13 @@ h3 {
 
 .gifticon-empty-card span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
 .gifticon-empty-card strong {
   color: var(--text-strong);
-  font-size: 1.08rem;
+  font-size: 1.04rem;
 }
 
 .gifticon-empty-card input,
@@ -382,7 +410,7 @@ h3 {
 .gifticon-member-list button {
   min-height: 26px;
   padding: 0 8px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .gifticon-form {
@@ -442,7 +470,7 @@ h3 {
 
 .gifticon-undo span {
   color: var(--text-strong);
-  font-weight: 850;
+  font-weight: 800;
 }
 
 .gifticon-list {
@@ -499,7 +527,7 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-muted);
   padding: 4px 8px;
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
   white-space: nowrap;
 }
@@ -507,7 +535,7 @@ h3 {
 .gifticon-expiry-soon .gifticon-title-row span,
 .gifticon-expiry-today .gifticon-title-row span {
   background: rgba(255, 210, 74, 0.16);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .gifticon-expiry-expired .gifticon-title-row span {
@@ -519,7 +547,7 @@ h3 {
   margin: 0;
   color: var(--text-muted);
   font-size: 0.82rem;
-  font-weight: 750;
+  font-weight: 700;
 }
 
 .gifticon-main code {
@@ -577,7 +605,7 @@ h3 {
 
 .auth-form span {
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -589,17 +617,17 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-main);
   padding: 0 12px;
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   font-weight: 900;
 }
 
 .auth-form input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
 .auth-form button[type="submit"] {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
   box-shadow: var(--shadow-cta);
@@ -623,7 +651,7 @@ h3 {
 .app-kicker,
 .section-label {
   margin: 0 0 4px;
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: 0;
@@ -656,7 +684,7 @@ h3 {
 .summary-item.is-active {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .summary-item span {
@@ -672,7 +700,7 @@ h3 {
   display: block;
   margin-top: 2px;
   color: inherit;
-  font-size: 1.18rem;
+  font-size: 1.25rem;
   line-height: 1.1;
 }
 
@@ -692,7 +720,7 @@ h3 {
 .manage-metrics span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
@@ -731,7 +759,7 @@ h3 {
   min-height: 30px;
   border-radius: 999px;
   padding: 0 10px;
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.78rem;
 }
 
@@ -759,7 +787,7 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 10px 12px;
   font-size: 0.86rem;
   font-weight: 800;
@@ -797,7 +825,7 @@ h3 {
 .settings-action-button {
   min-height: 38px;
   border-color: var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 10px;
   font-size: 0.82rem;
 }
@@ -812,7 +840,7 @@ h3 {
 
 .settings-crawl-action span {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   font-weight: 800;
   line-height: 1.15;
   text-align: center;
@@ -844,7 +872,7 @@ h3 {
 .settings-panel label span,
 .platform-settings > span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -889,7 +917,7 @@ h3 {
 
 .comment-settings > div:first-child span {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   line-height: 1.35;
 }
@@ -926,17 +954,17 @@ h3 {
 .settings-check-row input {
   width: 18px;
   min-height: 18px;
-  accent-color: var(--warning);
+  accent-color: var(--warm-orange);
 }
 
 .settings-check-row span {
   color: var(--text-main) !important;
-  font-size: 0.8rem !important;
+  font-size: 0.82rem !important;
   line-height: 1.35;
 }
 
 .settings-check-row strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .settings-cleanup-note {
@@ -976,7 +1004,7 @@ h3 {
 .settings-reset {
   justify-self: start;
   border-color: var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .pwa-panel {
@@ -998,13 +1026,13 @@ h3 {
 
 .pwa-panel strong {
   color: var(--text-strong);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
 }
 
 .pwa-panel span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1017,11 +1045,11 @@ h3 {
 
 .pwa-panel button {
   min-height: 36px;
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
   padding: 0 12px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .crawler-status-panel {
@@ -1053,7 +1081,7 @@ h3 {
 
 .crawler-status-panel strong {
   color: var(--success);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
   white-space: nowrap;
 }
@@ -1061,7 +1089,7 @@ h3 {
 .crawler-status-panel span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 400;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1072,7 +1100,7 @@ h3 {
   min-width: 0;
   margin: 0;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
 }
@@ -1094,7 +1122,7 @@ h3 {
 }
 
 .crawler-status-requested strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 @media (max-width: 520px) {
@@ -1134,7 +1162,7 @@ h3 {
 }
 
 .filter-chips button.is-active {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -1159,7 +1187,7 @@ h3 {
 }
 
 .sort-options button.is-active {
-  color: var(--warning);
+  color: var(--warm-orange);
   text-decoration: underline;
   text-underline-offset: 3px;
 }
@@ -1182,7 +1210,7 @@ h3 {
 
 .filter-chips strong {
   color: inherit;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .event-list {
@@ -1260,7 +1288,7 @@ h3 {
 }
 
 .deadline-row-head span {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.82rem;
   font-weight: 900;
 }
@@ -1342,7 +1370,7 @@ h3 {
 .inbox-summary span {
   display: block;
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
 }
 
@@ -1393,7 +1421,7 @@ h3 {
 
 .manual-winning-toggle strong {
   color: var(--text-strong);
-  font-size: 0.95rem;
+  font-size: 0.94rem;
 }
 
 .manual-winning-toggle small {
@@ -1409,10 +1437,10 @@ h3 {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   padding: 7px 12px;
   font-size: 0.78rem;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .manual-winning-form {
@@ -1429,7 +1457,7 @@ h3 {
 
 .manual-winning-form label span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1457,7 +1485,7 @@ h3 {
   border-radius: 12px;
   background: var(--wanted-blue);
   color: var(--cta-text);
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .inbox-manual-attention {
@@ -1502,14 +1530,14 @@ h3 {
   background: rgba(255, 82, 82, 0.12);
   color: var(--danger);
   padding: 3px 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
 .inbox-announcement-today .inbox-attention {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-row.is-unreceived-target {
@@ -1518,11 +1546,11 @@ h3 {
 
 .inbox-receipt-attention {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-winning-meta span:first-child {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .inbox-date-cell,
@@ -1677,7 +1705,7 @@ h3 {
   border-radius: 8px;
   background: var(--surface-raised);
   padding: 0 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1710,7 +1738,7 @@ h3 {
   overflow: hidden;
   margin-top: 2px;
   color: var(--text-strong);
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -1739,7 +1767,7 @@ h3 {
 
 .search-box span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1756,7 +1784,7 @@ h3 {
 }
 
 .search-box input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -1771,7 +1799,7 @@ h3 {
 }
 
 .search-result-head strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .search-row {
@@ -1798,7 +1826,7 @@ h3 {
   background: var(--soft-panel);
   color: var(--text-muted);
   padding: 0 8px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -1806,7 +1834,7 @@ h3 {
   display: -webkit-box;
   overflow: hidden;
   color: var(--text-strong);
-  font-size: 0.98rem;
+  font-size: 1rem;
   line-height: 1.35;
   -webkit-box-orient: vertical;
   -webkit-line-clamp: 2;
@@ -1864,9 +1892,9 @@ h3 {
   min-height: 26px;
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 9px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
 }
 
@@ -1886,7 +1914,7 @@ h3 {
   border-color: rgba(26, 115, 232, 0.18);
   background: rgba(26, 115, 232, 0.06);
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
 }
 
 .platform-badge {
@@ -1905,7 +1933,7 @@ h3 {
   height: 20px;
   border-radius: 7px;
   place-items: center;
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .platform-badge-icon svg {
@@ -1944,7 +1972,7 @@ h3 {
 
 .platform-badge-event .platform-badge-icon {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .platform-badge-label {
@@ -1969,7 +1997,7 @@ h3 {
   background: var(--surface-raised);
   color: var(--text-main);
   padding: 0 10px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -2077,7 +2105,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border: 1px solid var(--accent-border);
   border-radius: 999px;
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 12px;
   font-size: 0.84rem;
   font-weight: 900;
@@ -2085,7 +2113,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .event-body-toggle:focus-visible {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2137,7 +2165,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .youtube-transcript strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.84rem;
   font-weight: 900;
 }
@@ -2161,7 +2189,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .youtube-context strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -2169,7 +2197,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .youtube-context p {
   color: var(--text-muted);
   font-size: 0.84rem;
-  font-weight: 750;
+  font-weight: 700;
   overflow-wrap: anywhere;
   word-break: keep-all;
 }
@@ -2183,7 +2211,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   background: var(--warning);
   color: #111827;
   font-size: 0.84rem;
-  font-weight: 950;
+  font-weight: 900;
 }
 
 .youtube-transcript-button {
@@ -2193,7 +2221,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border: 1px solid var(--accent-border);
   border-radius: 8px;
   background: rgba(255, 211, 77, 0.1);
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.86rem;
   font-weight: 900;
 }
@@ -2232,7 +2260,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .comment-candidates-head span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
 }
 
@@ -2274,7 +2302,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 8px;
   background: rgba(120, 200, 140, 0.18);
   color: var(--accent, #6ad391);
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 800;
   cursor: pointer;
 }
@@ -2323,7 +2351,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .event-body-facts a {
   border: 1px solid var(--accent-border);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .quick-actions {
@@ -2345,7 +2373,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 40px;
   overflow: hidden;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.15;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2372,7 +2400,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .decision-reason {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 0.9rem;
   font-weight: 800;
 }
@@ -2399,12 +2427,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .tag-quick {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .tag-home {
   background: rgba(251, 191, 36, 0.15);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .tag-hard {
@@ -2426,7 +2454,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .status-later {
   border-color: rgba(255, 176, 32, 0.28);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .status-skipped {
@@ -2477,7 +2505,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .source-summary summary strong {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-size: 0.78rem;
 }
 
@@ -2570,7 +2598,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .prize-panel span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -2601,12 +2629,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .announcement-panel > div span,
 .announcement-panel label span {
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
 .announcement-panel > div strong {
-  color: var(--warning);
+  color: var(--warm-orange);
   font-size: 1rem;
 }
 
@@ -2627,7 +2655,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .announcement-panel input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2686,7 +2714,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   display: block;
   margin-top: 4px;
   color: var(--text-strong);
-  font-size: 1.08rem;
+  font-size: 1.04rem;
   line-height: 1.1;
 }
 
@@ -2704,7 +2732,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .ledger-view-toggle button.is-active {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   background: var(--wanted-blue);
   color: var(--cta-text);
 }
@@ -2758,8 +2786,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .ledger-title-block time {
-  color: var(--wanted-blue);
-  font-size: 0.8rem;
+  color: var(--warm-orange);
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -2777,7 +2805,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .ledger-title span {
   overflow: hidden;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 700;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2792,7 +2820,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   gap: 8px;
   align-items: center;
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -2814,7 +2842,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .amount-field input:focus,
 .receipt-field select:focus,
 .winning-memo-field input:focus {
-  border-color: var(--wanted-blue);
+  border-color: var(--warm-orange);
   outline: 2px solid var(--wanted-blue-soft);
 }
 
@@ -2875,7 +2903,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .manage-row-meta time {
-  color: var(--wanted-blue);
+  color: var(--warm-orange);
   font-weight: 900;
 }
 
@@ -2922,7 +2950,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 38px;
   border-radius: 10px;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   line-height: 1.1;
 }
 
@@ -2942,7 +2970,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .manage-result-actions button.is-won {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .manage-result-actions button.is-lost {
@@ -2959,7 +2987,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 38px;
   border-radius: 10px;
   padding: 0 4px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
   text-decoration: none;
 }
@@ -2967,7 +2995,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .manage-link {
   border: 1px solid var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .manage-edit-text-button {
@@ -2980,7 +3008,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   background: transparent;
   color: var(--text-muted);
   padding: 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
 }
 
@@ -3006,7 +3034,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 0;
   background: transparent;
   padding: 0;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 400;
 }
 
@@ -3034,9 +3062,9 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   border-radius: 999px;
   border: 1px solid var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
   padding: 0 9px;
-  font-size: 0.8rem;
+  font-size: 0.82rem;
   font-weight: 900;
   box-shadow: inset 0 0 0 1px rgba(255, 210, 74, 0.08);
 }
@@ -3049,7 +3077,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .announcement-state-today {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .ledger-prize,
@@ -3078,7 +3106,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   min-height: 32px;
   border-radius: 999px;
   padding: 0 10px;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 900;
 }
 
@@ -3091,13 +3119,13 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 .ledger-quick-receipt button.is-unreceived {
   border-color: rgba(255, 210, 74, 0.32);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .amount-quick-row button {
   border-color: var(--accent-border);
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 
@@ -3176,30 +3204,30 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
 .bottom-nav button.is-active {
   background: transparent;
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .bottom-nav span {
   overflow: hidden;
   max-width: 100%;
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .bottom-nav-many span {
-  font-size: 0.62rem;
+  font-size: 0.7rem;
 }
 
 .bottom-nav strong {
   color: inherit;
-  font-size: 0.88rem;
+  font-size: 0.9rem;
   line-height: 1;
 }
 
 .bottom-nav-many strong {
-  font-size: 0.8rem;
+  font-size: 0.82rem;
 }
 
 .ledger-row {
@@ -3269,7 +3297,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   h2 {
-    font-size: 1.42rem;
+    font-size: 1.5rem;
   }
 
   h3 {
@@ -3350,7 +3378,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .summary-item strong {
-    font-size: 1.38rem;
+    font-size: 1.5rem;
   }
 
   .desktop-nav {
@@ -3376,12 +3404,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .desktop-nav button.is-active {
     border-color: var(--accent-border);
     background: var(--wanted-blue-soft);
-    color: var(--warning);
+    color: var(--warm-orange);
   }
 
   .desktop-nav span {
     overflow: hidden;
-    font-size: 0.92rem;
+    font-size: 0.94rem;
     font-weight: 900;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3532,7 +3560,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .inbox-title-cell .manage-row-title {
     display: block;
     overflow: hidden;
-    font-size: 0.88rem;
+    font-size: 0.9rem;
     font-weight: 400;
     line-height: 1.35;
     text-overflow: ellipsis;
@@ -3606,7 +3634,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   .inbox-action-cell .ledger-quick-receipt button {
     min-height: 28px;
     padding: 0 9px;
-    font-size: 0.72rem;
+    font-size: 0.74rem;
   }
 
   .inbox-row .manage-edit-panel {
@@ -3819,7 +3847,7 @@ button {
 .section-label,
 .app-kicker {
   color: var(--text-muted);
-  font-size: 0.68rem;
+  font-size: 0.7rem;
   letter-spacing: 0;
   text-transform: uppercase;
 }
@@ -3831,7 +3859,7 @@ button {
   border-radius: 999px;
   background: var(--surface);
   color: var(--text-muted);
-  font-size: 0.76rem;
+  font-size: 0.78rem;
 }
 
 .filter-chips,
@@ -4005,7 +4033,7 @@ button.is-selected {
 .inbox-announcement-today .inbox-attention,
 .inbox-receipt-attention {
   background: var(--wanted-blue-soft);
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .crawler-status-failure,
@@ -4025,7 +4053,7 @@ button.is-selected {
 }
 
 .crawler-status-requested strong {
-  color: var(--warning);
+  color: var(--warm-orange);
 }
 
 .prize-panel,
@@ -4132,7 +4160,7 @@ html[data-theme="light"] {
 
 .inbox-gifticon-entry strong,
 .gifticon-family-panel strong {
-  font-size: 1.02rem;
+  font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: -0.02em;
 }
@@ -4160,7 +4188,7 @@ html[data-theme="light"] {
   border: none;
   background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
   color: #fff;
-  font-weight: 950;
+  font-weight: 900;
   box-shadow: 0 6px 16px rgba(255, 107, 74, 0.32);
 }
 
@@ -4213,20 +4241,20 @@ html[data-theme="light"] {
 
 .inbox-summary div:first-child strong {
   color: #fff;
-  font-size: 1.18rem;
+  font-size: 1.25rem;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
 }
 
 .inbox-summary span {
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.02em;
 }
 
 .inbox-summary strong {
   margin-top: 4px;
-  font-size: 1.05rem;
+  font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
@@ -4309,7 +4337,7 @@ html[data-theme="light"] {
   border-radius: 999px;
   background: rgba(255, 107, 74, 0.12);
   color: var(--warm-orange);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 900;
   letter-spacing: -0.01em;
 }
@@ -4418,7 +4446,7 @@ html[data-theme="light"] {
   border-radius: 999px;
   background: var(--warm-orange);
   color: #fff;
-  font-size: 0.66rem;
+  font-size: 0.7rem;
   font-weight: 900;
 }
 
@@ -4635,7 +4663,7 @@ html[data-theme="light"] {
 
 .section-label {
   color: var(--text-muted);
-  font-size: 0.72rem;
+  font-size: 0.74rem;
   font-weight: 800;
   letter-spacing: 0.04em;
   text-transform: uppercase;
@@ -4647,7 +4675,7 @@ html[data-theme="light"] {
     box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
   }
   .toolbar h2 {
-    font-size: 1.7rem;
+    font-size: 1.8rem;
   }
 }
 
@@ -4753,7 +4781,7 @@ html[data-theme="light"] {
 }
 
 .ready-hero-body > div:first-child span {
-  font-size: 0.92rem;
+  font-size: 0.94rem;
   font-weight: 700;
   opacity: 0.95;
 }
@@ -4772,7 +4800,7 @@ html[data-theme="light"] {
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.22);
   color: #fff;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   font-weight: 800;
   white-space: nowrap;
 }
@@ -4787,7 +4815,7 @@ html[data-theme="light"] {
 
 /* 헤더: 큰 타이틀 + 우측 등록 CTA */
 .gifticon-header h3 {
-  font-size: 1.45rem;
+  font-size: 1.5rem;
   font-weight: 900;
   letter-spacing: -0.03em;
 }
@@ -4820,7 +4848,7 @@ html[data-theme="light"] {
   border: none;
   background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
   color: #fff;
-  font-weight: 950;
+  font-weight: 900;
   box-shadow: 0 6px 16px rgba(255, 107, 74, 0.28);
 }
 
@@ -4956,7 +4984,7 @@ html[data-theme="light"] {
   border: none;
   background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
   color: #fff;
-  font-weight: 950;
+  font-weight: 900;
   box-shadow: 0 6px 16px rgba(255, 107, 74, 0.30);
   min-height: 48px;
 }
@@ -5061,7 +5089,7 @@ html[data-theme="light"] {
 }
 
 .admin-summary strong {
-  font-size: 1.05rem;
+  font-size: 1.04rem;
   font-weight: 900;
   letter-spacing: -0.02em;
   font-variant-numeric: tabular-nums;
