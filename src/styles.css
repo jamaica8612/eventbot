@@ -5804,3 +5804,146 @@ html[data-theme="light"] {
   border-color: rgba(255, 180, 84, 0.28);
   color: var(--warning);
 }
+
+/* ============================================================
+   V2 EventSearch reskin — brand indigo (2단계 d)
+   ============================================================ */
+
+.search-box {
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.18);
+}
+
+.search-box span {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.search-box input {
+  border-radius: 12px;
+  min-height: 48px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border-strong);
+  font-weight: 700;
+  font-size: 0.96rem;
+}
+
+/* focus: brand indigo (warm-orange 제거) */
+.search-box input:focus {
+  border-color: var(--wanted-blue);
+  outline: 3px solid var(--wanted-blue-soft);
+  outline-offset: 0;
+}
+
+/* 결과 수 카운트: brand indigo */
+.search-result-head strong {
+  color: var(--wanted-blue);
+  font-size: 0.96rem;
+}
+
+.search-result-head span {
+  font-size: 0.84rem;
+  color: var(--text-muted);
+}
+
+/* ============================================================
+   V2 PlatformBadge + EventBodyToggle reskin — brand indigo (2단계 e)
+   ============================================================ */
+
+/* ---- PlatformBadge ---- */
+/* 기본 이벤트 뱃지: warm-orange → brand indigo */
+.platform-badge-event .platform-badge-icon {
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+/* platform-badge-icon 기본 색 warm-orange → muted */
+.platform-badge-icon {
+  color: var(--text-muted);
+}
+
+/* ---- EventBodyToggle ---- */
+/* focus: brand indigo */
+.event-body-toggle:focus-visible {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
+}
+
+/* "원문 열기" 링크 버튼: brand indigo */
+.event-body-original {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  border-radius: 10px;
+}
+
+/* 유튜브 자료수집 버튼: brand indigo */
+.youtube-transcript-button {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  border-radius: 10px;
+}
+
+.youtube-transcript-button:hover:not(:disabled) {
+  background: rgba(129, 140, 248, 0.24);
+}
+
+/* ============================================================
+   V2 AdminPanel reskin — v2 카드 토큰 정렬 (2단계 f)
+   ============================================================ */
+
+.admin-summary div,
+.admin-user-row {
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  transition: border-color 120ms ease;
+}
+
+.admin-summary span,
+.admin-user-main span,
+.admin-user-stats span {
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.admin-summary strong {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  color: var(--text-strong);
+}
+
+.admin-user-row.is-pending {
+  border-color: rgba(255, 93, 108, 0.28);
+  background: rgba(255, 93, 108, 0.04);
+}
+
+.admin-user-stats div {
+  border-radius: 10px;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+}
+
+.admin-user-stats strong {
+  font-size: 0.96rem;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.admin-user-actions button {
+  min-height: 40px;
+  border-radius: 10px;
+  font-weight: 700;
+  transition: background 120ms ease, border-color 120ms ease;
+}
