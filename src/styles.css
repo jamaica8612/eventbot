@@ -1333,6 +1333,10 @@ h3 {
   .inbox-summary-unreceived {
     display: none;
   }
+
+  .manual-winning-form {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .inbox-summary span {
@@ -1351,6 +1355,120 @@ h3 {
   line-height: 1.1;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.manual-winning-panel {
+  display: grid;
+  gap: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+  padding: 10px;
+  box-shadow: var(--shadow-card);
+}
+
+.manual-winning-panel.is-open {
+  border-color: var(--accent-border);
+  background: linear-gradient(180deg, var(--wanted-blue-soft), var(--surface));
+}
+
+.manual-winning-toggle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  width: 100%;
+  min-height: 44px;
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.manual-winning-toggle span {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.manual-winning-toggle strong {
+  color: var(--text-strong);
+  font-size: 0.95rem;
+}
+
+.manual-winning-toggle small {
+  overflow: hidden;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manual-winning-toggle b {
+  border: 1px solid var(--accent-border);
+  border-radius: 999px;
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  padding: 7px 12px;
+  font-size: 0.78rem;
+  font-weight: 950;
+}
+
+.manual-winning-form {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.manual-winning-form label {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.manual-winning-form label span {
+  color: var(--text-muted);
+  font-size: 0.76rem;
+  font-weight: 900;
+}
+
+.manual-winning-form input,
+.manual-winning-form select {
+  width: 100%;
+  min-width: 0;
+  min-height: 40px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--surface-alt);
+  color: var(--text-main);
+  padding: 0 11px;
+  font: inherit;
+}
+
+.manual-winning-wide,
+.manual-winning-form > button {
+  grid-column: 1 / -1;
+}
+
+.manual-winning-form > button {
+  min-height: 42px;
+  border: 1px solid var(--accent-border);
+  border-radius: 12px;
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  font-weight: 950;
+}
+
+.inbox-manual-attention {
+  width: fit-content;
+  border-color: rgba(34, 197, 94, 0.24);
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+}
+
+.inbox-row-won {
+  border-color: rgba(34, 197, 94, 0.22);
 }
 
 .inbox-row {

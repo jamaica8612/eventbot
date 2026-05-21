@@ -51,6 +51,15 @@ export async function updateSupabaseEventDetails(eventId, patch) {
   });
 }
 
+export async function createSupabaseManualWinningEvent(event) {
+  if (!hasSupabaseConfig) return null;
+  const payload = await callDataFunction('POST', '', {
+    action: 'createManualWinningEvent',
+    event,
+  });
+  return payload.event ? toAppEvent(payload.event) : null;
+}
+
 export async function loadSupabaseFilterSettings() {
   if (!hasSupabaseConfig) {
     return null;

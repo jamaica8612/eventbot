@@ -113,9 +113,11 @@ export function EventInbox({
   onResultChange,
   onMetaChange,
   onDelete,
+  onCreateManualWinning,
   onNotice,
 }) {
   const [isGifticonOpen, setIsGifticonOpen] = useState(false);
+  const [isManualOpen, setIsManualOpen] = useState(false);
   const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
   const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
   const attentionCounts = useMemo(() => buildInboxAttentionCounts(sortedEvents), [sortedEvents]);
@@ -133,6 +135,12 @@ export function EventInbox({
     return (
       <div className="inbox-board">
         <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+        <ManualWinningEntry
+          isOpen={isManualOpen}
+          onToggle={() => setIsManualOpen((value) => !value)}
+          onCreate={onCreateManualWinning}
+          onNotice={onNotice}
+        />
         <p className="empty-message">
           {isLoading ? '이벤트를 불러오는 중입니다.' : '응모함에 담긴 이벤트가 없습니다.'}
         </p>
@@ -143,6 +151,12 @@ export function EventInbox({
   return (
     <div className="inbox-board">
       <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+      <ManualWinningEntry
+        isOpen={isManualOpen}
+        onToggle={() => setIsManualOpen((value) => !value)}
+        onCreate={onCreateManualWinning}
+        onNotice={onNotice}
+      />
 
       <div className="inbox-summary">
         <div>
@@ -156,6 +170,10 @@ export function EventInbox({
         <div className={`inbox-summary-unreceived${attentionCounts.unreceived > 0 ? ' is-attention' : ''}`}>
           <span>미수령</span>
           <strong>{inboxCounts.unreceived}</strong>
+        </div>
+        <div>
+          <span>당첨</span>
+          <strong>{inboxCounts.won}</strong>
         </div>
         <div>
           <span>당첨률</span>
@@ -221,6 +239,138 @@ function InboxGifticonEntry({ onOpen }) {
   );
 }
 
+function ManualWinningEntry({ isOpen, onToggle, onCreate, onNotice }) {
+  const [form, setForm] = useState({
+    title: '',
+    prizeTitle: '',
+    prizeAmount: '',
+    participatedAt: '',
+    resultCheckedAt: new Date().toISOString().slice(0, 10),
+    receiptStatus: 'unclaimed',
+    memo: '',
+    url: '',
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    if (!form.title.trim()) {
+      onNotice?.({ type: 'warning', message: '이벤트명이나 받은 곳을 입력해주세요.' });
+      return;
+    }
+    setIsSaving(true);
+    try {
+      await onCreate?.(form);
+      setForm({
+        title: '',
+        prizeTitle: '',
+        prizeAmount: '',
+        participatedAt: '',
+        resultCheckedAt: new Date().toISOString().slice(0, 10),
+        receiptStatus: 'unclaimed',
+        memo: '',
+        url: '',
+      });
+      onNotice?.({ type: 'success', message: '빠진 당첨 내역을 추가했습니다.' });
+    } catch (error) {
+      onNotice?.({ type: 'warning', message: error.message || '수기 당첨 입력에 실패했습니다.' });
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  function updateField(key, value) {
+    setForm((current) => ({ ...current, [key]: value }));
+  }
+
+  return (
+    <section className={`manual-winning-panel${isOpen ? ' is-open' : ''}`}>
+      <button type="button" className="manual-winning-toggle" onClick={onToggle}>
+        <span>
+          <strong>빠진 당첨 추가</strong>
+          <small>기프티콘이 왔는데 이벤트가 없을 때</small>
+        </span>
+        <b>{isOpen ? '닫기' : '입력'}</b>
+      </button>
+
+      {isOpen ? (
+        <form className="manual-winning-form" onSubmit={handleSubmit}>
+          <label>
+            <span>이벤트명 / 받은 곳</span>
+            <input
+              value={form.title}
+              onChange={(event) => updateField('title', event.target.value)}
+              placeholder="예: 카카오톡 채널 이벤트"
+            />
+          </label>
+          <label>
+            <span>경품명</span>
+            <input
+              value={form.prizeTitle}
+              onChange={(event) => updateField('prizeTitle', event.target.value)}
+              placeholder="예: 스타벅스 아메리카노"
+            />
+          </label>
+          <label>
+            <span>금액</span>
+            <input
+              inputMode="numeric"
+              value={form.prizeAmount}
+              onChange={(event) => updateField('prizeAmount', event.target.value)}
+              placeholder="예: 4500"
+            />
+          </label>
+          <label>
+            <span>당첨 확인일</span>
+            <input
+              type="date"
+              value={form.resultCheckedAt}
+              onChange={(event) => updateField('resultCheckedAt', event.target.value)}
+            />
+          </label>
+          <label>
+            <span>응모일</span>
+            <input
+              type="date"
+              value={form.participatedAt}
+              onChange={(event) => updateField('participatedAt', event.target.value)}
+            />
+          </label>
+          <label>
+            <span>수령 상태</span>
+            <select
+              value={form.receiptStatus}
+              onChange={(event) => updateField('receiptStatus', event.target.value)}
+            >
+              <option value="unclaimed">미수령</option>
+              <option value="received">수령완료</option>
+            </select>
+          </label>
+          <label className="manual-winning-wide">
+            <span>링크</span>
+            <input
+              value={form.url}
+              onChange={(event) => updateField('url', event.target.value)}
+              placeholder="선택 입력"
+            />
+          </label>
+          <label className="manual-winning-wide">
+            <span>메모</span>
+            <input
+              value={form.memo}
+              onChange={(event) => updateField('memo', event.target.value)}
+              placeholder="기프티콘 번호, 받은 날짜, 문의내용 등"
+            />
+          </label>
+          <button type="submit" disabled={isSaving}>
+            당첨함에 추가
+          </button>
+        </form>
+      ) : null}
+    </section>
+  );
+}
+
 function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, onDelete }) {
   const [isEditing, setIsEditing] = useState(false);
   const resultStatus = event.resultStatus ?? 'unknown';
@@ -260,6 +410,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
           </p>
         ) : null}
         {isUnreceived ? <p className="inbox-attention inbox-receipt-attention">미수령</p> : null}
+        {event.raw?.manualWinning ? <p className="inbox-attention inbox-manual-attention">수기입력</p> : null}
       </div>
 
       <div className="inbox-state-cell">

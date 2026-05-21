@@ -99,6 +99,10 @@ Deno.serve(async (request) => {
         await updateEventDetails(String(body.eventId ?? ''), body.patch ?? {});
         return json({ ok: true });
       }
+      if (body.action === 'createManualWinningEvent') {
+        const created = await createManualWinningEvent(auth.user, body.event ?? {});
+        return json({ event: created });
+      }
       if (body.action === 'saveFilterSettings') {
         await saveSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id), body.settings ?? {});
         return json({ ok: true });
@@ -340,6 +344,77 @@ async function updateEventDetails(eventId: string, patch: Record<string, unknown
     headers: { Prefer: 'return=minimal' },
     body: JSON.stringify(rowPatch),
   });
+}
+
+async function createManualWinningEvent(user: AuthUser, input: Record<string, unknown>) {
+  const title = normalizeShortText(input.title, 180);
+  if (!title) throw new HttpError('Title is required.', 400);
+
+  const sourceEventId = crypto.randomUUID();
+  const participatedAt =
+    typeof input.participatedAt === 'string' && input.participatedAt
+      ? new Date(`${input.participatedAt}T12:00:00`).toISOString()
+      : new Date().toISOString();
+  const resultCheckedAt =
+    typeof input.resultCheckedAt === 'string' && input.resultCheckedAt
+      ? new Date(`${input.resultCheckedAt}T12:00:00`).toISOString()
+      : new Date().toISOString();
+  const prizeTitle = normalizeShortText(input.prizeTitle, 180) || title;
+  const prizeAmount = parseAmount(input.prizeAmount);
+  const receiptStatus = input.receiptStatus === 'received' ? 'received' : 'unclaimed';
+  const memo = normalizeShortText(input.memo, 500);
+  const platform = normalizeShortText(input.platform, 60) || '수기입력';
+  const sourceUrl = normalizeShortText(input.url, 500);
+  const url = sourceUrl || `local://manual-winning/${sourceEventId}`;
+
+  const insertedEvents = await restFetch('/rest/v1/events', {
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify({
+      source_site: 'manual',
+      source_name: '수기 입력',
+      source_event_id: sourceEventId,
+      title,
+      url,
+      apply_url: sourceUrl || null,
+      platform,
+      due_text: '수기 입력',
+      deadline_text: '수기 입력',
+      prize_text: prizeTitle,
+      prize_title: prizeTitle,
+      prize_amount: prizeAmount,
+      effort: 'quick',
+      status: 'ready',
+      result_status: 'unknown',
+      raw: {
+        userCreated: true,
+        manualWinning: true,
+        createdBy: user.id,
+      },
+    }),
+  });
+  const event = Array.isArray(insertedEvents) ? insertedEvents[0] : null;
+  if (!event?.id) throw new Error('Could not create manual winning event.');
+
+  const insertedStates = await restFetch('/rest/v1/user_event_states?on_conflict=user_id,event_id', {
+    method: 'POST',
+    headers: { Prefer: 'resolution=merge-duplicates,return=representation' },
+    body: JSON.stringify({
+      user_id: user.id,
+      event_id: event.id,
+      status: 'done',
+      result_status: 'won',
+      participated_at: participatedAt,
+      result_checked_at: resultCheckedAt,
+      prize_title: prizeTitle,
+      prize_amount: prizeAmount,
+      receipt_status: receiptStatus,
+      winning_memo: memo,
+      memo,
+    }),
+  });
+  const state = Array.isArray(insertedStates) ? insertedStates[0] : null;
+  return mergeEventState(event, state);
 }
 
 async function loadGifticonFamily(user: AuthUser) {
@@ -784,6 +859,13 @@ function normalizeDate(value: unknown) {
 
 function normalizeShortText(value: unknown, maxLength: number) {
   return typeof value === 'string' ? value.trim().slice(0, maxLength) : '';
+}
+
+function parseAmount(value: unknown) {
+  if (typeof value === 'number' && Number.isFinite(value)) return Math.max(0, Math.round(value));
+  if (typeof value !== 'string') return null;
+  const parsed = Number.parseInt(value.replace(/[^\d]/g, ''), 10);
+  return Number.isFinite(parsed) ? parsed : null;
 }
 
 async function loadSetting(key: string) {

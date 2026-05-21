@@ -177,6 +177,7 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
+    createManualWinningEvent,
   } =
     useEventActions({ events, setEvents, setSyncNotice });
 
@@ -553,6 +554,7 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onResultChange={updateResult}
               onMetaChange={updateWinningMeta}
               onDelete={deleteInboxEvent}
+              onCreateManualWinning={createManualWinningEvent}
               onNotice={setSyncNotice}
             />
           ) : (

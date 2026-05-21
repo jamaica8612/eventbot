@@ -9,6 +9,7 @@ import {
 import { saveExcludedEvent } from '../storage/excludedEventStorage.js';
 import {
   hasSupabaseConfig,
+  createSupabaseManualWinningEvent,
   updateSupabaseEventDetails,
   updateSupabaseEventState,
 } from '../storage/supabaseEventStorage.js';
@@ -316,6 +317,20 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     [setEvents, setSyncNotice],
   );
 
+  const createManualWinningEvent = useCallback(
+    async (input) => {
+      if (!hasSupabaseConfig) {
+        throw new Error('수기 당첨 입력은 로그인/DB 연결이 필요합니다.');
+      }
+      const createdEvent = await createSupabaseManualWinningEvent(input);
+      if (!createdEvent) throw new Error('수기 당첨 내역을 만들지 못했습니다.');
+      setEvents((currentEvents) => [createdEvent, ...currentEvents]);
+      setSyncNotice({ type: 'success', message: '수기 당첨 내역을 추가했습니다.' });
+      return createdEvent;
+    },
+    [setEvents, setSyncNotice],
+  );
+
   return {
     updateStatus,
     updateResult,
@@ -323,5 +338,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
+    createManualWinningEvent,
   };
 }
