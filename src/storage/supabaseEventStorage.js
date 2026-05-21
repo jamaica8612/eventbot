@@ -315,6 +315,17 @@ function toAppEvent(row) {
     title: row.title,
     originalTitle: raw.originalTitle ?? row.title,
     originalUrl: row.url,
+    applyTargetUrl:
+      row.apply_target_url ??
+      raw.applyTargetUrl ??
+      raw.apply_target_url ??
+      raw.resolvedApplyUrl ??
+      raw.resolved_apply_url ??
+      raw.applyTargetResolvedUrl ??
+      raw.apply_target_resolved_url ??
+      raw.youtubeUrl ??
+      raw.youtube_url ??
+      '',
     applyUrl: row.apply_url ?? raw.applyUrl ?? row.url,
     lastSeenAt: row.last_seen_at,
     source: `${row.source_name} · ${row.platform}`,

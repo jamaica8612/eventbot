@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
+import { buildYoutubeLinks } from '../utils/youtubeLinks.js';
 import { getAuthToken, requireUnlock } from '../storage/supabaseAuthStorage.js';
 import { updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 
@@ -434,52 +435,6 @@ async function readJsonResponse(response) {
   }
 
   throw new Error(rawText.slice(0, 160) || '댓글 후보 API 응답 형식이 올바르지 않습니다.');
-}
-
-function buildYoutubeLinks(event) {
-  const raw = event.raw ?? {};
-  const textCandidates = [
-    event.originalText,
-    event.contentText,
-    event.bodyText,
-    raw.originalText,
-    raw.contentText,
-    raw.bodyText,
-    raw.detailText,
-    ...(Array.isArray(event.originalLines) ? event.originalLines : []),
-    ...(Array.isArray(event.contentLines) ? event.contentLines : []),
-    ...(Array.isArray(raw.originalLines) ? raw.originalLines : []),
-    ...(Array.isArray(raw.contentLines) ? raw.contentLines : []),
-    ...(Array.isArray(raw.bodyLines) ? raw.bodyLines : []),
-  ];
-  return [
-    event.applyTargetUrl,
-    raw.applyTargetUrl,
-    event.applyUrl,
-    event.url,
-    event.originalUrl,
-    raw.applyUrl,
-    raw.url,
-    raw.originalUrl,
-    ...(raw.externalLinks ?? []),
-    ...extractYoutubeUrlsFromText(textCandidates.join('\n')),
-  ]
-    .filter(Boolean)
-    .filter((url, index, urls) => urls.indexOf(url) === index)
-    .filter((url) => extractYoutubeVideoId(url));
-}
-
-function extractYoutubeUrlsFromText(text) {
-  return String(text ?? '').match(/https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s"'<>]+/gi) ?? [];
-}
-
-function extractYoutubeVideoId(url) {
-  const value = String(url ?? '');
-  return (
-    value.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)?.[1] ??
-    value.match(/youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1] ??
-    ''
-  );
 }
 
 function buildYoutubeCommentMaterialText(event, context) {

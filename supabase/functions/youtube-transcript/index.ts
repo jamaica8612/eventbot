@@ -46,6 +46,7 @@ Deno.serve(async (request) => {
     const userSettings = await loadRequestCommentSettings(request);
     const context = await fetchYoutubeContext({
       videoId,
+      url: body.url || requestUrl.searchParams.get('url') || '',
       eventInfo: body.eventInfo ?? {},
       mode,
       userSettings,
@@ -191,20 +192,24 @@ function extractVideoId(value = '') {
 
 async function fetchYoutubeContext({
   videoId,
+  url,
   eventInfo,
   mode,
   userSettings,
 }: {
   videoId: string;
+  url: string;
   eventInfo: Record<string, unknown>;
   mode: 'context' | 'candidates';
   userSettings: CommentSettings;
 }) {
-  if (!videoId) throw new Error('YouTube video ID was not found.');
+  const resolvedUrl = videoId ? url : await resolveYoutubeUrl(url);
+  const resolvedVideoId = videoId || extractVideoId(resolvedUrl);
+  if (!resolvedVideoId) throw new Error('YouTube video ID was not found.');
 
-  const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
+  const watchUrl = `https://www.youtube.com/watch?v=${resolvedVideoId}`;
   if (mode === 'candidates') {
-    const candidateContext = await fetchCandidateContext(videoId, watchUrl);
+    const candidateContext = await fetchCandidateContext(resolvedVideoId, watchUrl);
     let commentCandidates: Array<{ style: string; text: string }> = [];
     let commentCandidatesError = '';
 
@@ -220,7 +225,7 @@ async function fetchYoutubeContext({
     }
 
     return {
-      videoId,
+      videoId: resolvedVideoId,
       url: watchUrl,
       ...candidateContext.metadata,
       transcript: candidateContext.transcript,
@@ -247,11 +252,11 @@ async function fetchYoutubeContext({
   const youtubeApiKey = Deno.env.get('YOUTUBE_API_KEY') || '';
   const tracks = playerResponse?.captions?.playerCaptionsTracklistRenderer?.captionTracks ?? [];
   const apiVideoPromise = youtubeApiKey
-    ? fetchYoutubeApiVideoSafe(videoId, youtubeApiKey)
+    ? fetchYoutubeApiVideoSafe(resolvedVideoId, youtubeApiKey)
     : Promise.resolve(null);
   const transcriptPromise = fetchTranscriptSafe(tracks);
   const apiCommentsPromise = youtubeApiKey
-    ? fetchYoutubeApiCommentsSafe(videoId, youtubeApiKey)
+    ? fetchYoutubeApiCommentsSafe(resolvedVideoId, youtubeApiKey)
     : Promise.resolve([]);
   const [apiVideo, transcript, apiComments] = await Promise.all([
     apiVideoPromise,
@@ -262,10 +267,13 @@ async function fetchYoutubeContext({
     ...extractVideoMetadata(playerResponse, html, watchUrl),
     ...(apiVideo ? toApiVideoMetadata(apiVideo, watchUrl) : {}),
   };
-  const comments = apiComments.length > 0 ? apiComments : await fetchCommentsSafe({ html, playerResponse, videoId });
+  const comments =
+    apiComments.length > 0
+      ? apiComments
+      : await fetchCommentsSafe({ html, playerResponse, videoId: resolvedVideoId });
 
   return {
-    videoId,
+    videoId: resolvedVideoId,
     url: watchUrl,
     ...metadata,
     availableCaptionLanguages: tracks.map((track: Record<string, unknown>) => ({
@@ -279,6 +287,36 @@ async function fetchYoutubeContext({
     commentCandidates: [],
     commentCandidatesError: '',
   };
+}
+
+async function resolveYoutubeUrl(url = '') {
+  const value = String(url ?? '').trim();
+  if (!value || extractVideoId(value)) return value;
+  if (!/^https?:\/\//i.test(value)) return value;
+
+  try {
+    const response = await fetch(value, {
+      redirect: 'follow',
+      headers: {
+        'user-agent':
+          'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'accept-language': 'ko-KR,ko;q=0.9,en;q=0.8',
+      },
+    });
+    const finalUrl = response.url || value;
+    if (extractVideoId(finalUrl)) return finalUrl;
+
+    const html = await response.text().catch(() => '');
+    const htmlUrl = findYoutubeUrlInText(html);
+    return htmlUrl || finalUrl;
+  } catch {
+    return value;
+  }
+}
+
+function findYoutubeUrlInText(text = '') {
+  const match = String(text).match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\/[^\s"'<>]+/i);
+  return match?.[0]?.replace(/\\u0026/g, '&').replace(/[),.;\]]+$/, '') || '';
 }
 
 async function fetchCandidateContext(videoId: string, watchUrl: string) {
