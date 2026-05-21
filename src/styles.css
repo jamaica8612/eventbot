@@ -6091,3 +6091,189 @@ html[data-theme="light"] {
     display: none;
   }
 }
+
+/* ============================================================
+   V2 warm-orange 전체 정리 — brand indigo / 시맨틱 토큰으로 교체
+   (CSS 하단에서 override — 위의 모든 warm-orange 선언을 덮어씀)
+   GifticonVault / 당첨함 Warm Pop 섹션은 의도적으로 유지.
+   ============================================================ */
+
+/* ---- 공통 selected/active 버튼 ---- */
+button.is-selected {
+  border-color: var(--accent-border);
+}
+
+/* ---- 테마 스위치 ---- */
+.theme-switch {
+  color: var(--wanted-blue);
+}
+
+/* ---- 인증 폼 ---- */
+.auth-form input:focus {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
+  outline-offset: 0;
+}
+
+.auth-form button[type="submit"],
+.auth-form button:not([disabled]) {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+}
+
+/* ---- 레이블 ---- */
+.app-kicker,
+.section-label {
+  color: var(--text-muted);
+}
+
+/* ---- 설정 패널 ---- */
+.settings-button {
+  border-color: var(--accent-border);
+  color: var(--wanted-blue);
+}
+
+.settings-button:hover {
+  background: var(--wanted-blue-soft);
+}
+
+.sync-notice {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.settings-action-button {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-main);
+  transition: background 120ms ease, border-color 120ms ease;
+}
+
+.settings-action-button:hover {
+  border-color: var(--accent-border);
+  color: var(--wanted-blue);
+}
+
+.settings-check-row input {
+  accent-color: var(--wanted-blue);
+}
+
+.settings-check-row strong {
+  color: var(--text-strong);
+}
+
+.settings-reset {
+  color: var(--danger);
+}
+
+.pwa-panel button {
+  border-color: var(--accent-border);
+  color: var(--wanted-blue);
+}
+
+/* ---- 크롤러 상태 ---- */
+.crawler-status-requested strong {
+  color: var(--wanted-blue);
+}
+
+/* ---- 정렬 옵션 active ---- */
+.sort-options button.is-active {
+  color: var(--wanted-blue);
+  text-decoration-color: var(--wanted-blue);
+}
+
+/* ---- 마감일 행 ---- */
+.deadline-row-head span {
+  color: var(--warning);
+}
+
+/* ---- 스코어/점수 행 ---- */
+.score-row strong {
+  color: var(--wanted-blue);
+}
+
+/* ---- 이벤트 본문 facts 링크 ---- */
+.event-body-facts a {
+  color: var(--wanted-blue);
+  text-decoration-color: var(--accent-border);
+}
+
+/* ---- decision-reason, source-summary ---- */
+.decision-reason {
+  color: var(--text-muted);
+}
+
+.source-summary summary strong {
+  color: var(--wanted-blue);
+}
+
+/* ---- announcement-panel ---- */
+.announcement-panel > div strong {
+  color: var(--wanted-blue);
+}
+
+.announcement-panel input:focus,
+.announcement-panel select:focus {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
+  outline-offset: 0;
+}
+
+/* ---- 유튜브 컨텍스트/댓글 ---- */
+.youtube-transcript strong,
+.youtube-context strong {
+  color: var(--wanted-blue);
+}
+
+/* ---- 원장(ledger) & 관리 ---- */
+.ledger-view-toggle button.is-active {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.ledger-title-block time,
+.manage-row-meta time {
+  color: var(--text-muted);
+}
+
+.prize-title-field input:focus,
+.amount-field input:focus,
+.receipt-field select:focus,
+.winning-memo-field input:focus {
+  border-color: var(--wanted-blue);
+  outline: 2px solid var(--wanted-blue-soft);
+  outline-offset: 0;
+}
+
+/* ---- manage 결과 버튼 & 링크 ---- */
+.manage-result-actions button.is-won {
+  border-color: rgba(61, 220, 151, 0.32);
+  background: rgba(61, 220, 151, 0.12);
+  color: var(--success);
+}
+
+.manage-link,
+.apply-link {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.manage-link:hover,
+.apply-link:hover {
+  background: rgba(129, 140, 248, 0.24);
+}
+
+/* ---- 수령/미수령 빠른 버튼 ---- */
+.ledger-quick-receipt button.is-unreceived {
+  border-color: rgba(255, 180, 84, 0.28);
+  color: var(--warning);
+}
+
+.amount-quick-row button {
+  border-color: var(--accent-border);
+  color: var(--wanted-blue);
+}
