@@ -51,6 +51,11 @@ export function TodayDeadlineList({
     () => sortedEvents.filter((event) => matchesDeadlineView(event, selectedFilter)),
     [selectedFilter, sortedEvents],
   );
+  const deadlineFocus = [
+    { label: '오늘 마감', value: filterCounts.today },
+    { label: '내일 마감', value: filterCounts.tomorrow },
+    { label: '7일 이내', value: filterCounts.week },
+  ];
 
   if (events.length === 0) {
     return (
@@ -62,6 +67,28 @@ export function TodayDeadlineList({
 
   return (
     <div className="deadline-board">
+      <section className="deadline-focus-panel">
+        <div>
+          <span>DEADLINE QUEUE</span>
+          <strong>{filterCounts.all}</strong>
+          <p>마감이 가까운 이벤트를 먼저 처리하세요.</p>
+        </div>
+        <div className="deadline-focus-strip">
+          {deadlineFocus.map((item) => (
+            <button
+              key={item.label}
+              type="button"
+              onClick={() =>
+                onSelectFilter(item.label === '오늘 마감' ? 'today' : item.label === '내일 마감' ? 'tomorrow' : 'week')
+              }
+            >
+              <span>{item.label}</span>
+              <strong>{item.value}</strong>
+            </button>
+          ))}
+        </div>
+      </section>
+
       <div className="filter-chips" aria-label="마감일순 보기">
         {deadlineFilters.map((filter) => (
           <button
@@ -134,13 +161,15 @@ export function EventInbox({
   if (events.length === 0) {
     return (
       <div className="inbox-board">
-        <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
-        <ManualWinningEntry
-          isOpen={isManualOpen}
-          onToggle={() => setIsManualOpen((value) => !value)}
-          onCreate={onCreateManualWinning}
-          onNotice={onNotice}
-        />
+        <div className="inbox-command-grid">
+          <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+          <ManualWinningEntry
+            isOpen={isManualOpen}
+            onToggle={() => setIsManualOpen((value) => !value)}
+            onCreate={onCreateManualWinning}
+            onNotice={onNotice}
+          />
+        </div>
         <p className="empty-message">
           {isLoading ? '이벤트를 불러오는 중입니다.' : '응모함에 담긴 이벤트가 없습니다.'}
         </p>
@@ -150,39 +179,39 @@ export function EventInbox({
 
   return (
     <div className="inbox-board">
-      <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
-      <ManualWinningEntry
-        isOpen={isManualOpen}
-        onToggle={() => setIsManualOpen((value) => !value)}
-        onCreate={onCreateManualWinning}
-        onNotice={onNotice}
-      />
+      <section className="inbox-hero-panel">
+        <div>
+          <span>PRIZE LEDGER</span>
+          <strong>{formatWon(totalAmount)}</strong>
+          <p>당첨, 발표 확인, 미수령을 한 화면에서 정리합니다.</p>
+        </div>
+        <div className="inbox-hero-actions">
+          <button type="button" onClick={() => setIsManualOpen(true)}>
+            빠진 당첨 추가
+          </button>
+          <button type="button" onClick={() => setIsGifticonOpen(true)}>
+            기프티콘 공유함
+          </button>
+        </div>
+      </section>
+
+      <div className="inbox-command-grid">
+        <InboxGifticonEntry onOpen={() => setIsGifticonOpen(true)} />
+        <ManualWinningEntry
+          isOpen={isManualOpen}
+          onToggle={() => setIsManualOpen((value) => !value)}
+          onCreate={onCreateManualWinning}
+          onNotice={onNotice}
+        />
+      </div>
 
       <div className="inbox-summary">
-        <div>
-          <span>응모완료</span>
-          <strong>{events.length}</strong>
-        </div>
-        <div className={attentionCounts.check > 0 ? 'is-attention' : ''}>
-          <span>오늘발표</span>
-          <strong>{inboxCounts.check}</strong>
-        </div>
-        <div className={`inbox-summary-unreceived${attentionCounts.unreceived > 0 ? ' is-attention' : ''}`}>
-          <span>미수령</span>
-          <strong>{inboxCounts.unreceived}</strong>
-        </div>
-        <div>
-          <span>당첨</span>
-          <strong>{inboxCounts.won}</strong>
-        </div>
-        <div>
-          <span>당첨률</span>
-          <strong>{winRate}</strong>
-        </div>
-        <div>
-          <span>당첨금</span>
-          <strong>{formatWon(totalAmount)}</strong>
-        </div>
+        <InboxSummaryCard label="응모완료" value={events.length} />
+        <InboxSummaryCard label="오늘발표" value={inboxCounts.check} attention={attentionCounts.check > 0} />
+        <InboxSummaryCard label="미수령" value={inboxCounts.unreceived} attention={attentionCounts.unreceived > 0} />
+        <InboxSummaryCard label="당첨" value={inboxCounts.won} />
+        <InboxSummaryCard label="당첨률" value={winRate} />
+        <InboxSummaryCard label="당첨금" value={formatWon(totalAmount)} />
       </div>
 
       <div className="filter-chips" aria-label="응모함 보기">
@@ -221,6 +250,15 @@ export function EventInbox({
           <p className="empty-message">이 조건에 맞는 응모 내역이 없습니다.</p>
         )}
       </div>
+    </div>
+  );
+}
+
+function InboxSummaryCard({ label, value, attention = false }) {
+  return (
+    <div className={attention ? 'is-attention' : ''}>
+      <span>{label}</span>
+      <strong>{value}</strong>
     </div>
   );
 }

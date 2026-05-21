@@ -41,23 +41,69 @@ export function useEvents() {
   return { events, setEvents, isLoading };
 }
 
-export function useTheme() {
-  const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'light';
-    if (window.localStorage.getItem('eventbotDesignRefresh') !== '2026-light') {
-      window.localStorage.setItem('eventbotDesignRefresh', '2026-light');
-      window.localStorage.setItem('eventbotTheme', 'light');
-      return 'light';
-    }
-    const storedTheme = window.localStorage.getItem('eventbotTheme');
-    return storedTheme === 'dark' ? 'dark' : 'light';
+const defaultAppearance = {
+  design: 'v1',
+};
+
+function normalizeAppearance(value = {}) {
+  const requestedMode = value.mode === 'light' || value.mode === 'dark' ? value.mode : null;
+  const design = requestedMode ? (requestedMode === 'dark' ? 'v1' : 'v2') : value.design;
+  const normalizedDesign = design === 'v2' ? 'v2' : 'v1';
+  return {
+    design: normalizedDesign,
+    mode: normalizedDesign === 'v1' ? 'dark' : 'light',
+  };
+}
+
+function loadStoredAppearance() {
+  if (typeof window === 'undefined') return defaultAppearance;
+
+  const storedDesign = window.localStorage.getItem('eventbotDesignVersion');
+  const storedMode = window.localStorage.getItem('eventbotColorMode');
+
+  if (storedDesign || storedMode) {
+    return normalizeAppearance({ design: storedDesign, mode: storedMode });
+  }
+
+  const legacyTheme = window.localStorage.getItem('eventbotTheme');
+  return normalizeAppearance({
+    design: defaultAppearance.design,
+    mode: legacyTheme,
   });
+}
+
+export function useAppearance() {
+  const [appearance, setAppearance] = useState(loadStoredAppearance);
 
   useEffect(() => {
-    document.documentElement.dataset.theme = theme;
-    document.body.dataset.theme = theme;
-    window.localStorage.setItem('eventbotTheme', theme);
-  }, [theme]);
+    const nextAppearance = normalizeAppearance(appearance);
+    document.documentElement.dataset.design = nextAppearance.design;
+    document.documentElement.dataset.theme = nextAppearance.mode;
+    document.body.dataset.design = nextAppearance.design;
+    document.body.dataset.theme = nextAppearance.mode;
+    window.localStorage.setItem('eventbotDesignVersion', nextAppearance.design);
+    window.localStorage.setItem('eventbotColorMode', nextAppearance.mode);
+  }, [appearance]);
 
-  return [theme, setTheme];
+  function updateAppearance(nextValue) {
+    setAppearance((current) =>
+      normalizeAppearance(
+        typeof nextValue === 'function' ? nextValue(normalizeAppearance(current)) : nextValue,
+      ),
+    );
+  }
+
+  return [normalizeAppearance(appearance), updateAppearance];
+}
+
+export function useTheme() {
+  const [appearance, setAppearance] = useAppearance();
+  return [
+    appearance.mode,
+    (nextMode) =>
+      setAppearance((current) => ({
+        ...current,
+        mode: typeof nextMode === 'function' ? nextMode(current.mode) : nextMode,
+      })),
+  ];
 }

@@ -73,6 +73,18 @@ export function AdminPanel({ onSummaryChange, onNotice }) {
 
   return (
     <section className="admin-board" aria-label="관리자">
+      <section className="admin-control-panel">
+        <div>
+          <span>ACCESS CONTROL</span>
+          <strong>{summary.pending > 0 ? `${summary.pending}명 승인 대기` : '승인 대기 없음'}</strong>
+          <p>사용자 승인과 관리자 권한을 한 곳에서 관리합니다.</p>
+        </div>
+        <div className="admin-control-meter">
+          <span>전체 사용자</span>
+          <strong>{summary.total}명</strong>
+        </div>
+      </section>
+
       <div className="admin-summary">
         <AdminSummaryCard label="전체 사용자" value={`${summary.total}명`} />
         <AdminSummaryCard label="승인 대기" value={`${summary.pending}명`} attention={summary.pending > 0} />
@@ -116,7 +128,9 @@ function AdminUserRow({ user, isUpdating, onUpdateAccess }) {
           <span>{user.email || user.user_id}</span>
         </div>
         <div className="admin-user-badges">
-          <span className={user.approved ? 'is-approved' : 'is-pending'}>{user.approved ? '승인됨' : '승인 대기'}</span>
+          <span className={user.approved ? 'is-approved' : 'is-pending'}>
+            {user.approved ? '승인됨' : '승인 대기'}
+          </span>
           {user.is_admin ? <span className="is-admin">관리자</span> : null}
         </div>
       </div>

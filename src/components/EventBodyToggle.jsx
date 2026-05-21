@@ -177,7 +177,7 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
   // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
-  if (!hasCrawledBody(event)) {
+  if (!hasCrawledBody(event) && !canFetchYoutubeTranscript) {
     return (
       <div className="event-body-empty">
         <p>본문은 슈퍼투데이 사이트에서 직접 확인하세요.</p>
@@ -349,6 +349,34 @@ export function EventBodyToggle({ event, lines, facts }) {
           {lines.slice(0, 3).map((line) => (
             <p key={line}>{line}</p>
           ))}
+          {canFetchYoutubeTranscript ? (
+            <div className="youtube-quick-actions" aria-label="유튜브 댓글 도구">
+              <button
+                type="button"
+                className="youtube-transcript-button"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={handleYoutubeInfoFetch}
+                disabled={infoStatus === 'loading' || transcriptStatus === 'loading'}
+              >
+                {infoStatus === 'loading' ? '유튜브 정보수집 중' : '유튜브 정보수집'}
+              </button>
+              <button
+                type="button"
+                className="youtube-transcript-button"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={handleYoutubeTranscriptFetch}
+                disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
+              >
+                {transcriptStatus === 'loading'
+                  ? '댓글 생성 중'
+                  : hasCommentCandidates
+                    ? '댓글 보기'
+                    : '댓글 만들기'}
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
     </div>
@@ -410,10 +438,39 @@ async function readJsonResponse(response) {
 
 function buildYoutubeLinks(event) {
   const raw = event.raw ?? {};
-  return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+  const textCandidates = [
+    event.originalText,
+    event.contentText,
+    event.bodyText,
+    raw.originalText,
+    raw.contentText,
+    raw.bodyText,
+    raw.detailText,
+    ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+    ...(Array.isArray(event.contentLines) ? event.contentLines : []),
+    ...(Array.isArray(raw.originalLines) ? raw.originalLines : []),
+    ...(Array.isArray(raw.contentLines) ? raw.contentLines : []),
+    ...(Array.isArray(raw.bodyLines) ? raw.bodyLines : []),
+  ];
+  return [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    event.applyUrl,
+    event.url,
+    event.originalUrl,
+    raw.applyUrl,
+    raw.url,
+    raw.originalUrl,
+    ...(raw.externalLinks ?? []),
+    ...extractYoutubeUrlsFromText(textCandidates.join('\n')),
+  ]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
     .filter((url) => extractYoutubeVideoId(url));
+}
+
+function extractYoutubeUrlsFromText(text) {
+  return String(text ?? '').match(/https?:\/\/(?:www\.)?(?:youtube\.com|youtu\.be)\/[^\s"'<>]+/gi) ?? [];
 }
 
 function extractYoutubeVideoId(url) {

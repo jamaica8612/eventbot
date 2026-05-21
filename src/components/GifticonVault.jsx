@@ -37,6 +37,7 @@ export function GifticonVault({ onClose, onNotice }) {
   const [familyName, setFamilyName] = useState('우리 가족 기프티콘');
   const [memberEmail, setMemberEmail] = useState('');
   const [form, setForm] = useState(emptyForm);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [barcodeNotice, setBarcodeNotice] = useState('');
   const [previewImage, setPreviewImage] = useState(null);
   const [undoGifticonId, setUndoGifticonId] = useState('');
@@ -164,6 +165,7 @@ export function GifticonVault({ onClose, onNotice }) {
       setBarcodeNotice('');
       await refreshGifticons('active');
       setFilter('active');
+      setIsCreateOpen(false);
       showNotice(onNotice, 'success', '기프티콘을 공유함에 등록했습니다.');
     } catch (error) {
       showNotice(onNotice, 'warning', error.message);
@@ -272,43 +274,51 @@ export function GifticonVault({ onClose, onNotice }) {
 
   return (
     <section className="gifticon-vault">
-      <GifticonHeader family={family} onClose={onClose} />
+      <GifticonHeader
+        family={family}
+        onClose={onClose}
+        isCreateOpen={isCreateOpen}
+        onToggleCreate={() => setIsCreateOpen((value) => !value)}
+      />
 
-      <div className="gifticon-family-panel">
-        <div>
-          <span>가족</span>
-          <strong>{family.members.length}명</strong>
-        </div>
-        {family.isOwner ? (
-          <form onSubmit={handleAddMember}>
-            <input
-              type="email"
-              value={memberEmail}
-              onChange={(event) => setMemberEmail(event.target.value)}
-              placeholder="가족 이메일"
-            />
-            <button type="submit" disabled={isSaving}>
-              추가
-            </button>
-          </form>
-        ) : null}
-      </div>
-
-      <div className="gifticon-member-list">
-        {family.members.map((member) => (
-          <span key={member.id}>
-            {member.displayName || member.email}
-            {member.role === 'owner' ? ' · 방장' : ''}
-            {family.isOwner && member.role !== 'owner' ? (
-              <button type="button" onClick={() => handleRemoveMember(member.id)}>
-                제거
+      <div className="gifticon-dashboard">
+        <div className="gifticon-family-panel">
+          <div>
+            <span>가족</span>
+            <strong>{family.members.length}명</strong>
+          </div>
+          {family.isOwner ? (
+            <form onSubmit={handleAddMember}>
+              <input
+                type="email"
+                value={memberEmail}
+                onChange={(event) => setMemberEmail(event.target.value)}
+                placeholder="가족 이메일"
+              />
+              <button type="submit" disabled={isSaving}>
+                추가
               </button>
-            ) : null}
-          </span>
-        ))}
+            </form>
+          ) : null}
+        </div>
+
+        <div className="gifticon-member-list">
+          {family.members.map((member) => (
+            <span key={member.id}>
+              {member.displayName || member.email}
+              {member.role === 'owner' ? ' · 방장' : ''}
+              {family.isOwner && member.role !== 'owner' ? (
+                <button type="button" onClick={() => handleRemoveMember(member.id)}>
+                  제거
+                </button>
+              ) : null}
+            </span>
+          ))}
+        </div>
       </div>
 
-      <form className="gifticon-form" onSubmit={handleCreateGifticon}>
+      {isCreateOpen ? (
+        <form className="gifticon-form" onSubmit={handleCreateGifticon}>
         <label>
           <span>이미지</span>
           <input type="file" accept="image/*" onChange={handleImageChange} />
@@ -354,7 +364,8 @@ export function GifticonVault({ onClose, onNotice }) {
         <button type="submit" disabled={isSaving}>
           공유함에 등록
         </button>
-      </form>
+        </form>
+      ) : null}
 
       <div className="filter-chips gifticon-filters" aria-label="기프티콘 보기">
         {gifticonFilters.map((item) => (
@@ -410,16 +421,23 @@ export function GifticonVault({ onClose, onNotice }) {
   );
 }
 
-function GifticonHeader({ family, onClose }) {
+function GifticonHeader({ family, onClose, isCreateOpen = false, onToggleCreate }) {
   return (
     <div className="gifticon-header">
       <div>
         <p className="section-label">기프티콘 공유함</p>
         <h3>{family?.name ?? '가족 공유함'}</h3>
       </div>
-      <button type="button" onClick={onClose}>
-        응모함으로
-      </button>
+      <div className="gifticon-header-actions">
+        {onToggleCreate ? (
+          <button type="button" className="gifticon-register-button" onClick={onToggleCreate}>
+            {isCreateOpen ? '닫기' : '등록'}
+          </button>
+        ) : null}
+        <button type="button" onClick={onClose}>
+          응모함으로
+        </button>
+      </div>
     </div>
   );
 }
