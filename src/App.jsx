@@ -56,6 +56,7 @@ import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
   BottomNav,
   DesktopNav,
+  ManageMetrics,
 } from './components/Navigation.jsx';
 import { EventCard } from './components/EventCards.jsx';
 import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
@@ -440,12 +441,24 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     <>
       <main className={`app-shell ${isManageMode ? 'manage-mode' : 'click-mode'}`}>
         <section className="app-hero" aria-label="주요 메뉴">
+          <SidebarProfile
+            profile={profile}
+            theme={theme}
+            onThemeChange={setTheme}
+            onLock={onLock}
+          />
           <DesktopNav
             counts={counts}
             filters={navFilters}
             selectedFilter={filter}
             onSelect={setFilter}
           />
+          {isManageMode ? (
+            <ManageMetrics
+              events={visibleEvents}
+              totalAmount={winningTotal}
+            />
+          ) : null}
         </section>
 
         <section className="work-panel" aria-label="이벤트 관리">
@@ -1127,6 +1140,61 @@ function buildCounts(events, filterSettings) {
       skipped: 0,
     },
   );
+}
+
+/* ---- SidebarProfile (데스크톱 사이드바 프로필 헤더) ---- */
+function SidebarProfile({ profile, theme, onThemeChange, onLock }) {
+  const displayName = profile?.display_name || profile?.email || '';
+  const initials = getInitials(displayName);
+  const shortName = profile?.display_name || shortenEmail(profile?.email || '');
+  const email = profile?.email || '';
+
+  return (
+    <div className="sidebar-profile">
+      <div className="sidebar-profile-main">
+        <span className="sidebar-profile-avatar" aria-hidden="true">
+          {initials}
+        </span>
+        <div className="sidebar-profile-info">
+          <strong>{shortName || '내 계정'}</strong>
+          {email && shortName !== email ? <span title={email}>{email}</span> : null}
+        </div>
+      </div>
+      <div className="sidebar-profile-actions">
+        {profile?.is_admin ? (
+          <span className="sidebar-profile-badge">관리자</span>
+        ) : null}
+        <button
+          type="button"
+          className="sidebar-profile-btn"
+          aria-label="테마 변경"
+          onClick={() => onThemeChange((current) => (current === 'dark' ? 'light' : 'dark'))}
+        >
+          {theme === 'dark' ? '☀' : '◑'}
+        </button>
+        <button
+          type="button"
+          className="sidebar-profile-btn sidebar-profile-btn--lock"
+          aria-label="잠금"
+          onClick={onLock}
+        >
+          잠금
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const clean = name.split('@')[0];
+  const words = clean.split(/[\s._-]+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
+}
+
+function shortenEmail(email) {
+  return email.includes('@') ? email.split('@')[0] : email;
 }
 
 export default App;
