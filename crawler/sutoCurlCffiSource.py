@@ -229,6 +229,19 @@ def fetch_detail(s, url: str) -> dict:
         response.raise_for_status()
         body, links, metadata_lines, metadata = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
+
+        # Supertooday uses server-side redirect links (bbs/link.php) rather than
+        # direct YouTube URLs in its HTML.  If parse_detail didn't find a YouTube
+        # URL via link_pattern, follow the first apply-link redirect to resolve it.
+        if not metadata.get("applyTargetUrl") and not any(extract_youtube_video_id(lnk) for lnk in links):
+            for redirect_url in extract_suto_apply_redirect_urls(response.text)[:1]:
+                final_url = resolve_redirect_url(s, redirect_url)
+                if final_url and extract_youtube_video_id(final_url):
+                    metadata["applyTargetUrl"] = final_url
+                    if final_url not in set(links):
+                        links.append(final_url)
+                    break
+
         youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),
@@ -452,6 +465,43 @@ def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) 
     if value and pattern.search(value) and value not in seen:
         seen.add(value)
         links.append(value)
+
+
+def extract_suto_apply_redirect_urls(html_text: str) -> list[str]:
+    """Return apply-link hrefs from the #bo_v_link section.
+
+    Supertooday wraps event apply links in bbs/link.php redirect URLs
+    rather than embedding the real destination URL in the HTML.  This
+    function collects those redirect hrefs so the caller can follow them
+    to discover the actual target (e.g. a YouTube video URL).
+    """
+    soup = BeautifulSoup(html_text, "lxml")
+    urls: list[str] = []
+    seen: set[str] = set()
+    for scope in soup.select("#bo_v_link"):
+        for a in scope.find_all("a", href=True):
+            href = a["href"].strip()
+            if not href or href.startswith("#") or href.lower().startswith("javascript"):
+                continue
+            full_url = href if href.startswith("http") else f"{BASE}{href}"
+            if full_url not in seen:
+                seen.add(full_url)
+                urls.append(full_url)
+    return urls
+
+
+def resolve_redirect_url(s, url: str) -> str:
+    """Follow HTTP redirects and return the final destination URL.
+
+    Returns an empty string if following fails or if the URL does not
+    redirect to a different location.
+    """
+    try:
+        response = s.get(url)
+        final = str(response.url)
+        return final if final != url else ""
+    except Exception:
+        return ""
 
 
 def fetch_youtube_transcripts(links: list[str]) -> list[dict]:
