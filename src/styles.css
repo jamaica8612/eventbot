@@ -5633,3 +5633,174 @@ html[data-theme="light"] {
   letter-spacing: -0.02em;
   color: var(--text-strong);
 }
+
+/* ============================================================
+   V2 EventInbox reskin — brand indigo (2단계 c)
+   filter-chips, inbox-summary, inbox-row 상태,
+   announcement-state, inbox-attention 등 warm-orange → indigo.
+   ============================================================ */
+
+/* ---- filter-chips: active border indigo 정렬 ---- */
+.filter-chips button.is-active {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.filter-chips button {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 700;
+  transition: background 120ms ease, color 120ms ease, border-color 120ms ease;
+}
+
+.filter-chips button:hover:not(.is-active) {
+  background: var(--surface-raised);
+  color: var(--text-main);
+}
+
+.filter-chips strong {
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+/* ---- inbox-summary v2 카드 ---- */
+.inbox-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.inbox-summary div {
+  border-radius: 12px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  transition: border-color 120ms ease;
+}
+
+.inbox-summary div.is-attention {
+  border-color: rgba(255, 93, 108, 0.30);
+  background: rgba(255, 93, 108, 0.07);
+}
+
+.inbox-summary span {
+  font-size: 0.70rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.inbox-summary strong {
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+/* ---- inbox-row: 상태별 border ---- */
+.inbox-row {
+  border-radius: 16px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.14);
+  padding: 14px 15px;
+  gap: 8px;
+  transition: border-color 120ms ease;
+}
+
+.inbox-row-won {
+  border-color: rgba(61, 220, 151, 0.22);
+}
+
+.inbox-row.is-check-target {
+  border-color: rgba(255, 93, 108, 0.30);
+  box-shadow: 0 2px 14px rgba(255, 93, 108, 0.10);
+}
+
+.inbox-announcement-today.is-check-target {
+  border-color: var(--accent-border);
+  box-shadow: 0 2px 14px rgba(129, 140, 248, 0.12);
+}
+
+.inbox-row.is-unreceived-target {
+  border-color: rgba(255, 180, 84, 0.28);
+}
+
+/* ---- inbox-attention 태그 (발표 관련) ---- */
+.inbox-attention {
+  border-radius: 6px;
+  background: rgba(255, 93, 108, 0.10);
+  color: var(--danger);
+  padding: 3px 7px;
+  font-size: 0.72rem;
+  font-weight: 800;
+}
+
+/* "오늘발표"는 brand indigo */
+.inbox-announcement-today .inbox-attention {
+  background: var(--wanted-blue-soft);
+  border-color: var(--accent-border);
+  color: var(--wanted-blue);
+}
+
+/* "미수령" 태그는 warning 톤 */
+.inbox-receipt-attention {
+  background: rgba(255, 180, 84, 0.14);
+  border-color: rgba(255, 180, 84, 0.28);
+  color: var(--warning);
+}
+
+/* "수기입력" 태그 */
+.inbox-manual-attention {
+  background: var(--soft-panel);
+  color: var(--text-muted);
+}
+
+/* ---- announcement-state 배지 (발표일 상태) ---- */
+.announcement-state {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  box-shadow: none;
+  font-size: 0.78rem;
+}
+
+.announcement-state-today {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.announcement-state-overdue {
+  border-color: rgba(255, 93, 108, 0.28);
+  background: rgba(255, 93, 108, 0.10);
+  color: var(--danger);
+}
+
+/* ---- inbox-winning-meta (당첨 금액/수령 상태) ---- */
+.inbox-winning-meta span:first-child {
+  color: var(--success);
+  background: rgba(61, 220, 151, 0.12);
+}
+
+/* ---- manual-winning-toggle CTA ---- */
+.manual-winning-toggle b {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+/* ---- 태그: quick / home은 brand/warn으로 ---- */
+.tag-quick {
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.tag-home {
+  background: rgba(255, 180, 84, 0.14);
+  color: var(--warning);
+}
+
+/* ---- status-later (나중에 상태) warn 색 ---- */
+.status-later {
+  border-color: rgba(255, 180, 84, 0.28);
+  color: var(--warning);
+}
