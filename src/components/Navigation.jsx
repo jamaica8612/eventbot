@@ -81,18 +81,22 @@ export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
       style={{ '--nav-count': filters.length }}
       aria-label="주요 분류"
     >
-      {filters.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          className={selectedFilter === item.value ? 'is-active' : ''}
-          onClick={() => onSelect(item.value)}
-        >
-          <span className="nav-icon">{navIcons[item.value]}</span>
-          <span>{getFilterLabel(item)}</span>
-          <strong>{counts[item.countKey]}</strong>
-        </button>
-      ))}
+      {filters.map((item) => {
+        const count = counts[item.countKey];
+        return (
+          <button
+            key={item.value}
+            type="button"
+            className={selectedFilter === item.value ? 'is-active' : ''}
+            onClick={() => onSelect(item.value)}
+            aria-current={selectedFilter === item.value ? 'page' : undefined}
+          >
+            <span className="nav-icon">{navIcons[item.value]}</span>
+            <span>{getFilterLabel(item)}</span>
+            {count > 0 && <strong aria-label={`${count}건`}>{count}</strong>}
+          </button>
+        );
+      })}
     </nav>
   );
 }
@@ -100,17 +104,21 @@ export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
 export function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
   return (
     <nav className="desktop-nav" aria-label="PC 주요 분류">
-      {filters.map((item) => (
-        <button
-          key={item.value}
-          type="button"
-          className={selectedFilter === item.value ? 'is-active' : ''}
-          onClick={() => onSelect(item.value)}
-        >
-          <span>{getFilterLabel(item)}</span>
-          <strong>{counts[item.countKey]}</strong>
-        </button>
-      ))}
+      {filters.map((item) => {
+        const count = counts[item.countKey];
+        return (
+          <button
+            key={item.value}
+            type="button"
+            className={selectedFilter === item.value ? 'is-active' : ''}
+            onClick={() => onSelect(item.value)}
+            aria-current={selectedFilter === item.value ? 'page' : undefined}
+          >
+            <span>{getFilterLabel(item)}</span>
+            <strong>{count}</strong>
+          </button>
+        );
+      })}
     </nav>
   );
 }
