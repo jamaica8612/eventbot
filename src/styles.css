@@ -4101,3 +4101,265 @@ button.is-selected {
     padding: 8px 2px 14px;
   }
 }
+
+/* ============================================================
+   V2 Warm Pop — 당첨함 reskin (2단계)
+   Inbox, 기프티콘 entry, 빠진당첨 입력, 결과 카드까지.
+   ============================================================ */
+:root {
+  --warm-orange: #ff6b4a;
+  --warm-orange-2: #ff8a4c;
+  --warm-pink: #ff6b9d;
+  --warm-mint: #3ec4a3;
+  --warm-mint-2: #5dd9b7;
+  --warm-yellow: #ffb454;
+
+  --hero-shadow: 0 14px 28px rgba(255, 107, 74, 0.28);
+  --hero-shadow-mint: 0 14px 28px rgba(62, 196, 163, 0.26);
+}
+
+html[data-theme="light"] {
+  --hero-shadow: 0 12px 26px rgba(255, 107, 74, 0.22);
+  --hero-shadow-mint: 0 12px 26px rgba(62, 196, 163, 0.22);
+}
+
+/* ----- 기프티콘 entry / 빠진당첨: 둥글림 강화 ----- */
+.inbox-gifticon-entry,
+.manual-winning-panel {
+  border-radius: 20px;
+  padding: 14px 16px;
+}
+
+.inbox-gifticon-entry strong,
+.gifticon-family-panel strong {
+  font-size: 1.02rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+}
+
+.inbox-gifticon-entry button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 900;
+  box-shadow: 0 4px 12px rgba(255, 107, 74, 0.32);
+}
+
+.manual-winning-panel.is-open {
+  border-color: rgba(255, 107, 74, 0.28);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.10), var(--surface));
+}
+
+.manual-winning-toggle b {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: rgba(255, 107, 74, 0.12);
+  color: var(--warm-orange);
+}
+
+.manual-winning-form > button {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  font-weight: 950;
+  box-shadow: 0 6px 16px rgba(255, 107, 74, 0.32);
+}
+
+/* ----- Hero 통계 카드 ----- */
+.inbox-summary {
+  position: relative;
+  grid-template-columns: 1.4fr 1fr 1fr;
+  gap: 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  background: var(--surface);
+  padding: 6px;
+  box-shadow: 0 6px 18px rgba(40, 30, 18, 0.06);
+}
+
+.inbox-summary div {
+  position: relative;
+  border: none;
+  border-radius: 16px;
+  background: transparent;
+  padding: 12px 10px;
+  text-align: center;
+  box-shadow: none;
+}
+
+.inbox-summary div + div::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 22%;
+  bottom: 22%;
+  width: 1px;
+  background: var(--border);
+}
+
+.inbox-summary div:first-child {
+  background: linear-gradient(135deg, var(--warm-orange-2), var(--warm-orange));
+  color: #fff;
+  box-shadow: var(--hero-shadow);
+}
+
+.inbox-summary div:first-child::before {
+  display: none;
+}
+
+.inbox-summary div:first-child span {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.inbox-summary div:first-child strong {
+  color: #fff;
+  font-size: 1.18rem;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox-summary span {
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+}
+
+.inbox-summary strong {
+  margin-top: 4px;
+  font-size: 1.05rem;
+  font-weight: 900;
+  letter-spacing: -0.02em;
+  font-variant-numeric: tabular-nums;
+}
+
+.inbox-summary div.is-attention {
+  background: linear-gradient(135deg, rgba(255, 107, 74, 0.18), rgba(255, 107, 74, 0.06));
+  border-radius: 16px;
+}
+
+.inbox-summary div.is-attention span,
+.inbox-summary div.is-attention strong {
+  color: var(--warm-orange);
+}
+
+@media (max-width: 520px) {
+  .inbox-summary {
+    grid-template-columns: 1fr 1fr 1fr;
+  }
+  .inbox-summary div:nth-child(n+4) {
+    grid-column: span 1;
+  }
+  .inbox-summary div:first-child {
+    grid-column: 1 / -1;
+  }
+  .inbox-summary div:first-child::before {
+    display: none;
+  }
+}
+
+/* ----- 필터 칩 (응모함 보기) ----- */
+.inbox-board .filter-chips button,
+.deadline-board .filter-chips button {
+  border-radius: 999px;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+
+.inbox-board .filter-chips button.is-active,
+.deadline-board .filter-chips button.is-active {
+  background: var(--text-strong);
+  border-color: var(--text-strong);
+  color: var(--surface);
+  box-shadow: 0 6px 14px rgba(40, 30, 18, 0.16);
+}
+
+/* ----- Inbox row / Event card: 둥글림 + 그림자 ----- */
+.inbox-row,
+.event-card,
+.deadline-row {
+  border-radius: 20px;
+  box-shadow: 0 2px 10px rgba(40, 30, 18, 0.05);
+  transition: box-shadow 160ms ease, transform 160ms ease;
+}
+
+.inbox-row:hover,
+.event-card:hover {
+  box-shadow: 0 10px 24px rgba(40, 30, 18, 0.10);
+}
+
+.inbox-row.is-check-target {
+  border-color: rgba(255, 107, 74, 0.32);
+  background: linear-gradient(180deg, rgba(255, 138, 76, 0.06), var(--surface));
+}
+
+.inbox-row-won {
+  border-color: rgba(62, 196, 163, 0.30);
+  background: linear-gradient(180deg, rgba(62, 196, 163, 0.06), var(--surface));
+}
+
+.inbox-row.is-unreceived-target {
+  border-color: rgba(255, 180, 84, 0.36);
+}
+
+.inbox-attention {
+  display: inline-flex;
+  align-items: center;
+  margin-top: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  background: rgba(255, 107, 74, 0.12);
+  color: var(--warm-orange);
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+}
+
+.inbox-receipt-attention {
+  background: rgba(255, 180, 84, 0.16);
+  color: var(--warm-yellow);
+}
+
+.inbox-manual-attention {
+  background: rgba(62, 196, 163, 0.14);
+  color: var(--warm-mint);
+}
+
+/* ----- 결과 버튼: 당첨/미당첨 ----- */
+.manage-result-actions button.is-won {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+  box-shadow: var(--hero-shadow-mint);
+}
+
+.manage-result-actions button.is-lost {
+  border: none;
+  background: linear-gradient(135deg, #ff8896, #ff5d6c);
+  color: #fff;
+  box-shadow: 0 6px 14px rgba(255, 93, 108, 0.28);
+}
+
+.ledger-quick-receipt button.is-received {
+  border: none;
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  color: #fff;
+}
+
+.ledger-quick-receipt button.is-unreceived {
+  border-color: rgba(255, 180, 84, 0.36);
+  background: rgba(255, 180, 84, 0.12);
+  color: var(--warm-yellow);
+}
+
+/* ----- Result badge ----- */
+.result-badge.result-won {
+  background: linear-gradient(135deg, var(--warm-mint-2), var(--warm-mint));
+  border-color: transparent;
+  color: #fff;
+}
+
+.result-badge.result-lost {
+  background: rgba(255, 93, 108, 0.14);
+  border-color: rgba(255, 93, 108, 0.30);
+  color: var(--danger);
+}
