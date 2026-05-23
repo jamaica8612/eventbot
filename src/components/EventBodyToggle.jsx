@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
-import { buildYoutubeLinks } from '../utils/youtubeLinks.js';
 import { getAuthToken, requireUnlock } from '../storage/supabaseAuthStorage.js';
 import { updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 
@@ -178,7 +177,7 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
   // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
-  if (!hasCrawledBody(event) && !canFetchYoutubeTranscript) {
+  if (!hasCrawledBody(event)) {
     return (
       <div className="event-body-empty">
         <p>본문은 슈퍼투데이 사이트에서 직접 확인하세요.</p>
@@ -350,34 +349,6 @@ export function EventBodyToggle({ event, lines, facts }) {
           {lines.slice(0, 3).map((line) => (
             <p key={line}>{line}</p>
           ))}
-          {canFetchYoutubeTranscript ? (
-            <div className="youtube-quick-actions" aria-label="유튜브 댓글 도구">
-              <button
-                type="button"
-                className="youtube-transcript-button"
-                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-                onClick={handleYoutubeInfoFetch}
-                disabled={infoStatus === 'loading' || transcriptStatus === 'loading'}
-              >
-                {infoStatus === 'loading' ? '유튜브 정보수집 중' : '유튜브 정보수집'}
-              </button>
-              <button
-                type="button"
-                className="youtube-transcript-button"
-                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-                onClick={handleYoutubeTranscriptFetch}
-                disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
-              >
-                {transcriptStatus === 'loading'
-                  ? '댓글 생성 중'
-                  : hasCommentCandidates
-                    ? '댓글 보기'
-                    : '댓글 만들기'}
-              </button>
-            </div>
-          ) : null}
         </div>
       )}
     </div>
@@ -435,6 +406,23 @@ async function readJsonResponse(response) {
   }
 
   throw new Error(rawText.slice(0, 160) || '댓글 후보 API 응답 형식이 올바르지 않습니다.');
+}
+
+function buildYoutubeLinks(event) {
+  const raw = event.raw ?? {};
+  return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+    .filter(Boolean)
+    .filter((url, index, urls) => urls.indexOf(url) === index)
+    .filter((url) => extractYoutubeVideoId(url));
+}
+
+function extractYoutubeVideoId(url) {
+  const value = String(url ?? '');
+  return (
+    value.match(/youtu\.be\/([A-Za-z0-9_-]{6,})/)?.[1] ??
+    value.match(/youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1] ??
+    ''
+  );
 }
 
 function buildYoutubeCommentMaterialText(event, context) {

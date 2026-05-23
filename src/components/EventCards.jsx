@@ -79,94 +79,50 @@ function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
   const sourceFacts = buildSourceFacts(event);
   const applyHref = event.applyUrl ?? event.url;
   const totalWinnerCount = getTotalWinnerCount(event);
-  const deadline = getDeadlineDisplay(event);
-  const prize = getSchedulePrizeDisplay(event);
-  const deadlineKind =
-    deadline === '오늘마감'
-      ? 'today'
-      : deadline === '내일마감'
-        ? 'tomorrow'
-        : 'soon';
-  const isFeatured = deadlineKind === 'today';
-  const isLater = event.status === 'later';
-  const isSkipped = event.status === 'skipped';
 
   return (
-    <article className={`event-card v2-card v2-card-ready${isFeatured ? ' is-featured' : ''}`}>
-      {isFeatured ? (
-        <span className="v2-featured-ribbon">🔥 마감 임박</span>
-      ) : null}
-
-      <header className="v2-card-head">
+    <article className="event-card now-card">
+      <div className="score-row">
         <PlatformBadge platform={event.platform} />
-        <span className="v2-winner-count">
-          당첨 <b>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</b>
-        </span>
-      </header>
-
-      <h3 className="v2-card-title">{event.title}</h3>
-
-      {deadline || prize ? (
-        <div className="v2-chip-row">
-          {deadline ? (
-            <span className={`v2-chip v2-chip-${deadlineKind}`}>⏰ {deadline}</span>
+        <div className="winner-row-actions">
+          <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
+          {onDeadlineChange ? (
+            <button
+              className="deadline-edit-inline"
+              type="button"
+              onClick={() => setIsDeadlineEditing((current) => !current)}
+            >
+              마감 수정
+            </button>
           ) : null}
-          {prize ? <span className="v2-chip v2-chip-prize">🎁 {prize}</span> : null}
         </div>
-      ) : null}
+      </div>
+
+      <h3>{event.title}</h3>
+      <EventScheduleMeta event={event} />
 
       {isDeadlineEditing && onDeadlineChange ? (
         <DeadlinePanel event={event} onDeadlineChange={onDeadlineChange} />
       ) : null}
 
-      <div className="v2-summary-box">
-        <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
-      </div>
+      <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
-      <div className="v2-action-row" aria-label={`${event.title} 처리`}>
+      <div className="quick-actions now-actions" aria-label={`${event.title} 처리`}>
         {applyHref ? (
-          <ApplyLink className="apply-link v2-primary-cta" url={applyHref} label="참여하러 가기 →" />
-        ) : (
-          <button type="button" className="v2-primary-cta" disabled>링크 없음</button>
-        )}
-        <button
-          type="button"
-          className="v2-icon-btn v2-icon-btn-done"
-          title="참여완료"
-          aria-label="참여완료"
-          onClick={() => onStatusChange(event.id, 'done')}
-        >
-          ✓
-        </button>
-        <button
-          type="button"
-          className={`v2-icon-btn v2-icon-btn-later${isLater ? ' is-on' : ''}`}
-          title={isLater ? '대기로' : '임시저장'}
-          aria-label={isLater ? '대기로' : '임시저장'}
-          onClick={() => onStatusChange(event.id, isLater ? 'ready' : 'later')}
-        >
-          {isLater ? '↩' : '☆'}
-        </button>
-        <button
-          type="button"
-          className={`v2-icon-btn v2-icon-btn-skip${isSkipped ? ' is-on' : ''}`}
-          title="제외"
-          aria-label="제외"
-          onClick={() => onStatusChange(event.id, 'skipped')}
-        >
-          ×
-        </button>
-        {onDeadlineChange ? (
-          <button
-            type="button"
-            className="v2-icon-btn v2-icon-btn-edit"
-            title="마감 수정"
-            aria-label="마감 수정"
-            onClick={() => setIsDeadlineEditing((current) => !current)}
-          >
-            ✎
-          </button>
+          <ApplyLink className="apply-link primary-apply" url={applyHref} label="참여하기" />
         ) : null}
+        <button type="button" onClick={() => onStatusChange(event.id, 'done')}>
+          참여완료
+        </button>
+        <button
+          type="button"
+          onClick={() => onStatusChange(event.id, event.status === 'later' ? 'ready' : 'later')}
+        >
+          {event.status === 'later' ? '대기로' : '임시저장'}
+        </button>
+        <button type="button" onClick={() => onStatusChange(event.id, 'skipped')}>
+          제외
+        </button>
       </div>
     </article>
   );

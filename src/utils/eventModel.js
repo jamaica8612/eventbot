@@ -2,7 +2,6 @@ import { analyzeAnnouncementByRules } from '../../crawler/eventDecision/announce
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
 import { getLocalToday, parseLocalDate, formatDate } from './format.js';
 import { getUpcomingDeadlineMatch } from './deadlineModel.js';
-import { hasYoutubeLink } from './youtubeLinks.js';
 export { getTodayDeadlineMatch, getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from './deadlineModel.js';
 
 export const FALLBACK_BODY_LINE =
@@ -42,7 +41,9 @@ function replaceSourcePlatform(source = '', platform) {
 }
 
 function hasYoutubeApplyUrl(event = {}) {
-  return hasYoutubeLink(event);
+  const raw = event.raw ?? {};
+  const applyUrl = [event.applyTargetUrl, raw.applyTargetUrl].filter(Boolean).join(' ');
+  return /youtube\.com|youtu\.be/i.test(applyUrl);
 }
 
 function getFallbackAnnouncement(event) {

@@ -56,7 +56,6 @@ import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
   BottomNav,
   DesktopNav,
-  ManageMetrics,
 } from './components/Navigation.jsx';
 import { EventCard } from './components/EventCards.jsx';
 import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
@@ -178,7 +177,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
-    createManualWinningEvent,
   } =
     useEventActions({ events, setEvents, setSyncNotice });
 
@@ -441,24 +439,12 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     <>
       <main className={`app-shell ${isManageMode ? 'manage-mode' : 'click-mode'}`}>
         <section className="app-hero" aria-label="주요 메뉴">
-          <SidebarProfile
-            profile={profile}
-            theme={theme}
-            onThemeChange={setTheme}
-            onLock={onLock}
-          />
           <DesktopNav
             counts={counts}
             filters={navFilters}
             selectedFilter={filter}
             onSelect={setFilter}
           />
-          {isManageMode ? (
-            <ManageMetrics
-              events={visibleEvents}
-              totalAmount={winningTotal}
-            />
-          ) : null}
         </section>
 
         <section className="work-panel" aria-label="이벤트 관리">
@@ -479,6 +465,8 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             </div>
           </div>
 
+          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
+
           {syncNotice ? (
             <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
           ) : null}
@@ -497,14 +485,10 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
+              onCrawl={handleManualCrawl}
+              isCrawling={isCrawling}
+              crawlerStatus={crawlerStatus}
               onReset={() => setFilterSettings(defaultFilterSettings)}
-            />
-          ) : null}
-
-          {filter === 'ready' ? (
-            <ReadyHero
-              total={counts.ready}
-              todayDeadline={counts.todayDeadline}
             />
           ) : null}
 
@@ -538,9 +522,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             <AdminPanel
               onSummaryChange={setAdminSummary}
               onNotice={setSyncNotice}
-              crawlerStatus={crawlerStatus}
-              isCrawling={isCrawling}
-              onCrawl={handleManualCrawl}
             />
           ) : filter === 'todayDeadline' ? (
             <TodayDeadlineList
@@ -572,8 +553,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onResultChange={updateResult}
               onMetaChange={updateWinningMeta}
               onDelete={deleteInboxEvent}
-              onCreateManualWinning={createManualWinningEvent}
-              onNotice={setSyncNotice}
             />
           ) : (
             <div className="event-list">
@@ -616,37 +595,6 @@ const sortOptions = [
   { value: 'deadline', label: '마감임박순' },
   { value: 'newest', label: '최신수집순' },
 ];
-
-function ReadyHero({ total, todayDeadline }) {
-  const todayLabel = useMemo(() => {
-    const now = new Date();
-    const formatter = new Intl.DateTimeFormat('ko-KR', {
-      timeZone: 'Asia/Seoul',
-      month: 'long',
-      day: 'numeric',
-      weekday: 'long',
-    });
-    return formatter.format(now);
-  }, []);
-
-  return (
-    <section className="ready-hero" aria-label="오늘 응모 요약">
-      <div className="ready-hero-head">
-        <p className="section-label">오늘 응모</p>
-        <span>{todayLabel}</span>
-      </div>
-      <div className="ready-hero-body">
-        <div>
-          <strong>{total}</strong>
-          <span>건 대기중</span>
-        </div>
-        <div className="ready-hero-chips">
-          <span className="ready-hero-chip ready-hero-chip-hot">🔥 오늘마감 {todayDeadline}</span>
-        </div>
-      </div>
-    </section>
-  );
-}
 
 function SortChips({ selectedSort, onSelectSort }) {
   return (
@@ -912,6 +860,9 @@ function FilterSettingsPanel({
   onThemeChange,
   onSelectFilter,
   onLock,
+  onCrawl,
+  isCrawling,
+  crawlerStatus,
   onReset,
 }) {
   const platforms = useMemo(
@@ -924,6 +875,10 @@ function FilterSettingsPanel({
   const keywordText = settings.excludedKeywords.join('\n');
   const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
   const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
+  const lastCrawledAt = formatDateTime(
+    crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt,
+  );
+
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
   }
@@ -966,6 +921,17 @@ function FilterSettingsPanel({
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
         </button>
+        <div className="settings-crawl-action">
+          <button
+            type="button"
+            className="settings-action-button"
+            onClick={onCrawl}
+            disabled={isCrawling}
+          >
+            {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
+          </button>
+          <span>{`\uB9C8\uC9C0\uB9C9 \uC131\uACF5 ${lastCrawledAt}`}</span>
+        </div>
         <button
           type="button"
           className={`settings-action-button settings-excluded-button${
@@ -1120,61 +1086,6 @@ function buildCounts(events, filterSettings) {
       skipped: 0,
     },
   );
-}
-
-/* ---- SidebarProfile (데스크톱 사이드바 프로필 헤더) ---- */
-function SidebarProfile({ profile, theme, onThemeChange, onLock }) {
-  const displayName = profile?.display_name || profile?.email || '';
-  const initials = getInitials(displayName);
-  const shortName = profile?.display_name || shortenEmail(profile?.email || '');
-  const email = profile?.email || '';
-
-  return (
-    <div className="sidebar-profile">
-      <div className="sidebar-profile-main">
-        <span className="sidebar-profile-avatar" aria-hidden="true">
-          {initials}
-        </span>
-        <div className="sidebar-profile-info">
-          <strong>{shortName || '내 계정'}</strong>
-          {email && shortName !== email ? <span title={email}>{email}</span> : null}
-        </div>
-      </div>
-      <div className="sidebar-profile-actions">
-        {profile?.is_admin ? (
-          <span className="sidebar-profile-badge">관리자</span>
-        ) : null}
-        <button
-          type="button"
-          className="sidebar-profile-btn"
-          aria-label="테마 변경"
-          onClick={() => onThemeChange((current) => (current === 'dark' ? 'light' : 'dark'))}
-        >
-          {theme === 'dark' ? '☀' : '◑'}
-        </button>
-        <button
-          type="button"
-          className="sidebar-profile-btn sidebar-profile-btn--lock"
-          aria-label="잠금"
-          onClick={onLock}
-        >
-          잠금
-        </button>
-      </div>
-    </div>
-  );
-}
-
-function getInitials(name) {
-  if (!name) return '?';
-  const clean = name.split('@')[0];
-  const words = clean.split(/[\s._-]+/).filter(Boolean);
-  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
-  return clean.slice(0, 2).toUpperCase();
-}
-
-function shortenEmail(email) {
-  return email.includes('@') ? email.split('@')[0] : email;
 }
 
 export default App;

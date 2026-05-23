@@ -13,9 +13,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     base: process.env.GITHUB_PAGES ? '/eventbot/' : '/',
-    server: {
-      allowedHosts: ['.trycloudflare.com'],
-    },
     plugins: [react(), localApi()],
   };
 });

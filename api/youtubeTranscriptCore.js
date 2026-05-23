@@ -37,8 +37,7 @@ export async function fetchYoutubeTranscript(input) {
 }
 
 export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'candidates' }) {
-  const resolvedUrl = videoId ? url : await resolveYoutubeUrl(url);
-  const resolvedVideoId = videoId || extractVideoId(resolvedUrl);
+  const resolvedVideoId = videoId || extractVideoId(url);
   if (!resolvedVideoId) throw new Error('유튜브 영상 ID를 찾지 못했습니다.');
 
   const watchUrl = `https://www.youtube.com/watch?v=${resolvedVideoId}`;
@@ -105,32 +104,6 @@ export async function fetchYoutubeContext({ videoId, url, eventInfo, mode = 'can
     commentCandidates: [],
     commentCandidatesError: '',
   };
-}
-
-async function resolveYoutubeUrl(url = '') {
-  const value = String(url ?? '').trim();
-  if (!value || extractVideoId(value)) return value;
-  if (!/^https?:\/\//i.test(value)) return value;
-
-  try {
-    const response = await fetch(value, {
-      redirect: 'follow',
-      headers: WATCH_HEADERS,
-    });
-    const finalUrl = response.url || value;
-    if (extractVideoId(finalUrl)) return finalUrl;
-
-    const html = await response.text().catch(() => '');
-    const htmlUrl = findYoutubeUrlInText(html);
-    return htmlUrl || finalUrl;
-  } catch {
-    return value;
-  }
-}
-
-function findYoutubeUrlInText(text = '') {
-  const match = String(text).match(/https?:\/\/(?:www\.|m\.)?(?:youtube\.com|youtu\.be)\/[^\s"'<>]+/i);
-  return match?.[0]?.replace(/\\u0026/g, '&').replace(/[),.;\]]+$/, '') || '';
 }
 
 async function fetchCandidateContext(videoId, watchUrl) {

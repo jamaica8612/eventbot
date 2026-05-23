@@ -15,26 +15,6 @@ const navIcons = {
       <path d="M12 12v4l3 1" />
     </svg>
   ),
-  inbox: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 5h16v14H4z" />
-      <path d="M4 13h4l2 3h4l2-3h4" />
-    </svg>
-  ),
-  todayAnnouncement: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M5 4h14v16H5z" />
-      <path d="M8 8h8M8 12h5" />
-      <path d="m15 15 1.5 1.5 3-3" />
-    </svg>
-  ),
-  gifticon: (
-    <svg viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M4 8h16v12H4z" />
-      <path d="M3 8h18M12 8v12" />
-      <path d="M8 8c-2-2-1-4 1-4 1.6 0 3 2 3 4M16 8c2-2 1-4-1-4-1.6 0-3 2-3 4" />
-    </svg>
-  ),
   later: (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path d="M6 4h12v16l-6-3-6 3z" />
@@ -45,6 +25,12 @@ const navIcons = {
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <circle cx="11" cy="11" r="6" />
       <path d="m16 16 4 4" />
+    </svg>
+  ),
+  inbox: (
+    <svg viewBox="0 0 24 24" aria-hidden="true">
+      <path d="M4 5h16v14H4z" />
+      <path d="M4 13h4l2 3h4l2-3h4" />
     </svg>
   ),
   admin: (
@@ -95,27 +81,18 @@ export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
       style={{ '--nav-count': filters.length }}
       aria-label="주요 분류"
     >
-      {filters.map((item) => {
-        const count = counts[item.countKey];
-        return (
-          <button
-            key={item.value}
-            type="button"
-            className={selectedFilter === item.value ? 'is-active' : ''}
-            onClick={() => onSelect(item.value)}
-            aria-current={selectedFilter === item.value ? 'page' : undefined}
-          >
-            <span className="nav-icon">{navIcons[item.value]}</span>
-            <span>{getFilterLabel(item)}</span>
-            <strong
-              className={count > 0 ? 'nav-count' : 'nav-count is-zero'}
-              aria-label={`${count}건`}
-            >
-              {count > 99 ? '99+' : count}
-            </strong>
-          </button>
-        );
-      })}
+      {filters.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          className={selectedFilter === item.value ? 'is-active' : ''}
+          onClick={() => onSelect(item.value)}
+        >
+          <span className="nav-icon">{navIcons[item.value]}</span>
+          <span>{getFilterLabel(item)}</span>
+          <strong>{counts[item.countKey]}</strong>
+        </button>
+      ))}
     </nav>
   );
 }
@@ -123,22 +100,17 @@ export function BottomNav({ counts, filters, selectedFilter, onSelect }) {
 export function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
   return (
     <nav className="desktop-nav" aria-label="PC 주요 분류">
-      {filters.map((item) => {
-        const count = counts[item.countKey];
-        return (
-          <button
-            key={item.value}
-            type="button"
-            className={selectedFilter === item.value ? 'is-active' : ''}
-            onClick={() => onSelect(item.value)}
-            aria-current={selectedFilter === item.value ? 'page' : undefined}
-          >
-            <span className="nav-icon">{navIcons[item.value]}</span>
-            <span>{getFilterLabel(item)}</span>
-            <strong>{count}</strong>
-          </button>
-        );
-      })}
+      {filters.map((item) => (
+        <button
+          key={item.value}
+          type="button"
+          className={selectedFilter === item.value ? 'is-active' : ''}
+          onClick={() => onSelect(item.value)}
+        >
+          <span>{getFilterLabel(item)}</span>
+          <strong>{counts[item.countKey]}</strong>
+        </button>
+      ))}
     </nav>
   );
 }

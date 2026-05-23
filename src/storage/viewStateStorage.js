@@ -11,17 +11,7 @@ const defaultViewState = {
 };
 
 const allowedValues = {
-  filter: new Set([
-    'ready',
-    'todayDeadline',
-    'todayAnnouncement',
-    'gifticon',
-    'later',
-    'search',
-    'inbox',
-    'admin',
-    'skipped',
-  ]),
+  filter: new Set(['ready', 'todayDeadline', 'later', 'search', 'inbox', 'admin', 'skipped']),
   platformFilter: null,
   sortMode: new Set(['default', 'popular', 'winners', 'deadline', 'newest']),
   deadlineFilter: new Set(['all', 'today', 'tomorrow', 'week', 'unknown']),
