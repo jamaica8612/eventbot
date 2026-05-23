@@ -445,6 +445,13 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             selectedFilter={filter}
             onSelect={setFilter}
           />
+          <SidebarProfile
+            profile={profile}
+            theme={theme}
+            crawlerStatus={crawlerStatus}
+            onThemeChange={setTheme}
+            onLock={onLock}
+          />
         </section>
 
         <section className="work-panel" aria-label="이벤트 관리">
@@ -465,8 +472,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             </div>
           </div>
 
-          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
-
           {syncNotice ? (
             <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
           ) : null}
@@ -485,9 +490,6 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
-              onCrawl={handleManualCrawl}
-              isCrawling={isCrawling}
-              crawlerStatus={crawlerStatus}
               onReset={() => setFilterSettings(defaultFilterSettings)}
             />
           ) : null}
@@ -522,6 +524,9 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
             <AdminPanel
               onSummaryChange={setAdminSummary}
               onNotice={setSyncNotice}
+              crawlerStatus={crawlerStatus}
+              isCrawling={isCrawling}
+              onCrawl={handleManualCrawl}
             />
           ) : filter === 'todayDeadline' ? (
             <TodayDeadlineList
@@ -782,62 +787,11 @@ function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction
     </main>
   );
 }
-function CrawlerStatusPanel({ status }) {
-  const recentSeen = Number.isFinite(status.recentSeen24h)
-    ? status.recentSeen24h
-    : Array.isArray(status.recentEvents)
-      ? status.recentEvents.length
-      : null;
-  const statusInfo = getCrawlerStatusInfo(status?.status, recentSeen);
-  const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
-  const lastSuccessAt = formatDateTime(status.lastSuccessAt ?? status.checkedAt ?? status.updatedAt);
-  const latestSeenAt = formatDateTime(status.latestSeenAt);
-  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
-  const recentLabel = recentSeen === null ? '-' : recentSeen;
-  const summary =
-    statusInfo.kind === 'failure'
-      ? status.failureMessage || '최근 크롤링이 실패했습니다. 설정의 크롤링하기로 다시 요청해보세요.'
-      : statusInfo.kind === 'quiet'
-        ? '최근 24시간 신규 수집이 없습니다. 이벤트가 없는 상황인지 크롤링 로그를 한 번 확인해보세요.'
-        : `상태 확인 ${checkedAt}`;
-
-  return (
-    <section
-      className={`crawler-status-panel crawler-status-${statusInfo.kind}`}
-      aria-label="크롤링 상태"
-    >
-      <div>
-        <strong>{statusInfo.label}</strong>
-        <span>마지막 성공 {lastSuccessAt}</span>
-      </div>
-      <div>
-        <span>DB {total}개</span>
-        <span>최근 24시간 {recentLabel}개</span>
-        <span>최신 수집 {latestSeenAt}</span>
-      </div>
-      <p>{summary}</p>
-    </section>
-  );
-}
-
 function getCrawlerStatusInfo(status, recentSeen) {
   if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
   if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
   if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
   return { kind: 'success', label: '크롤링 정상' };
-}
-
-function formatDateTime(value) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('ko-KR', {
-    timeZone: 'Asia/Seoul',
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
 }
 
 function getEmptyMessage(filter) {
@@ -860,9 +814,6 @@ function FilterSettingsPanel({
   onThemeChange,
   onSelectFilter,
   onLock,
-  onCrawl,
-  isCrawling,
-  crawlerStatus,
   onReset,
 }) {
   const platforms = useMemo(
@@ -875,9 +826,6 @@ function FilterSettingsPanel({
   const keywordText = settings.excludedKeywords.join('\n');
   const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
   const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
-  const lastCrawledAt = formatDateTime(
-    crawlerStatus?.lastSuccessAt ?? crawlerStatus?.checkedAt ?? crawlerStatus?.updatedAt,
-  );
 
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
@@ -921,17 +869,6 @@ function FilterSettingsPanel({
         <button type="button" className="settings-action-button" onClick={onLock}>
           잠금
         </button>
-        <div className="settings-crawl-action">
-          <button
-            type="button"
-            className="settings-action-button"
-            onClick={onCrawl}
-            disabled={isCrawling}
-          >
-            {isCrawling ? '\uD06C\uB864\uB9C1 \uC911' : '\uD06C\uB864\uB9C1\uD558\uAE30'}
-          </button>
-          <span>{`\uB9C8\uC9C0\uB9C9 \uC131\uACF5 ${lastCrawledAt}`}</span>
-        </div>
         <button
           type="button"
           className={`settings-action-button settings-excluded-button${
@@ -1086,6 +1023,66 @@ function buildCounts(events, filterSettings) {
       skipped: 0,
     },
   );
+}
+
+function SidebarProfile({ profile, theme, crawlerStatus, onThemeChange, onLock }) {
+  const displayName = profile?.display_name || profile?.email || '';
+  const shortName = profile?.display_name || shortenEmail(profile?.email || '');
+  const recentSeen = Number.isFinite(crawlerStatus?.recentSeen24h)
+    ? crawlerStatus.recentSeen24h
+    : Array.isArray(crawlerStatus?.recentEvents)
+      ? crawlerStatus.recentEvents.length
+      : null;
+  const crawlerInfo = crawlerStatus
+    ? getCrawlerStatusInfo(crawlerStatus.status, recentSeen)
+    : { kind: 'unknown', label: '상태 확인 중' };
+
+  return (
+    <div className="sidebar-profile" aria-label="로그인 상태">
+      <div className="sidebar-profile-main">
+        <span className="sidebar-profile-avatar" aria-hidden="true">
+          {getInitials(displayName)}
+        </span>
+        <div className="sidebar-profile-info">
+          <strong title={displayName}>{shortName || '내 계정'}</strong>
+          <span className={`sidebar-profile-status sidebar-profile-status-${crawlerInfo.kind}`}>
+            {crawlerInfo.label}
+          </span>
+        </div>
+      </div>
+      <div className="sidebar-profile-actions">
+        {profile?.is_admin ? <span className="sidebar-profile-badge">관리자</span> : null}
+        <button
+          type="button"
+          className="sidebar-profile-btn"
+          aria-label="테마 변경"
+          onClick={() => onThemeChange((current) => (current === 'dark' ? 'light' : 'dark'))}
+        >
+          {theme === 'dark' ? '☀' : '◑'}
+        </button>
+        <button
+          type="button"
+          className="sidebar-profile-btn sidebar-profile-btn--lock"
+          aria-label="잠금"
+          onClick={onLock}
+        >
+          잠금
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const clean = name.split('@')[0];
+  const words = clean.split(/[\s._-]+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
+}
+
+function shortenEmail(email) {
+  return email.includes('@') ? email.split('@')[0] : email;
 }
 
 export default App;

@@ -130,8 +130,10 @@ export function EventInbox({
     );
   }
 
+  const isWinningView = selectedFilter === 'won' || selectedFilter === 'unreceived';
+
   return (
-    <div className="inbox-board">
+    <div className={`inbox-board inbox-view-${selectedFilter}`}>
       <div className="inbox-summary">
         <div>
           <span>응모완료</span>
@@ -170,11 +172,23 @@ export function EventInbox({
 
       <div className="inbox-list">
         <div className="inbox-list-head" aria-hidden="true">
-          <span>응모일</span>
-          <span>이벤트</span>
-          <span>발표/결과</span>
-          <span>경품</span>
-          <span>관리</span>
+          {isWinningView ? (
+            <>
+              <span>응모일</span>
+              <span>이벤트</span>
+              <span>경품/금액</span>
+              <span>수령</span>
+              <span>관리</span>
+            </>
+          ) : (
+            <>
+              <span>응모일</span>
+              <span>이벤트</span>
+              <span>발표/결과</span>
+              <span>경품</span>
+              <span>관리</span>
+            </>
+          )}
         </div>
         {visibleEvents.length > 0 ? (
           visibleEvents.map((event) => (

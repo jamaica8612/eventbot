@@ -5,7 +5,13 @@ import {
   updateSupabaseProfileAccess,
 } from '../storage/supabaseEventStorage.js';
 
-export function AdminPanel({ onSummaryChange, onNotice }) {
+export function AdminPanel({
+  onSummaryChange,
+  onNotice,
+  crawlerStatus,
+  isCrawling,
+  onCrawl,
+}) {
   const [users, setUsers] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
   const [updatingUserId, setUpdatingUserId] = useState('');
@@ -63,16 +69,21 @@ export function AdminPanel({ onSummaryChange, onNotice }) {
     }
   }
 
-  if (isLoading) {
-    return <p className="empty-message">사용자 정보를 불러오는 중입니다.</p>;
-  }
-
-  if (users.length === 0) {
-    return <p className="empty-message">등록된 사용자가 없습니다.</p>;
-  }
-
   return (
     <section className="admin-board" aria-label="관리자">
+      <section className="admin-hero-panel">
+        <div className="admin-hero-copy">
+          <span>ADMIN</span>
+          <strong>관리자 콘솔</strong>
+          <p>사용자 승인, 운영 현황, 크롤링 상태를 한 곳에서 확인합니다.</p>
+        </div>
+        <CrawlerControlPanel
+          status={crawlerStatus}
+          isCrawling={isCrawling}
+          onCrawl={onCrawl}
+        />
+      </section>
+
       <div className="admin-summary">
         <AdminSummaryCard label="전체 사용자" value={`${summary.total}명`} />
         <AdminSummaryCard label="승인 대기" value={`${summary.pending}명`} attention={summary.pending > 0} />
@@ -81,17 +92,65 @@ export function AdminPanel({ onSummaryChange, onNotice }) {
         <AdminSummaryCard label="미수령" value={`${summary.unreceived}건`} attention={summary.unreceived > 0} />
       </div>
 
-      <div className="admin-user-list">
-        {users.map((user) => (
-          <AdminUserRow
-            key={user.user_id}
-            user={user}
-            isUpdating={updatingUserId === user.user_id}
-            onUpdateAccess={updateAccess}
-          />
-        ))}
-      </div>
+      <section className="admin-user-section">
+        <div className="admin-section-head">
+          <div>
+            <span>USERS</span>
+            <strong>사용자 관리</strong>
+          </div>
+          <b>{isLoading ? '불러오는 중' : `${users.length}명`}</b>
+        </div>
+
+        {isLoading ? (
+          <p className="empty-message">사용자 정보를 불러오는 중입니다.</p>
+        ) : users.length === 0 ? (
+          <p className="empty-message">등록된 사용자가 없습니다.</p>
+        ) : (
+          <div className="admin-user-list">
+            {users.map((user) => (
+              <AdminUserRow
+                key={user.user_id}
+                user={user}
+                isUpdating={updatingUserId === user.user_id}
+                onUpdateAccess={updateAccess}
+              />
+            ))}
+          </div>
+        )}
+      </section>
     </section>
+  );
+}
+
+function CrawlerControlPanel({ status, isCrawling, onCrawl }) {
+  const recentSeen = Number.isFinite(status?.recentSeen24h)
+    ? status.recentSeen24h
+    : Array.isArray(status?.recentEvents)
+      ? status.recentEvents.length
+      : null;
+  const statusInfo = getCrawlerStatusInfo(status?.status, recentSeen);
+  const checkedAt = formatCrawlerDate(status?.checkedAt ?? status?.updatedAt);
+  const lastSuccessAt = formatCrawlerDate(status?.lastSuccessAt ?? status?.checkedAt);
+  const latestSeenAt = formatCrawlerDate(status?.latestSeenAt);
+  const total = Number.isFinite(status?.totalEvents) ? status.totalEvents : '-';
+  const recentLabel = recentSeen === null ? '-' : recentSeen;
+
+  return (
+    <div className={`admin-crawler-card admin-crawler-${statusInfo.kind}`}>
+      <div className="admin-crawler-top">
+        <span>CRAWLER</span>
+        <strong>{statusInfo.label}</strong>
+      </div>
+      <div className="admin-crawler-stats">
+        <span>DB {total}개</span>
+        <span>24시간 {recentLabel}개</span>
+        <span>최신 {latestSeenAt}</span>
+      </div>
+      <p>마지막 성공 {lastSuccessAt} · 상태 확인 {checkedAt}</p>
+      <button type="button" onClick={onCrawl} disabled={isCrawling}>
+        {isCrawling ? '크롤링 요청 중' : '크롤링 실행'}
+      </button>
+    </div>
   );
 }
 
@@ -116,7 +175,9 @@ function AdminUserRow({ user, isUpdating, onUpdateAccess }) {
           <span>{user.email || user.user_id}</span>
         </div>
         <div className="admin-user-badges">
-          <span className={user.approved ? 'is-approved' : 'is-pending'}>{user.approved ? '승인됨' : '승인 대기'}</span>
+          <span className={user.approved ? 'is-approved' : 'is-pending'}>
+            {user.approved ? '승인됨' : '승인 대기'}
+          </span>
           {user.is_admin ? <span className="is-admin">관리자</span> : null}
         </div>
       </div>
@@ -159,6 +220,26 @@ function Metric({ label, value }) {
       <strong>{value}</strong>
     </div>
   );
+}
+
+function getCrawlerStatusInfo(status, recentSeen) {
+  if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
+  if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
+  if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
+  return { kind: 'success', label: '크롤링 정상' };
+}
+
+function formatCrawlerDate(value) {
+  if (!value) return '-';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return '-';
+  return new Intl.DateTimeFormat('ko-KR', {
+    timeZone: 'Asia/Seoul',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
 }
 
 function buildAdminSummary(users) {
