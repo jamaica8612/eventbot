@@ -302,7 +302,6 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
               className="manage-link"
               url={originalUrl}
               label="확인"
-              target="_self"
             />
           ) : null}
         </div>
