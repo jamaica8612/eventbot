@@ -14,7 +14,7 @@ import {
   sortInboxEvents,
   sortTodayAnnouncements,
 } from './utils/eventModel.js';
-import { sortTodayDeadlineEvents } from './utils/deadlineModel.js';
+import { getTodayDeadlineMatch, sortTodayDeadlineEvents } from './utils/deadlineModel.js';
 import { parsePrizeAmount } from './utils/format.js';
 import {
   defaultFilterSettings,
@@ -1000,7 +1000,12 @@ function buildCounts(events, filterSettings) {
       if (event.status === 'done' && event.resultStatus === 'unknown') {
         acc.resultUnknown += 1;
       }
-      if (matchesFilter(event, 'todayDeadline', filterSettings)) acc.todayDeadline += 1;
+      if (
+        matchesFilter(event, 'todayDeadline', filterSettings) &&
+        getTodayDeadlineMatch(event).isMatch
+      ) {
+        acc.todayDeadline += 1;
+      }
       if (matchesFilter(event, 'search', filterSettings)) acc.searchable += 1;
       if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
       if (event.resultStatus === 'won') acc.won += 1;

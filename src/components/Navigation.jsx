@@ -107,6 +107,7 @@ export function DesktopNav({ counts, filters, selectedFilter, onSelect }) {
           className={selectedFilter === item.value ? 'is-active' : ''}
           onClick={() => onSelect(item.value)}
         >
+          <span className="nav-icon">{navIcons[item.value]}</span>
           <span>{getFilterLabel(item)}</span>
           <strong>{counts[item.countKey]}</strong>
         </button>
