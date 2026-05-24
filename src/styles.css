@@ -3204,38 +3204,21 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     border-radius: 0;
   }
 
-  .inbox-list-head,
+  .inbox-list-head {
+    display: none;
+  }
+
   .inbox-row {
     display: grid;
-    grid-template-columns:
-      minmax(92px, 0.7fr)
-      minmax(0, 1.7fr)
-      minmax(126px, 0.9fr)
-      minmax(0, 1fr)
-      minmax(168px, 0.95fr);
-    gap: 12px;
+    grid-template-columns: 86px minmax(0, 1fr) minmax(178px, 210px);
+    grid-template-areas:
+      "date title actions"
+      "date state actions"
+      "date prize actions";
+    gap: 6px 14px;
     align-items: center;
-    min-width: 0;
-  }
-
-  .inbox-list-head {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    min-height: 40px;
-    border-bottom: 1px solid var(--border);
-    background: var(--surface-raised);
-    padding: 0 16px;
-  }
-
-  .inbox-list-head span {
-    color: var(--text-muted);
-    font-size: 0.74rem;
-    font-weight: 900;
-  }
-
-  .inbox-row {
     min-height: 52px;
+    min-width: 0;
     padding: 9px 16px;
     border-radius: 10px;
     transition: background 140ms ease, box-shadow 140ms ease;
@@ -3254,6 +3237,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .inbox-date-cell {
+    grid-area: date;
     flex-direction: column;
     align-items: flex-start;
   }
@@ -3289,18 +3273,20 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .inbox-title-cell {
+    grid-area: title;
     gap: 4px;
     padding-right: 0;
   }
 
   .inbox-title-cell .manage-row-title {
-    display: block;
+    display: -webkit-box;
     overflow: hidden;
     font-size: 0.88rem;
     font-weight: 400;
     line-height: 1.35;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .inbox-state-cell .announcement-state,
@@ -3309,12 +3295,22 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     max-width: 100%;
   }
 
+  .inbox-state-cell {
+    grid-area: state;
+  }
+
+  .inbox-prize-cell {
+    grid-area: prize;
+  }
+
   .inbox-prize-cell > span {
-    display: block;
+    display: -webkit-box;
+    overflow: hidden;
     font-size: 0.84rem;
     line-height: 1.3;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .inbox-winning-meta {
@@ -3330,6 +3326,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .inbox-action-cell {
+    grid-area: actions;
     gap: 7px;
     align-self: stretch;
     justify-content: stretch;
@@ -3386,40 +3383,22 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     grid-template-columns: repeat(4, minmax(0, 1fr));
   }
 
-  .inbox-view-won .inbox-list-head,
   .inbox-view-won .inbox-row,
-  .inbox-view-unreceived .inbox-list-head,
   .inbox-view-unreceived .inbox-row {
-    grid-template-columns:
-      minmax(92px, 0.7fr)
-      minmax(0, 1.8fr)
-      minmax(160px, 1.05fr)
-      minmax(168px, 0.9fr);
-  }
-
-  .inbox-view-won .inbox-list-head span:nth-child(3),
-  .inbox-view-unreceived .inbox-list-head span:nth-child(3) {
-    grid-column: 3;
-  }
-
-  .inbox-view-won .inbox-list-head span:nth-child(4),
-  .inbox-view-unreceived .inbox-list-head span:nth-child(4) {
-    display: none;
-  }
-
-  .inbox-view-won .inbox-list-head span:nth-child(5),
-  .inbox-view-unreceived .inbox-list-head span:nth-child(5) {
-    grid-column: 4;
+    grid-template-columns: 86px minmax(0, 1fr) minmax(178px, 210px);
+    grid-template-areas:
+      "date title actions"
+      "date prize actions";
   }
 
   .inbox-view-won .inbox-prize-cell,
   .inbox-view-unreceived .inbox-prize-cell {
-    grid-column: 3;
+    grid-area: prize;
   }
 
   .inbox-view-won .inbox-action-cell,
   .inbox-view-unreceived .inbox-action-cell {
-    grid-column: 4;
+    grid-area: actions;
     align-self: center;
   }
 
