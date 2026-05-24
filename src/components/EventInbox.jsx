@@ -297,6 +297,15 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
           >
             미당첨
           </button>
+          {resultStatus !== 'unknown' ? (
+            <button
+              type="button"
+              className="is-reset"
+              onClick={() => onResultChange(event.id, 'unknown')}
+            >
+              미확인
+            </button>
+          ) : null}
           {originalUrl ? (
             <ApplyLink
               className="manage-link"

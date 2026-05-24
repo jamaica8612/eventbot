@@ -1043,7 +1043,7 @@ h3 {
 }
 
 .inbox-action-cell .manage-result-actions {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
 }
 
 .inbox-edit-panel {
@@ -2581,6 +2581,12 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   color: #fff;
 }
 
+.manage-result-actions button.is-reset {
+  border-color: var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
 .manage-link,
 .manage-edit-button {
   display: inline-flex;
@@ -3331,7 +3337,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   }
 
   .inbox-action-cell .manage-result-actions {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   }
 
   .inbox-action-cell .manage-result-actions button,
@@ -3419,7 +3425,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .inbox-view-won .inbox-action-cell .manage-result-actions,
   .inbox-view-unreceived .inbox-action-cell .manage-result-actions {
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   }
 
   /* 단, 월별 그룹 안의 .ledger-table은 그룹 박스 안에서 단일 열로 유지한다(시각적 위계). */
