@@ -3135,7 +3135,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .desktop-nav span {
     overflow: hidden;
-    font-size: 0.92rem;
+    font-size: 13px;
     font-weight: 700;
     text-overflow: ellipsis;
     white-space: nowrap;
@@ -3143,7 +3143,7 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 
   .desktop-nav strong {
     color: inherit;
-    font-size: 1rem;
+    font-size: 13px;
     font-weight: 700;
     line-height: 1;
   }
