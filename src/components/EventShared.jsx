@@ -1,12 +1,16 @@
 import { getAnnouncementStatus } from '../utils/eventModel.js';
 import { formatDate } from '../utils/format.js';
 
-export function ApplyLink({ className, url, label = '참여하기' }) {
+export function ApplyLink({ className, url, label = '참여하기', target = '_blank' }) {
   function handleApplyClick(clickEvent) {
     clickEvent.stopPropagation();
     if (!url) {
       clickEvent.preventDefault();
       return;
+    }
+    if (target === '_self') {
+      clickEvent.preventDefault();
+      window.location.assign(url);
     }
   }
 
@@ -14,8 +18,8 @@ export function ApplyLink({ className, url, label = '참여하기' }) {
     <a
       className={className}
       href={url || '#'}
-      target="_blank"
-      rel="noopener noreferrer"
+      target={target}
+      rel={target === '_blank' ? 'noopener noreferrer' : undefined}
       onClick={handleApplyClick}
     >
       {label}

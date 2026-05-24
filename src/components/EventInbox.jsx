@@ -219,6 +219,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
   const isUnreceived = isWon && event.receiptStatus !== 'received';
   const isCheckTarget =
     resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
+  const originalUrl = getHttpOriginalUrl(event);
   const handleDelete = () => {
     if (window.confirm('이 응모 기록을 응모함에서 삭제할까요?')) {
       onDelete(event.id);
@@ -296,11 +297,12 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
           >
             미당첨
           </button>
-          {event.originalUrl || event.url ? (
+          {originalUrl ? (
             <ApplyLink
               className="manage-link"
-              url={event.originalUrl ?? event.url}
+              url={originalUrl}
               label="확인"
+              target="_self"
             />
           ) : null}
         </div>
@@ -381,6 +383,11 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
       ) : null}
     </article>
   );
+}
+
+function getHttpOriginalUrl(event) {
+  const url = event.originalUrl || event.url;
+  return /^https?:\/\//i.test(url ?? '') ? url : '';
 }
 
 function buildInboxCounts(events) {
