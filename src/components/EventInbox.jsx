@@ -20,7 +20,7 @@ const deadlineFilters = [
 ];
 
 const inboxFilters = [
-  { value: 'all', label: '미확인' },
+  { value: 'all', label: '결과 미확인' },
   { value: 'check', label: '오늘발표' },
   { value: 'won', label: '당첨' },
   { value: 'unreceived', label: '미수령' },
@@ -130,8 +130,6 @@ export function EventInbox({
     );
   }
 
-  const isWinningView = selectedFilter === 'won' || selectedFilter === 'unreceived';
-
   return (
     <div className={`inbox-board inbox-view-${selectedFilter}`}>
       <div className="inbox-summary">
@@ -171,25 +169,6 @@ export function EventInbox({
       </div>
 
       <div className="inbox-list">
-        <div className="inbox-list-head" aria-hidden="true">
-          {isWinningView ? (
-            <>
-              <span>응모일</span>
-              <span>이벤트</span>
-              <span>경품/금액</span>
-              <span>수령</span>
-              <span>관리</span>
-            </>
-          ) : (
-            <>
-              <span>응모일</span>
-              <span>이벤트</span>
-              <span>발표/결과</span>
-              <span>경품</span>
-              <span>관리</span>
-            </>
-          )}
-        </div>
         {visibleEvents.length > 0 ? (
           visibleEvents.map((event) => (
             <InboxRow
@@ -220,8 +199,8 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
   const isCheckTarget =
     resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
   const originalUrl = getHttpOriginalUrl(event);
-  const handleDelete = () => {
-    if (window.confirm('이 응모 기록을 응모함에서 삭제할까요?')) {
+  const handleRestoreToReady = () => {
+    if (window.confirm('이 응모 기록을 대기 상태로 되돌릴까요?')) {
       onDelete(event.id);
     }
   };
@@ -269,20 +248,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
       </div>
 
       <div className="inbox-action-cell">
-        <div className="inbox-top-actions">
-          <button
-            type="button"
-            className="manage-edit-text-button"
-            onClick={() => setIsEditing((value) => !value)}
-          >
-            수정
-          </button>
-          <button type="button" className="inbox-delete-button" onClick={handleDelete}>
-            삭제
-          </button>
-        </div>
-
-        <div className="manage-result-actions manage-actions-three">
+        <div className="manage-result-actions inbox-result-actions" aria-label={`${event.title} 결과 변경`}>
           <button
             type="button"
             className={resultStatus === 'won' ? 'is-won' : ''}
@@ -310,29 +276,49 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
             <ApplyLink
               className="manage-link"
               url={originalUrl}
-              label="확인"
+              label="원글"
             />
           ) : null}
         </div>
 
         {isWon ? (
-          <div className="ledger-quick-receipt" aria-label={`${event.title} 수령 상태 빠른 변경`}>
+          <div className="inbox-receipt-actions" aria-label={`${event.title} 수령 상태 빠른 변경`}>
+            <button
+              type="button"
+              className={(event.receiptStatus ?? 'unclaimed') === 'unclaimed' ? 'is-unreceived' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'unclaimed' })}
+            >
+              미수령
+            </button>
+            <button
+              type="button"
+              className={event.receiptStatus === 'requested' ? 'is-requested' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'requested' })}
+            >
+              요청
+            </button>
             <button
               type="button"
               className={event.receiptStatus === 'received' ? 'is-received' : ''}
               onClick={() => onMetaChange(event.id, { receiptStatus: 'received' })}
             >
-              수령완료
-            </button>
-            <button
-              type="button"
-              className={event.receiptStatus !== 'received' ? 'is-unreceived' : ''}
-              onClick={() => onMetaChange(event.id, { receiptStatus: 'unclaimed' })}
-            >
-              미수령
+              완료
             </button>
           </div>
         ) : null}
+
+        <div className="inbox-secondary-actions">
+          <button
+            type="button"
+            className="manage-edit-text-button"
+            onClick={() => setIsEditing((value) => !value)}
+          >
+            수정
+          </button>
+          <button type="button" className="inbox-delete-button" onClick={handleRestoreToReady}>
+            대기로
+          </button>
+        </div>
       </div>
 
       {isEditing ? (

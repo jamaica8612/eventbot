@@ -1032,18 +1032,55 @@ h3 {
   max-width: 100%;
 }
 
-.inbox-view-won .manage-result-actions button.is-won,
-.inbox-view-unreceived .manage-result-actions button.is-won {
-  display: none;
-}
-
 .inbox-action-cell {
   display: grid;
   gap: 7px;
 }
 
-.inbox-action-cell .manage-result-actions {
+.inbox-action-cell .inbox-result-actions,
+.inbox-receipt-actions,
+.inbox-secondary-actions {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
+  gap: 7px;
+}
+
+.inbox-receipt-actions button,
+.inbox-secondary-actions button {
+  min-width: 0;
+  min-height: 34px;
+  border-radius: 10px;
+  padding: 0 6px;
+  font-size: 0.78rem;
+  line-height: 1.1;
+}
+
+.inbox-receipt-actions button {
+  border-color: var(--border);
+  background: var(--surface-raised);
+  color: var(--text-muted);
+}
+
+.inbox-receipt-actions button.is-unreceived {
+  border-color: rgba(255, 176, 32, 0.32);
+  background: var(--wanted-blue-soft);
+  color: var(--warning);
+}
+
+.inbox-receipt-actions button.is-requested {
+  border-color: rgba(59, 130, 246, 0.28);
+  background: rgba(59, 130, 246, 0.1);
+  color: var(--warning);
+}
+
+.inbox-receipt-actions button.is-received {
+  border-color: rgba(34, 197, 94, 0.28);
+  background: rgba(34, 197, 94, 0.1);
+  color: var(--success);
+}
+
+.inbox-secondary-actions {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 }
 
 .inbox-edit-panel {
@@ -2556,10 +2593,6 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   line-height: 1.1;
 }
 
-.manage-actions-three {
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-}
-
 .completed-row .result-badge {
   justify-self: start;
 }
@@ -2607,9 +2640,6 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
 }
 
 .manage-edit-text-button {
-  position: absolute;
-  top: 13px;
-  right: 16px;
   min-height: 24px;
   border: 0;
   border-radius: 0;
@@ -2624,17 +2654,6 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   transform: none;
 }
 
-.inbox-top-actions {
-  display: flex;
-  position: absolute;
-  top: 14px;
-  right: 14px;
-  gap: 8px;
-  align-items: center;
-  justify-content: flex-end;
-}
-
-.inbox-top-actions .manage-edit-text-button,
 .inbox-delete-button {
   position: static;
   min-height: 24px;
@@ -2646,12 +2665,8 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   font-weight: 400;
 }
 
-.inbox-top-actions .manage-edit-text-button {
-  color: var(--text-muted);
-}
-
 .inbox-delete-button {
-  color: var(--danger);
+  color: var(--text-muted);
 }
 
 .manage-edit-panel,
@@ -3333,12 +3348,15 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     min-width: 0;
   }
 
-  .inbox-action-cell .manage-result-actions {
+  .inbox-action-cell .inbox-result-actions,
+  .inbox-action-cell .inbox-receipt-actions {
     grid-template-columns: repeat(auto-fit, minmax(52px, 1fr));
   }
 
   .inbox-action-cell .manage-result-actions button,
-  .inbox-action-cell .manage-result-actions .manage-link {
+  .inbox-action-cell .manage-result-actions .manage-link,
+  .inbox-action-cell .inbox-receipt-actions button,
+  .inbox-action-cell .inbox-secondary-actions button {
     min-width: 0;
     min-height: 30px;
     border-radius: 8px;
@@ -3347,27 +3365,17 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     font-weight: 400;
   }
 
-  .inbox-top-actions {
+  .inbox-secondary-actions {
     order: initial;
     position: static;
     transform: none;
-    justify-content: flex-end;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
-  .inbox-top-actions .manage-edit-text-button,
+  .inbox-secondary-actions .manage-edit-text-button,
   .inbox-delete-button {
     min-height: 20px;
     font-size: 0.74rem;
-  }
-
-  .inbox-action-cell .ledger-quick-receipt {
-    justify-content: flex-end;
-  }
-
-  .inbox-action-cell .ledger-quick-receipt button {
-    min-height: 28px;
-    padding: 0 9px;
-    font-size: 0.72rem;
   }
 
   .inbox-row .manage-edit-panel {
