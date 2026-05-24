@@ -61,6 +61,7 @@ html[data-theme="light"] {
 
 html {
   overflow-x: hidden;
+  scrollbar-gutter: stable;
 }
 
 body {
@@ -2915,16 +2916,6 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
     padding: 40px 0 44px;
   }
 
-  .app-shell.manage-mode {
-    grid-template-columns: 220px minmax(0, 1fr);
-    gap: 24px;
-    width: min(1380px, calc(100% - 40px));
-  }
-
-  .manage-mode .app-hero {
-    gap: 12px;
-  }
-
   .manage-mode .hero-top {
     padding: 14px;
   }
@@ -3877,20 +3868,10 @@ button.is-selected {
     padding-top: 28px;
   }
 
-  .app-shell.manage-mode {
-    grid-template-columns: 220px minmax(0, 1fr);
-    width: min(1260px, calc(100% - 48px));
-  }
-
   .app-hero {
     top: 28px;
     left: max(24px, calc((100vw - 1120px) / 2));
     width: 240px;
-  }
-
-  .manage-mode .app-hero {
-    left: max(24px, calc((100vw - 1260px) / 2));
-    width: 220px;
   }
 
   .desktop-nav {
