@@ -17,7 +17,8 @@ export async function upsertEvents(events) {
     },
   });
 
-  const rows = await buildRowsPreservingBodies(supabase, events);
+  const { rows, existingIds } = await buildRowsPreservingBodies(supabase, events);
+  const newEvents = pickNewEvents(events, existingIds);
   const { error } = await supabase
     .from('events')
     .upsert(rows, { onConflict: 'source_site,source_event_id' });
@@ -33,13 +34,22 @@ export async function upsertEvents(events) {
         throw new Error(`Supabase legacy upsert failed: ${legacyError.message}`);
       }
 
-      return legacyRows.length;
+      return { savedCount: legacyRows.length, newEvents };
     }
 
     throw new Error(`Supabase upsert failed: ${error.message}`);
   }
 
-  return rows.length;
+  return { savedCount: rows.length, newEvents };
+}
+
+// 이번 크롤에서 처음 등장한(=DB에 없던) 이벤트만 골라낸다.
+// 기존 ID 목록을 알 수 없으면(조회 실패) 알림 폭주를 막기 위해 빈 배열을 돌려준다.
+function pickNewEvents(events, existingIds) {
+  if (!(existingIds instanceof Set)) {
+    return [];
+  }
+  return events.filter((event) => !existingIds.has(event.id.replace(/^suto-/, '')));
 }
 
 function isMissingDecisionColumnError(error) {
@@ -126,15 +136,17 @@ async function buildRowsPreservingBodies(supabase, events) {
     .in('source_event_id', sourceIds);
 
   if (error || !Array.isArray(data)) {
-    return events.map(toEventRow);
+    // 기존 ID를 알 수 없으면 신규 판별을 포기한다(existingIds = null).
+    return { rows: events.map(toEventRow), existingIds: null };
   }
 
   const existingById = new Map(data.map((row) => [row.source_event_id, row.raw]));
-  return events.map((event) => {
+  const rows = events.map((event) => {
     const sourceEventId = event.id.replace(/^suto-/, '');
     const existingRaw = existingById.get(sourceEventId);
     return toEventRow(mergeExistingBody(event, existingRaw));
   });
+  return { rows, existingIds: new Set(existingById.keys()) };
 }
 
 function mergeExistingBody(event, existingRaw) {

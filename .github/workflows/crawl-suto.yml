@@ -40,6 +40,11 @@ jobs:
         env:
           VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          # 신규 이벤트 텔레그램 알림 + 유튜브 이벤트 추천 댓글 생성용. 없으면 해당 단계는 건너뜀.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          YOUTUBE_API_KEY: ${{ secrets.YOUTUBE_API_KEY }}
           SUTO_BODY_LIMIT: "80"
           SUTO_BODY_HEADLESS: "1"
           SUTO_YOUTUBE_TRANSCRIPT_LIMIT: "1"
