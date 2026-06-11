@@ -9,3 +9,7 @@ supabase/.temp/
 .gh-auth*
 __pycache__/
 *.pyc
+
+# 당첨노트 리디자인 작업용 산출물 (커밋 제외)
+_design_handoff_tmp/
+_CLEANUP.md
