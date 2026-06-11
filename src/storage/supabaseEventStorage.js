@@ -9,29 +9,29 @@ export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 const DATA_FUNCTION_URL = `${supabaseUrl}/functions/v1/eventbot-data`;
 
 const effortLabels = {
-  quick: '\uD604\uC7A5 \uC989\uC2DC',
-  home: '\uC9D1\uC5D0\uC11C \uCC98\uB9AC',
-  hard: '\uBCF5\uC7A1\uD568',
+  quick: '현장 즉시',
+  home: '집에서 처리',
+  hard: '복잡함',
 };
+
+const SUPABASE_REQUIRED_ERROR = 'Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.';
 
 export async function loadSupabaseEvents() {
   if (!hasSupabaseConfig) {
-    return [];
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const payload = await callDataFunction('GET', 'events');
   const rows = payload.events;
   if (!Array.isArray(rows)) {
     return [];
   }
-
   return rows.map(toAppEvent);
 }
+
 export async function updateSupabaseEventState(eventId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   await callDataFunction('POST', '', {
     action: 'updateEventState',
     eventId,
@@ -41,9 +41,8 @@ export async function updateSupabaseEventState(eventId, patch) {
 
 export async function updateSupabaseEventDetails(eventId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   await callDataFunction('POST', '', {
     action: 'updateEventDetails',
     eventId,
@@ -53,27 +52,24 @@ export async function updateSupabaseEventDetails(eventId, patch) {
 
 export async function loadSupabaseFilterSettings() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const payload = await callDataFunction('GET', 'filterSettings');
   return payload.value ?? null;
 }
 
 export async function loadSupabaseCommentSettings() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const payload = await callDataFunction('GET', 'commentSettings');
   return payload.value ?? null;
 }
 
 export async function saveSupabaseFilterSettings(settings) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   await callDataFunction('POST', '', {
     action: 'saveFilterSettings',
     settings,
@@ -82,9 +78,8 @@ export async function saveSupabaseFilterSettings(settings) {
 
 export async function saveSupabaseCommentSettings(settings) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   await callDataFunction('POST', '', {
     action: 'saveCommentSettings',
     settings,
@@ -93,27 +88,24 @@ export async function saveSupabaseCommentSettings(settings) {
 
 export async function loadSupabaseCrawlerStatus() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const payload = await callDataFunction('GET', 'crawlStatus');
   return payload.value ?? null;
 }
 
 export async function loadSupabaseAdminUsers() {
   if (!hasSupabaseConfig) {
-    return [];
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const payload = await callDataFunction('GET', 'adminUsers');
   return Array.isArray(payload.users) ? payload.users : [];
 }
 
 export async function updateSupabaseProfileAccess(userId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   await callDataFunction('POST', '', {
     action: 'updateProfileAccess',
     userId,
@@ -123,14 +115,12 @@ export async function updateSupabaseProfileAccess(userId, patch) {
 
 export async function triggerSupabaseCrawler() {
   if (!hasSupabaseConfig) {
-    throw new Error('Supabase \uC124\uC815\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+    throw new Error(SUPABASE_REQUIRED_ERROR);
   }
-
   const token = await getAuthToken();
   if (!token) {
-    throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+    throw new Error('로그인이 필요합니다.');
   }
-
   const response = await fetch(`${supabaseUrl}/functions/v1/eventbot-crawl-trigger`, {
     method: 'POST',
     headers: {
@@ -142,7 +132,7 @@ export async function triggerSupabaseCrawler() {
   const payload = await response.json().catch(() => ({}));
   if (!response.ok) {
     if (response.status === 401) requireUnlock();
-    throw new Error(payload.error || '\uD06C\uB864\uB9C1 \uC2E4\uD589\uC744 \uC694\uCCAD\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.');
+    throw new Error(payload.error || '크롤링 실행을 요청하지 못했습니다.');
   }
   return payload;
 }
@@ -150,7 +140,7 @@ export async function triggerSupabaseCrawler() {
 async function callDataFunction(method, resource, body) {
   const token = await getAuthToken();
   if (!token) {
-    throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
+    throw new Error('로그인이 필요합니다.');
   }
 
   const url = new URL(DATA_FUNCTION_URL);
@@ -173,7 +163,7 @@ async function callDataFunction(method, resource, body) {
     if (response.status === 401) {
       requireUnlock();
     }
-    throw new Error(payload.error || 'DB \uC694\uCCAD\uC774 \uC2E4\uD328\uD588\uC2B5\uB2C8\uB2E4.');
+    throw new Error(payload.error || 'DB 요청이 실패했습니다.');
   }
   return payload;
 }

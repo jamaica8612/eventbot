@@ -9,3 +9,4 @@ supabase/.temp/
 .gh-auth*
 __pycache__/
 *.pyc
+_design_handoff_tmp/

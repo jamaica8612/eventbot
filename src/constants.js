@@ -54,3 +54,6 @@ export function getFilterLabel(item) {
 export function getFilterTitle(filter) {
   return filterTitles[filter];
 }
+
+// lib/domain.js가 LABELS 단일 소스
+export { LABELS } from './lib/domain.js';
