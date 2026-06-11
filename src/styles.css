@@ -3888,3 +3888,407 @@ button.is-selected {
     padding: 8px 2px 14px;
   }
 }
+
+/* CSS-only visual refresh. Keep this block presentation-only. */
+:root {
+  --wanted-blue: #4f7cff;
+  --wanted-blue-soft: rgba(79, 124, 255, 0.12);
+  --text-strong: #f8fafc;
+  --text-main: #d8deea;
+  --text-muted: #8b95a7;
+  --border: rgba(148, 163, 184, 0.16);
+  --border-strong: rgba(203, 213, 225, 0.26);
+  --surface: #151922;
+  --surface-alt: #0e1118;
+  --surface-raised: #1c2230;
+  --success: #44c37d;
+  --danger: #ff6b6b;
+  --warning: #f2b84b;
+  --cta-text: #ffffff;
+  --accent-border: rgba(79, 124, 255, 0.38);
+  --page-bg:
+    radial-gradient(circle at top left, rgba(79, 124, 255, 0.18), transparent 30vw),
+    linear-gradient(180deg, #111827 0%, #0e1118 340px);
+  --nav-bg: rgba(14, 17, 24, 0.88);
+  --soft-panel: rgba(148, 163, 184, 0.08);
+  --shadow-card: 0 14px 42px rgba(0, 0, 0, 0.26);
+  --shadow-cta: 0 12px 26px rgba(79, 124, 255, 0.28);
+}
+
+html[data-theme="light"] {
+  --wanted-blue: #315fdd;
+  --wanted-blue-soft: rgba(49, 95, 221, 0.09);
+  --text-strong: #182033;
+  --text-main: #344054;
+  --text-muted: #667085;
+  --border: rgba(16, 24, 40, 0.11);
+  --border-strong: rgba(16, 24, 40, 0.18);
+  --surface: #ffffff;
+  --surface-alt: #f4f7fb;
+  --surface-raised: #f8fafc;
+  --success: #12805c;
+  --danger: #d92d20;
+  --warning: #b7791f;
+  --cta-text: #ffffff;
+  --accent-border: rgba(49, 95, 221, 0.26);
+  --page-bg:
+    radial-gradient(circle at top left, rgba(49, 95, 221, 0.12), transparent 32vw),
+    linear-gradient(180deg, #eef4ff 0%, #f6f8fb 360px);
+  --nav-bg: rgba(255, 255, 255, 0.9);
+  --soft-panel: rgba(49, 95, 221, 0.055);
+  --shadow-card: 0 14px 40px rgba(16, 24, 40, 0.08);
+  --shadow-cta: 0 12px 24px rgba(49, 95, 221, 0.18);
+}
+
+body {
+  letter-spacing: 0;
+}
+
+button {
+  border-radius: 12px;
+  font-weight: 750;
+  transition: background 140ms ease, border-color 140ms ease, color 140ms ease, transform 140ms ease;
+}
+
+button:hover,
+.apply-link:hover,
+.manage-link:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-1px);
+}
+
+.app-shell {
+  padding-top: 20px;
+}
+
+.work-panel {
+  gap: 16px;
+}
+
+.toolbar {
+  align-items: center;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  padding: 14px 16px;
+  box-shadow: var(--shadow-card);
+}
+
+.section-label {
+  color: var(--wanted-blue);
+  font-size: 0.72rem;
+}
+
+.toolbar h2 {
+  font-size: 1.35rem;
+  font-weight: 850;
+}
+
+.settings-button,
+.list-count,
+.theme-switch,
+.sidebar-profile-btn {
+  border-radius: 12px;
+}
+
+.settings-button {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+}
+
+.list-count {
+  background: var(--surface-raised);
+  color: var(--text-main);
+}
+
+.sync-notice {
+  border-radius: 14px;
+  padding: 11px 14px;
+}
+
+.filter-chips {
+  gap: 8px;
+  padding-bottom: 3px;
+}
+
+.filter-chips button,
+.sort-options button,
+.settings-action-button,
+.platform-settings button,
+.settings-reset {
+  font-weight: 750;
+}
+
+.filter-chips button {
+  min-height: 38px;
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.filter-chips button.is-active,
+button.is-selected {
+  border-color: transparent;
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  box-shadow: var(--shadow-cta);
+}
+
+.sort-options {
+  gap: 8px;
+  padding: 2px;
+}
+
+.sort-options button {
+  min-height: 30px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  padding: 0 9px;
+  text-decoration: none;
+}
+
+.sort-options button.is-active {
+  border-color: var(--accent-border);
+  background: var(--wanted-blue-soft);
+  color: var(--wanted-blue);
+  text-decoration: none;
+}
+
+.event-card,
+.manage-row,
+.ledger-row,
+.deadline-row,
+.inbox-row,
+.admin-user-row,
+.search-row,
+.search-box,
+.settings-panel,
+.auth-card,
+.admin-hero-panel,
+.admin-user-section,
+.inbox-summary div,
+.admin-summary div,
+.ledger-summary div,
+.ledger-month-head,
+.manage-metrics div,
+.summary-item,
+.desktop-nav {
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--surface) 94%, var(--surface-raised));
+}
+
+.event-card,
+.manage-row,
+.ledger-row,
+.deadline-row,
+.inbox-row,
+.search-row {
+  padding: 17px;
+}
+
+.event-card:hover,
+.manage-row:hover,
+.ledger-row:hover,
+.deadline-row:hover,
+.inbox-row:hover,
+.admin-user-row:hover,
+.search-row:hover {
+  border-color: var(--accent-border);
+  background: color-mix(in srgb, var(--surface) 88%, var(--wanted-blue-soft));
+}
+
+.event-card h3,
+.manage-row-title,
+.ledger-title strong,
+.search-row strong,
+.deadline-row-head strong {
+  font-size: 1.02rem;
+  font-weight: 780;
+  line-height: 1.42;
+}
+
+.score-row {
+  align-items: flex-start;
+}
+
+.score-row strong,
+.schedule-row span,
+.quick-meta span,
+.result-badge,
+.announcement-state,
+.deadline-meta span,
+.inbox-winning-meta span,
+.search-row-meta span,
+.manage-row-meta span,
+.manage-row-meta time {
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--surface-raised);
+}
+
+.score-row strong {
+  color: var(--wanted-blue);
+  font-weight: 750;
+}
+
+.quick-actions,
+.action-row,
+.result-row {
+  gap: 8px;
+}
+
+.quick-actions .apply-link,
+.primary-apply,
+.manage-link {
+  border-color: transparent;
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  border-radius: 12px;
+  box-shadow: var(--shadow-cta);
+}
+
+.quick-actions button,
+.action-row button,
+.result-row button,
+.manage-result-actions button,
+.deadline-actions button,
+.deadline-actions .manage-link,
+.amount-quick-row button,
+.ledger-quick-receipt button,
+.inbox-receipt-actions button,
+.inbox-secondary-actions button {
+  border-radius: 12px;
+}
+
+.event-body-toggle,
+.event-body-empty,
+.source-summary,
+.prize-panel,
+.event-body-preview,
+.event-body-expanded,
+.source-body,
+.comment-settings {
+  border-radius: 14px;
+  background: var(--surface-raised);
+}
+
+.settings-panel input,
+.settings-panel textarea,
+.search-box input,
+.auth-form input,
+.prize-title-field input,
+.amount-field input,
+.receipt-field select,
+.winning-memo-field input {
+  border-radius: 12px;
+}
+
+.desktop-nav {
+  border-radius: 20px;
+}
+
+.desktop-nav button,
+.bottom-nav button {
+  border-radius: 12px;
+}
+
+.desktop-nav button.is-active {
+  border-color: transparent;
+  background: var(--wanted-blue);
+  color: var(--cta-text);
+  box-shadow: var(--shadow-cta);
+}
+
+.bottom-nav {
+  background: var(--nav-bg);
+  backdrop-filter: blur(18px);
+}
+
+.bottom-nav button.is-active {
+  color: var(--wanted-blue);
+  background: var(--wanted-blue-soft);
+}
+
+.platform-badge-icon {
+  border-radius: 8px;
+}
+
+.inbox-row.is-check-target,
+.inbox-announcement-today.is-check-target {
+  border-color: rgba(242, 184, 75, 0.45);
+  box-shadow: 0 14px 36px rgba(242, 184, 75, 0.12);
+}
+
+.manage-result-actions button.is-won,
+.result-row button.is-won,
+.ledger-quick-receipt button.is-received {
+  background: rgba(68, 195, 125, 0.14);
+  color: var(--success);
+}
+
+.manage-result-actions button.is-lost,
+.result-row button.is-lost {
+  background: rgba(255, 107, 107, 0.12);
+  color: var(--danger);
+}
+
+@media (max-width: 720px) {
+  .app-shell {
+    padding: 14px 12px 96px;
+  }
+
+  .toolbar {
+    align-items: flex-start;
+    padding: 13px;
+  }
+
+  .toolbar h2 {
+    font-size: 1.16rem;
+  }
+
+  .toolbar-actions {
+    gap: 6px;
+  }
+
+  .settings-button,
+  .list-count {
+    min-height: 34px;
+    padding: 0 10px;
+  }
+
+  .event-card,
+  .manage-row,
+  .ledger-row,
+  .deadline-row,
+  .inbox-row,
+  .search-row {
+    padding: 14px;
+    border-radius: 16px;
+  }
+
+  .quick-actions.now-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .quick-actions.now-actions .primary-apply {
+    grid-column: 1 / -1;
+  }
+
+  .quick-actions.now-actions button,
+  .quick-actions.now-actions .apply-link {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .filter-chips button {
+    max-width: 76vw;
+  }
+
+  .bottom-nav {
+    padding-inline: 8px;
+  }
+
+  .bottom-nav button {
+    min-width: 0;
+  }
+}
