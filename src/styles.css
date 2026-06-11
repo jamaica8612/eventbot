@@ -1868,6 +1868,18 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   opacity: 0.72;
 }
 
+.youtube-quick-tools {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.youtube-quick-tools .youtube-transcript-button {
+  min-width: 0;
+  width: 100%;
+}
+
 .youtube-transcript-error {
   color: var(--danger);
   font-size: 0.82rem;

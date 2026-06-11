@@ -177,7 +177,7 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
   // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
-  if (!hasCrawledBody(event)) {
+  if (!hasCrawledBody(event) && !canFetchYoutubeTranscript) {
     return (
       <div className="event-body-empty">
         <p>본문은 슈퍼투데이 사이트에서 직접 확인하세요.</p>
@@ -208,12 +208,40 @@ export function EventBodyToggle({ event, lines, facts }) {
         }
       }}
     >
+      {canFetchYoutubeTranscript ? (
+        <div className="youtube-quick-tools" onClick={(clickEvent) => clickEvent.stopPropagation()}>
+          <button
+            type="button"
+            className="youtube-transcript-button"
+            onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+            onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+            onClick={handleYoutubeInfoFetch}
+            disabled={infoStatus === 'loading' || transcriptStatus === 'loading'}
+          >
+            {infoStatus === 'loading' ? '유튜브 정보수집 중' : '유튜브 정보수집'}
+          </button>
+          <button
+            type="button"
+            className="youtube-transcript-button"
+            onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+            onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+            onClick={handleYoutubeTranscriptFetch}
+            disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
+          >
+            {transcriptStatus === 'loading'
+              ? '댓글 생성 중'
+              : hasCommentCandidates
+                ? '댓글 보기'
+                : '댓글 만들기'}
+          </button>
+        </div>
+      ) : null}
       {isBodyOpen ? (
         <div className="event-body-expanded">
           {lines.map((line) => (
             <p key={line}>{line}</p>
           ))}
-          {canFetchYoutubeTranscript ? (
+          {false ? (
             <>
               <button
                 type="button"
@@ -346,9 +374,11 @@ export function EventBodyToggle({ event, lines, facts }) {
         </div>
       ) : (
         <div className="event-body-preview">
-          {lines.slice(0, 3).map((line) => (
-            <p key={line}>{line}</p>
-          ))}
+          {lines.length > 0
+            ? lines.slice(0, 3).map((line) => (
+                <p key={line}>{line}</p>
+              ))
+            : <p>본문 수집이 제한된 유튜브 이벤트입니다. 위 버튼으로 댓글 자료를 수집할 수 있어요.</p>}
         </div>
       )}
     </div>
