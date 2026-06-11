@@ -1,14 +1,5 @@
 import { useCallback, useEffect } from 'react';
 import {
-  saveEventAnnouncement,
-  saveEventResult,
-  saveEventStatus,
-  saveWinningMeta,
-  removeEventState,
-} from '../storage/eventStatusStorage.js';
-import { saveExcludedEvent } from '../storage/excludedEventStorage.js';
-import {
-  hasSupabaseConfig,
   updateSupabaseEventDetails,
   updateSupabaseEventState,
 } from '../storage/supabaseEventStorage.js';
@@ -106,12 +97,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     (eventId, status) => {
       const changedAt = new Date().toISOString();
       const currentEvent = events.find((event) => event.id === eventId);
-      if (!hasSupabaseConfig) {
-        saveEventStatus(eventId, status);
-      }
-      if (!hasSupabaseConfig && status === 'skipped') {
-        saveExcludedEvent(currentEvent);
-      }
       persistRemote(eventId, buildStatusPatch(currentEvent, status, changedAt), setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -132,9 +117,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
           ? currentEvent?.prizeTitle || getPrizeDisplay(currentEvent)
           : undefined;
 
-      if (!hasSupabaseConfig) {
-        saveEventResult(eventId, resultStatus, { prizeTitle });
-      }
       persistRemote(
         eventId,
         {
@@ -171,9 +153,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     (eventId, meta) => {
       const currentEvent = events.find((event) => event.id === eventId);
       const participatedAt = currentEvent?.participatedAt ?? new Date().toISOString();
-      if (!hasSupabaseConfig) {
-        saveEventAnnouncement(eventId, meta);
-      }
       persistRemote(
         eventId,
         {
@@ -246,9 +225,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
 
   const updateWinningMeta = useCallback(
     (eventId, meta) => {
-      if (!hasSupabaseConfig) {
-        saveWinningMeta(eventId, meta);
-      }
       persistRemote(eventId, { status: 'done', resultStatus: 'won', ...meta }, setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -289,9 +265,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
         winningMemo: '',
       };
 
-      if (!hasSupabaseConfig) {
-        removeEventState(eventId);
-      }
       persistRemote(eventId, patch, setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>

@@ -54,3 +54,5 @@ export function getFilterLabel(item) {
 export function getFilterTitle(filter) {
   return filterTitles[filter];
 }
+
+export { LABELS } from './lib/domain.js';
