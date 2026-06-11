@@ -16,7 +16,7 @@ const effortLabels = {
 
 export async function loadSupabaseEvents() {
   if (!hasSupabaseConfig) {
-    return [];
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   const payload = await callDataFunction('GET', 'events');
@@ -29,7 +29,7 @@ export async function loadSupabaseEvents() {
 }
 export async function updateSupabaseEventState(eventId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   await callDataFunction('POST', '', {
@@ -41,7 +41,7 @@ export async function updateSupabaseEventState(eventId, patch) {
 
 export async function updateSupabaseEventDetails(eventId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   await callDataFunction('POST', '', {
@@ -53,7 +53,7 @@ export async function updateSupabaseEventDetails(eventId, patch) {
 
 export async function loadSupabaseFilterSettings() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   const payload = await callDataFunction('GET', 'filterSettings');
@@ -62,7 +62,7 @@ export async function loadSupabaseFilterSettings() {
 
 export async function loadSupabaseCommentSettings() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   const payload = await callDataFunction('GET', 'commentSettings');
@@ -71,7 +71,7 @@ export async function loadSupabaseCommentSettings() {
 
 export async function saveSupabaseFilterSettings(settings) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   await callDataFunction('POST', '', {
@@ -82,7 +82,7 @@ export async function saveSupabaseFilterSettings(settings) {
 
 export async function saveSupabaseCommentSettings(settings) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   await callDataFunction('POST', '', {
@@ -93,7 +93,7 @@ export async function saveSupabaseCommentSettings(settings) {
 
 export async function loadSupabaseCrawlerStatus() {
   if (!hasSupabaseConfig) {
-    return null;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   const payload = await callDataFunction('GET', 'crawlStatus');
@@ -102,7 +102,7 @@ export async function loadSupabaseCrawlerStatus() {
 
 export async function loadSupabaseAdminUsers() {
   if (!hasSupabaseConfig) {
-    return [];
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   const payload = await callDataFunction('GET', 'adminUsers');
@@ -111,7 +111,7 @@ export async function loadSupabaseAdminUsers() {
 
 export async function updateSupabaseProfileAccess(userId, patch) {
   if (!hasSupabaseConfig) {
-    return;
+    throw new Error('Supabase 설정이 필요합니다. .env 파일에 VITE_SUPABASE_URL과 VITE_SUPABASE_ANON_KEY를 설정하세요.');
   }
 
   await callDataFunction('POST', '', {
@@ -240,6 +240,6 @@ function toAppEvent(row) {
     crawledFrom: row.source_name,
     raw,
     originalLines: raw.originalLines,
-    originalText: raw.originalText,
+    originalText: raw.originalText ?? raw.bodyText ?? raw.contentText ?? '',
   };
 }
