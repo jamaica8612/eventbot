@@ -240,6 +240,6 @@ function toAppEvent(row) {
     crawledFrom: row.source_name,
     raw,
     originalLines: raw.originalLines,
-    originalText: raw.originalText,
+    originalText: raw.originalText ?? raw.bodyText ?? raw.contentText ?? '',
   };
 }
