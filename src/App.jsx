@@ -1,7 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
-  getFilterTitle,
+  manageFilters,
   primaryFilters,
+  getFilterTitle,
 } from './constants.js';
 import {
   buildPlatformOptions,
@@ -9,10 +10,8 @@ import {
   isInstagramEvent,
   isOldSkippedEvent,
   matchesFilter,
-  matchesSearchQuery,
   matchesTodayAnnouncement,
   sortInboxEvents,
-  sortSearchEvents,
   sortTodayAnnouncements,
 } from './utils/eventModel.js';
 import { getTodayDeadlineMatch, sortTodayDeadlineEvents } from './utils/deadlineModel.js';
@@ -21,25 +20,27 @@ import {
   defaultFilterSettings,
   loadFilterSettings,
   normalizeFilterSettings,
+  parseKeywordInput,
+  saveFilterSettings,
 } from './storage/filterSettingsStorage.js';
 import {
   defaultCommentSettings,
   loadCommentSettings,
   normalizeCommentSettings,
+  saveCommentSettings,
 } from './storage/commentSettingsStorage.js';
 import {
   loadViewState,
   saveViewState,
 } from './storage/viewStateStorage.js';
 import {
-  loadSupabaseAdminUsers,
-  loadSupabaseCommentSettings,
+  hasSupabaseConfig,
   loadSupabaseCrawlerStatus,
+  loadSupabaseCommentSettings,
   loadSupabaseFilterSettings,
   saveSupabaseCommentSettings,
   saveSupabaseFilterSettings,
   triggerSupabaseCrawler,
-  updateSupabaseProfileAccess,
 } from './storage/supabaseEventStorage.js';
 import {
   getCurrentSession,
@@ -52,173 +53,14 @@ import {
 } from './storage/supabaseAuthStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
-import { AuthGate } from './features/auth/AuthGate.jsx';
-import { AdminScreen } from './features/admin/AdminScreen.jsx';
-import { DeadlineScreen, EventsList } from './features/events/EventsList.jsx';
-import { FilterPanel } from './features/filter/FilterPanel.jsx';
-import { InboxScreen } from './features/inbox/InboxScreen.jsx';
-import { Avatar } from './components/Avatar.jsx';
-import { Badge } from './components/Badge.jsx';
-import { Button, IconBtn } from './components/Button.jsx';
-import { Chip } from './components/Chip.jsx';
-import { Empty } from './components/Empty.jsx';
-import { Icon } from './components/Icon.jsx';
-import { PlatformBadge } from './components/PlatformBadge.jsx';
-
-const ADMIN_FILTER = { value: 'admin', label: '관리자', countKey: 'admin', icon: 'shield' };
-const FILTER_ICONS = {
-  ready: 'hourglass',
-  todayDeadline: 'clock',
-  later: 'bookmark',
-  search: 'search',
-  inbox: 'inbox',
-  skipped: 'x',
-  admin: 'shield',
-};
-const shouldBypassAuth = import.meta.env.DEV && import.meta.env.VITE_EVENTBOT_BYPASS_AUTH === 'true';
-const bypassProfile = {
-  user_id: 'local-preview',
-  email: 'preview@eventbot.local',
-  display_name: 'Preview Admin',
-  approved: true,
-  is_admin: true,
-};
-const previewNow = new Date();
-const previewIso = (offset, hour = 18) => {
-  const date = new Date(previewNow);
-  date.setDate(date.getDate() + offset);
-  date.setHours(hour, 0, 0, 0);
-  return date.toISOString();
-};
-const previewEvents = [
-  {
-    id: 'preview-ready-today',
-    platform: '유튜브 이벤트',
-    status: 'ready',
-    title: '신제품 런칭 기념 구독 댓글 이벤트',
-    deadlineDate: previewIso(0, 23),
-    deadlineText: '오늘 마감',
-    prizeTitle: '올리브영 모바일 상품권 3만원',
-    description: '구독과 좋아요를 누르고 기대평을 댓글로 남기면 추첨을 통해 모바일 상품권을 드립니다.',
-    url: 'https://youtube.com/watch?v=preview',
-    bookmarkCount: 482,
-    totalWinnerCount: 30,
-    lastSeenAt: previewIso(-1, 9),
-  },
-  {
-    id: 'preview-ready-week',
-    platform: '네이버 이벤트',
-    status: 'ready',
-    title: '여름맞이 체험단 모집',
-    deadlineDate: previewIso(2, 18),
-    deadlineText: '2일 후 마감',
-    prizeTitle: '스타벅스 5만원권',
-    description: '블로그에 체험 후기를 남겨 주세요. 선정자에게 기프티콘을 지급합니다.',
-    url: 'https://blog.naver.com/preview',
-    bookmarkCount: 211,
-    totalWinnerCount: 50,
-    lastSeenAt: previewIso(-1, 11),
-  },
-  {
-    id: 'preview-later',
-    platform: '홈페이지 이벤트',
-    status: 'later',
-    title: '조건 확인이 필요한 카드 발급 이벤트',
-    deadlineDate: previewIso(7, 18),
-    deadlineText: '다음 주 마감',
-    prizeTitle: '캐시백 최대 15만원',
-    description: '조건이 복잡해 임시저장한 이벤트입니다.',
-    url: 'https://example.com/event',
-    bookmarkCount: 17,
-    totalWinnerCount: 999,
-    lastSeenAt: previewIso(-2, 12),
-  },
-  {
-    id: 'preview-inbox-overdue',
-    platform: '네이버 이벤트',
-    status: 'done',
-    title: '신용카드 리뷰 작성 이벤트',
-    resultStatus: 'unknown',
-    receiptStatus: 'unclaimed',
-    resultAnnouncementDate: previewIso(-2, 18),
-    resultAnnouncementText: '발표일 지남',
-    participatedAt: previewIso(-12, 12),
-    prizeTitle: '네이버페이 5천원',
-    description: '응모 완료 후 결과 확인이 필요한 이벤트입니다.',
-    url: 'https://blog.naver.com/result-preview',
-    bookmarkCount: 88,
-    totalWinnerCount: 200,
-    lastSeenAt: previewIso(-13, 9),
-  },
-  {
-    id: 'preview-inbox-today',
-    platform: '홈페이지 이벤트',
-    status: 'done',
-    title: '호텔 숙박권 사전예약 응모',
-    resultStatus: 'unknown',
-    receiptStatus: 'unclaimed',
-    resultAnnouncementDate: previewIso(0, 18),
-    resultAnnouncementText: '오늘 발표',
-    participatedAt: previewIso(-8, 19),
-    prizeTitle: '호텔 숙박권',
-    description: '오늘 발표 예정인 응모 건입니다.',
-    url: 'https://example.com/result',
-    bookmarkCount: 540,
-    totalWinnerCount: 10,
-    lastSeenAt: previewIso(-9, 9),
-  },
-  {
-    id: 'preview-inbox-won',
-    platform: '유튜브 이벤트',
-    status: 'done',
-    title: '편의점 인기템 기프티콘 이벤트',
-    resultStatus: 'won',
-    receiptStatus: 'unclaimed',
-    resultAnnouncementDate: previewIso(-5, 18),
-    participatedAt: previewIso(-15, 20),
-    prizeTitle: 'GS25 모바일 상품권',
-    prizeAmount: '10000',
-    description: '당첨되었지만 아직 수령 전인 이벤트입니다.',
-    url: 'https://youtube.com/watch?v=won-preview',
-    bookmarkCount: 305,
-    totalWinnerCount: 100,
-    lastSeenAt: previewIso(-16, 9),
-  },
-  {
-    id: 'preview-skipped',
-    platform: '홈페이지 이벤트',
-    status: 'skipped',
-    title: '관심 없는 상담 신청 이벤트',
-    deadlineDate: previewIso(-5, 18),
-    deadlineText: '마감 지남',
-    prizeTitle: '커피 쿠폰',
-    description: '제외 목록 확인용 이벤트입니다.',
-    url: 'https://example.com/skipped',
-    bookmarkCount: 3,
-    totalWinnerCount: 20,
-    lastSeenAt: previewIso(-20, 9),
-  },
-];
-const previewAdminUsers = [
-  {
-    id: 'local-preview',
-    user_id: 'local-preview',
-    email: 'preview@eventbot.local',
-    display_name: 'Preview Admin',
-    approved: true,
-    is_admin: true,
-    stats: { done: 8, won: 2, lost: 1, unreceived: 1, prize: 160000 },
-  },
-  {
-    id: 'pending-preview',
-    user_id: 'pending-preview',
-    email: 'pending@eventbot.local',
-    display_name: 'Pending User',
-    approved: false,
-    is_admin: false,
-    stats: { done: 1, won: 0, lost: 0, unreceived: 0, prize: 0 },
-  },
-];
+import {
+  BottomNav,
+  DesktopNav,
+} from './components/Navigation.jsx';
+import { EventCard } from './components/EventCards.jsx';
+import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
+import { EventSearch } from './components/EventSearch.jsx';
+import { AdminPanel } from './components/AdminPanel.jsx';
 
 function App() {
   const [theme, setTheme] = useTheme();
@@ -228,7 +70,6 @@ function App() {
     profile: null,
     error: '',
   });
-  const [isSubmittingLogin, setIsSubmittingLogin] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -245,11 +86,9 @@ function App() {
             isLoading: false,
             session: null,
             profile: null,
-            error: error.message || '로그인 상태를 확인하지 못했습니다.',
+            error: error.message || '\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
           });
         }
-      } finally {
-        if (isMounted) setIsSubmittingLogin(false);
       }
     }
 
@@ -265,63 +104,39 @@ function App() {
     };
   }, []);
 
-  async function handleLogin() {
-    setIsSubmittingLogin(true);
-    setAuthState((current) => ({ ...current, error: '' }));
-    try {
-      await signInWithGoogle();
-    } catch (error) {
-      setIsSubmittingLogin(false);
-      setAuthState((current) => ({
-        ...current,
-        error: error.message || 'Google 로그인을 시작하지 못했습니다.',
-      }));
-    }
-  }
-
   async function lockApp() {
     await signOut();
     setAuthState({ isLoading: false, session: null, profile: null, error: '' });
   }
 
-  const toggleTheme = () => setTheme((current) => (current === 'dark' ? 'light' : 'dark'));
-
-  if (shouldBypassAuth) {
+  if (authState.isLoading) {
     return (
-      <EventBotApp
+      <AuthStatusGate
         theme={theme}
         setTheme={setTheme}
-        profile={bypassProfile}
-        onLock={() => {}}
+        title={'\uB85C\uADF8\uC778 \uD655\uC778 \uC911'}
+        message={'\uC7A0\uC2DC\uB9CC \uAE30\uB2E4\uB824 \uC8FC\uC138\uC694.'}
       />
     );
   }
 
-  if (authState.isLoading) {
-    return <AuthGate stage="loading" theme={theme} onToggleTheme={toggleTheme} />;
-  }
-
   if (!hasAuthConfig || !authState.session) {
     return (
-      <AuthGate
-        stage="login"
+      <GoogleLoginGate
         theme={theme}
-        onToggleTheme={toggleTheme}
-        onLogin={handleLogin}
+        setTheme={setTheme}
         error={authState.error}
-        isSubmitting={isSubmittingLogin}
       />
     );
   }
 
   if (!authState.profile?.approved) {
     return (
-      <AuthGate
-        stage="pending"
+      <PendingApprovalGate
         theme={theme}
-        onToggleTheme={toggleTheme}
-        account={authState.profile?.email || authState.session?.user?.email || '현재 계정'}
-        onSwitchAccount={lockApp}
+        setTheme={setTheme}
+        profile={authState.profile}
+        onSignOut={lockApp}
       />
     );
   }
@@ -337,10 +152,11 @@ function App() {
 }
 
 function EventBotApp({ theme, setTheme, profile, onLock }) {
-  const { events, setEvents, isLoading, loadError } = useEvents();
+  const { events, setEvents, isLoading } = useEvents();
   const [viewState, setViewState] = useState(loadViewState);
   const [filter, setFilterState] = useState(viewState.filter);
   const [platformFilter, setPlatformFilterState] = useState(viewState.platformFilter);
+  const [sortMode, setSortModeState] = useState(viewState.sortMode);
   const [deadlineFilter, setDeadlineFilterState] = useState(viewState.deadlineFilter);
   const [inboxFilter, setInboxFilterState] = useState(viewState.inboxFilter);
   const [searchQuery, setSearchQueryState] = useState(viewState.searchQuery);
@@ -351,11 +167,9 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
   const [crawlerStatus, setCrawlerStatus] = useState(null);
   const [isCrawling, setIsCrawling] = useState(false);
-  const [adminUsers, setAdminUsers] = useState([]);
-  const [updatingAdminUserId, setUpdatingAdminUserId] = useState('');
+  const [adminSummary, setAdminSummary] = useState({ pending: 0 });
   const didLoadFilterSettings = useRef(false);
   const didLoadCommentSettings = useRef(false);
-
   const {
     updateStatus,
     updateResult,
@@ -363,7 +177,12 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
-  } = useEventActions({ events, setEvents, setSyncNotice });
+  } =
+    useEventActions({ events, setEvents, setSyncNotice });
+
+  function updateDeadlineStatus(eventId, status) {
+    updateStatus(eventId, status);
+  }
 
   function updateViewState(patch) {
     setViewState((current) => {
@@ -375,13 +194,17 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
 
   function setFilter(value) {
     setFilterState(value);
-    setIsSettingsOpen(false);
     updateViewState({ filter: value });
   }
 
   function setPlatformFilter(value) {
     setPlatformFilterState(value);
     updateViewState({ platformFilter: value });
+  }
+
+  function setSortMode(value) {
+    setSortModeState(value);
+    updateViewState({ sortMode: value });
   }
 
   function setDeadlineFilter(value) {
@@ -405,36 +228,28 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   }
 
   useEffect(() => {
-    if (shouldBypassAuth) return;
-    if (loadError) setSyncNotice({ type: 'warning', message: loadError });
-  }, [loadError]);
+    if (!isSortableFilter(filter)) {
+      setSortMode('default');
+    }
+  }, [filter]);
 
   useEffect(() => {
-    if (!shouldBypassAuth) return;
-    if (events.length > 0) return;
-    setEvents(previewEvents);
-    setAdminUsers(previewAdminUsers);
-    setCrawlerStatus({
-      status: 'ok',
-      totalEvents: previewEvents.length,
-      recentSeen24h: 3,
-      lastCrawledAt: previewIso(0, 9),
-      lastSuccessAt: previewIso(0, 9),
-    });
-  }, [events.length, setEvents]);
-
-  useEffect(() => {
-    if (!profile?.is_admin && filter === 'admin') setFilter('ready');
+    if (!profile?.is_admin && filter === 'admin') {
+      setFilter('ready');
+    }
   }, [filter, profile?.is_admin]);
 
   useEffect(() => {
-    if (shouldBypassAuth) {
+    if (!hasSupabaseConfig) {
       didLoadFilterSettings.current = true;
       return;
     }
+
     loadSupabaseFilterSettings()
       .then((remoteSettings) => {
-        if (remoteSettings) setFilterSettings(normalizeFilterSettings(remoteSettings));
+        if (remoteSettings) {
+          setFilterSettings(normalizeFilterSettings(remoteSettings));
+        }
       })
       .catch((error) => {
         setSyncNotice({
@@ -448,13 +263,16 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   }, []);
 
   useEffect(() => {
-    if (shouldBypassAuth) {
+    if (!hasSupabaseConfig) {
       didLoadCommentSettings.current = true;
       return;
     }
+
     loadSupabaseCommentSettings()
       .then((remoteSettings) => {
-        if (remoteSettings) setCommentSettings(normalizeCommentSettings(remoteSettings));
+        if (remoteSettings) {
+          setCommentSettings(normalizeCommentSettings(remoteSettings));
+        }
       })
       .catch((error) => {
         setSyncNotice({
@@ -468,7 +286,8 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   }, []);
 
   useEffect(() => {
-    if (shouldBypassAuth) return;
+    if (!hasSupabaseConfig) return;
+
     let isMounted = true;
     loadSupabaseCrawlerStatus()
       .then((status) => {
@@ -484,53 +303,46 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   }, []);
 
   useEffect(() => {
-    if (!profile?.is_admin || shouldBypassAuth) return;
-    let isMounted = true;
-    loadSupabaseAdminUsers()
-      .then((users) => {
-        if (isMounted) setAdminUsers(users.map(normalizeAdminUser));
-      })
-      .catch((error) => {
-        if (isMounted) {
-          setSyncNotice({
-            type: 'warning',
-            message: error.message || '관리자 사용자 정보를 불러오지 못했습니다.',
-          });
-        }
-      });
-    return () => {
-      isMounted = false;
-    };
-  }, [profile?.is_admin]);
-
-  useEffect(() => {
     if (!didLoadFilterSettings.current) return;
-    if (shouldBypassAuth) return;
-    saveSupabaseFilterSettings(filterSettings).catch((error) => {
-      setSyncNotice({
-        type: 'warning',
-        message: `필터 설정 DB 저장 실패. (${error.message})`,
+
+    if (hasSupabaseConfig) {
+      saveSupabaseFilterSettings(filterSettings).catch((error) => {
+        setSyncNotice({
+          type: 'warning',
+          message: `필터 설정 DB 저장 실패. (${error.message})`,
+        });
       });
-    });
+      return;
+    }
+
+    saveFilterSettings(filterSettings);
   }, [filterSettings]);
 
   async function handleManualCrawl() {
     if (isCrawling) return;
-    if (shouldBypassAuth) {
-      setSyncNotice({ type: 'info', message: '로컬 미리보기에서는 크롤링 요청을 보내지 않습니다.' });
-      return;
-    }
     setIsCrawling(true);
-    setSyncNotice({ type: 'info', message: '크롤링을 요청했습니다.' });
+    setSyncNotice({ type: 'info', message: '크롤링을 시작했습니다. 잠시만 기다려 주세요.' });
 
     try {
-      const payload = await triggerSupabaseCrawler();
-      if (payload?.crawlStatus) setCrawlerStatus(payload.crawlStatus);
-      setSyncNotice({
-        type: 'success',
-        message: '크롤링 작업을 GitHub Actions에 요청했습니다.',
-      });
-      window.setTimeout(() => setIsCrawling(false), 1200);
+      if (hasSupabaseConfig) {
+        const payload = await triggerSupabaseCrawler();
+        if (payload?.crawlStatus) {
+          setCrawlerStatus(payload.crawlStatus);
+        }
+        setSyncNotice({
+          type: 'success',
+          message:
+            '크롤링 작업을 GitHub Actions에 요청했습니다. 완료까지 몇 분 걸릴 수 있습니다.',
+        });
+        window.setTimeout(() => setIsCrawling(false), 1200);
+        return;
+      }
+
+      const response = await fetch('/api/crawl-suto', { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
+      setSyncNotice({ type: 'success', message: '크롤링이 완료되었습니다. 목록을 다시 불러옵니다.' });
+      window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {
       setSyncNotice({
         type: 'warning',
@@ -543,14 +355,13 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
   async function handleSaveCommentSettings() {
     const normalized = normalizeCommentSettings(commentSettings);
     setCommentSettings(normalized);
-    didLoadCommentSettings.current = true;
 
     try {
-      if (shouldBypassAuth) {
-        setSyncNotice({ type: 'success', message: '댓글 설정을 저장했습니다. (로컬 미리보기)' });
-        return;
+      if (hasSupabaseConfig) {
+        await saveSupabaseCommentSettings(normalized);
+      } else {
+        saveCommentSettings(normalized);
       }
-      await saveSupabaseCommentSettings(normalized);
       setSyncNotice({ type: 'success', message: '댓글 설정을 저장했습니다.' });
     } catch (error) {
       setSyncNotice({
@@ -560,64 +371,27 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     }
   }
 
-  async function handleAdminUserChange(user, patch) {
-    const userId = user.user_id || user.id;
-    setUpdatingAdminUserId(userId);
-    try {
-      if (shouldBypassAuth) {
-        setAdminUsers((current) =>
-          current.map((item) =>
-            item.id === userId || item.user_id === userId
-              ? {
-                  ...item,
-                  ...(typeof patch.approved === 'boolean' ? { approved: patch.approved } : {}),
-                  ...(typeof patch.is_admin === 'boolean' ? { is_admin: patch.is_admin } : {}),
-                }
-              : item,
-          ),
-        );
-        setSyncNotice({ type: 'success', message: '사용자 권한을 저장했습니다. (로컬 미리보기)' });
-        return;
-      }
-      await updateSupabaseProfileAccess(userId, {
-        ...(typeof patch.approved === 'boolean' ? { approved: patch.approved } : {}),
-        ...(typeof patch.is_admin === 'boolean' ? { isAdmin: patch.is_admin } : {}),
-      });
-      setAdminUsers((current) =>
-        current.map((item) =>
-          item.id === userId || item.user_id === userId
-            ? {
-                ...item,
-                ...(typeof patch.approved === 'boolean' ? { approved: patch.approved } : {}),
-                ...(typeof patch.is_admin === 'boolean' ? { is_admin: patch.is_admin } : {}),
-              }
-            : item,
-        ),
-      );
-      setSyncNotice({ type: 'success', message: '사용자 권한을 저장했습니다.' });
-    } catch (error) {
-      setSyncNotice({
-        type: 'warning',
-        message: error.message || '사용자 권한 저장에 실패했습니다.',
-      });
-    } finally {
-      setUpdatingAdminUserId('');
-    }
-  }
-
   const appEvents = useMemo(() => events.filter((event) => !isInstagramEvent(event)), [events]);
+
   const isAdmin = Boolean(profile?.is_admin);
+
   const navFilters = useMemo(
-    () => (isAdmin ? [...primaryFilters, ADMIN_FILTER] : primaryFilters),
+    () =>
+      isAdmin
+        ? [
+            ...primaryFilters,
+            { value: 'admin', label: '관리자', countKey: 'admin' },
+          ]
+        : primaryFilters,
     [isAdmin],
   );
 
   const counts = useMemo(
     () => ({
       ...buildCounts(appEvents, filterSettings),
-      admin: adminUsers.filter((user) => !user.approved).length,
+      admin: adminSummary.pending,
     }),
-    [adminUsers, appEvents, filterSettings],
+    [adminSummary.pending, appEvents, filterSettings],
   );
 
   const filteredByTabEvents = useMemo(
@@ -644,21 +418,12 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
       platformFilter === 'all'
         ? filteredByTabEvents
         : filteredByTabEvents.filter((event) => event.platform === platformFilter);
-
-    if (filter === 'search') {
-      return sortSearchEvents(
-        platformEvents.filter((event) => {
-          if (searchScope === 'ready' && event.status !== 'ready') return false;
-          if (searchScope === 'done' && event.status !== 'done') return false;
-          return matchesSearchQuery(event, searchQuery);
-        }),
-      );
-    }
-    if (filter === 'todayDeadline') return sortTodayDeadlineEvents(platformEvents);
+    if (isSortableFilter(filter)) return sortEventsByMode(platformEvents, sortMode, filter);
     if (filter === 'inbox') return sortInboxEvents(platformEvents);
-    if (filter === 'todayAnnouncement') return sortTodayAnnouncements(platformEvents);
-    return platformEvents;
-  }, [filter, filteredByTabEvents, platformFilter, searchQuery, searchScope]);
+    return filter === 'todayAnnouncement'
+      ? sortTodayAnnouncements(platformEvents)
+      : platformEvents;
+  }, [filter, filteredByTabEvents, platformFilter, sortMode]);
 
   const winningTotal = useMemo(
     () =>
@@ -668,385 +433,580 @@ function EventBotApp({ theme, setTheme, profile, onLock }) {
     [appEvents],
   );
 
-  const resultCount = filter === 'admin' ? adminUsers.length : visibleEvents.length;
-  const title = getFilterTitle(filter) || '이벤트';
+  const isManageMode = manageFilters.has(filter) || filter === 'admin';
 
   return (
-    <div className="dn-app">
-      <aside className="dn-sidebar" aria-label="주요 메뉴">
-        <div className="dn-brand">
-          <Brandmark />
-        </div>
-        <ProfileCard
-          profile={profile}
-          crawlerStatus={crawlerStatus}
-        />
-        <nav className="dn-nav">
-          {navFilters.map((item) => (
-            <NavItem
-              key={item.value}
-              item={item}
-              active={filter === item.value}
-              count={counts[item.countKey]}
-              onClick={() => setFilter(item.value)}
+    <>
+      <main className={`app-shell ${isManageMode ? 'manage-mode' : 'click-mode'}`}>
+        <section className="app-hero" aria-label="주요 메뉴">
+          <DesktopNav
+            counts={counts}
+            filters={navFilters}
+            selectedFilter={filter}
+            onSelect={setFilter}
+          />
+          <SidebarProfile
+            profile={profile}
+            theme={theme}
+            crawlerStatus={crawlerStatus}
+            onThemeChange={setTheme}
+            onLock={onLock}
+          />
+        </section>
+
+        <section className="work-panel" aria-label="이벤트 관리">
+          <div className="toolbar">
+            <div>
+              <p className="section-label">현재 보기</p>
+              <h2>{getFilterTitle(filter)}</h2>
+            </div>
+            <div className="toolbar-actions">
+              <button
+                type="button"
+                className="settings-button"
+                onClick={() => setIsSettingsOpen((current) => !current)}
+              >
+                필터설정
+              </button>
+              <span className="list-count">{visibleEvents.length}개</span>
+            </div>
+          </div>
+
+          {syncNotice ? (
+            <p className={`sync-notice sync-${syncNotice.type}`}>{syncNotice.message}</p>
+          ) : null}
+
+          {isSettingsOpen ? (
+            <FilterSettingsPanel
+              events={appEvents}
+              settings={filterSettings}
+              commentSettings={commentSettings}
+              counts={counts}
+              selectedFilter={filter}
+              theme={theme}
+              onChange={setFilterSettings}
+              onCommentSettingsChange={setCommentSettings}
+              onSaveCommentSettings={handleSaveCommentSettings}
+              onThemeChange={setTheme}
+              onSelectFilter={setFilter}
+              onLock={onLock}
+              onReset={() => setFilterSettings(defaultFilterSettings)}
             />
-          ))}
-        </nav>
-        <div className="dn-sidebar-actions">
-          <IconBtn
-            name={theme === 'dark' ? 'sun' : 'moon'}
-            title="테마 전환"
-            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
-          />
-          <IconBtn name="lock" title="잠금" onClick={onLock} />
-        </div>
-      </aside>
+          ) : null}
 
-      <div className="dn-main-col">
-        <SyncNotice notice={syncNotice} />
-        <header className="dn-topbar">
-          <div className="dn-mobile-brand">
-            <Brandmark compact />
-          </div>
-          <div className="dn-topbar-title">
-            <h1>{title}</h1>
-            <span className="tnum">{resultCount}건</span>
-          </div>
-          <div className="dn-topbar-actions">
-            <Button
-              variant="outline"
-              icon="filter"
-              className="dn-filter-button"
-              onClick={() => setIsSettingsOpen(true)}
-            >
-              필터설정
-            </Button>
-          </div>
-        </header>
+          {filter === 'ready' && platformOptions.length > 1 ? (
+            <div className="filter-chips" aria-label="이벤트 종류별 보기">
+              <button
+                type="button"
+                className={platformFilter === 'all' ? 'is-active' : ''}
+                onClick={() => setPlatformFilter('all')}
+              >
+                전체 <strong>{filteredByTabEvents.length}</strong>
+              </button>
+              {platformOptions.map((option) => (
+                <button
+                  key={option.platform}
+                  type="button"
+                  className={platformFilter === option.platform ? 'is-active' : ''}
+                  onClick={() => setPlatformFilter(option.platform)}
+                >
+                  {option.platform} <strong>{option.count}</strong>
+                </button>
+              ))}
+            </div>
+          ) : null}
 
-        <main className="dn-content-scroll">
-          <div className="dn-content-inner" key={filter}>
-            {filter === 'ready' && platformOptions.length > 1 ? (
-              <PlatformChips
-                options={platformOptions}
-                selected={platformFilter}
-                total={filteredByTabEvents.length}
-                onSelect={setPlatformFilter}
-              />
-            ) : null}
+          {isSortableFilter(filter) ? (
+            <SortChips selectedSort={sortMode} onSelectSort={setSortMode} />
+          ) : null}
 
-            {filter === 'search' ? (
-              <SearchControls
-                query={searchQuery}
-                scope={searchScope}
-                onQueryChange={setSearchQuery}
-                onScopeChange={setSearchScope}
-              />
-            ) : null}
+          {filter === 'admin' ? (
+            <AdminPanel
+              onSummaryChange={setAdminSummary}
+              onNotice={setSyncNotice}
+              crawlerStatus={crawlerStatus}
+              isCrawling={isCrawling}
+              onCrawl={handleManualCrawl}
+            />
+          ) : filter === 'todayDeadline' ? (
+            <TodayDeadlineList
+              events={visibleEvents}
+              isLoading={isLoading}
+              selectedFilter={deadlineFilter}
+              onSelectFilter={setDeadlineFilter}
+              onDeadlineChange={updateDeadline}
+              onStatusChange={updateDeadlineStatus}
+            />
+          ) : filter === 'search' ? (
+            <EventSearch
+              events={visibleEvents}
+              isLoading={isLoading}
+              query={searchQuery}
+              scope={searchScope}
+              onQueryChange={setSearchQuery}
+              onScopeChange={setSearchScope}
+              onStatusChange={updateStatus}
+            />
+          ) : filter === 'inbox' ? (
+            <EventInbox
+              events={visibleEvents}
+              isLoading={isLoading}
+              selectedFilter={inboxFilter}
+              onSelectFilter={setInboxFilter}
+              totalAmount={winningTotal}
+              onAnnouncementChange={updateAnnouncement}
+              onResultChange={updateResult}
+              onMetaChange={updateWinningMeta}
+              onDelete={deleteInboxEvent}
+            />
+          ) : (
+            <div className="event-list">
+              {visibleEvents.length > 0 ? (
+                visibleEvents.map((event) => (
+                  <EventCard
+                    key={event.id}
+                    event={event}
+                    filter={filter}
+                    onResultChange={updateResult}
+                    onAnnouncementChange={updateAnnouncement}
+                    onDeadlineChange={updateDeadline}
+                    onStatusChange={updateStatus}
+                  />
+                ))
+              ) : (
+                <p className="empty-message">
+                  {isLoading ? '이벤트를 불러오는 중입니다.' : getEmptyMessage(filter)}
+                </p>
+              )}
+            </div>
+          )}
+        </section>
+      </main>
 
-            {renderScreen({
-              filter,
-              events: visibleEvents,
-              isLoading,
-              deadlineFilter,
-              setDeadlineFilter,
-              inboxFilter,
-              setInboxFilter,
-              winningTotal,
-              updateStatus,
-              updateDeadline,
-              updateResult,
-              updateAnnouncement,
-              updateWinningMeta,
-              deleteInboxEvent,
-              searchQuery,
-              adminUsers,
-              updatingAdminUserId,
-              handleAdminUserChange,
-              crawlerStatus,
-              isCrawling,
-              handleManualCrawl,
-              setSyncNotice,
-            })}
-          </div>
-        </main>
-      </div>
-
-      <nav className="dn-tabbar" aria-label="하단 메뉴">
-        {navFilters.map((item) => (
-          <NavItem
-            key={item.value}
-            item={item}
-            active={filter === item.value}
-            count={counts[item.countKey]}
-            onClick={() => setFilter(item.value)}
-            compact
-          />
-        ))}
-      </nav>
-
-      {isSettingsOpen ? (
-        <FilterPanel
-          settings={filterSettings}
-          commentSettings={commentSettings}
-          theme={theme}
-          onToggleTheme={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
-          onLock={onLock}
-          counts={{
-            skipped: counts.skipped,
-            passed: appEvents.filter(isExpiredReadyEvent).length,
-            oldExcluded: appEvents.filter(isOldSkippedEvent).length,
-          }}
-          onGoExcluded={() => {
-            setFilter('skipped');
-            setIsSettingsOpen(false);
-          }}
-          onClose={() => setIsSettingsOpen(false)}
-          onFilterChange={(patch) =>
-            setFilterSettings((current) => normalizeFilterSettings({ ...current, ...patch }))
-          }
-          onCommentSettingsChange={setCommentSettings}
-          onSaveCommentSettings={handleSaveCommentSettings}
-          onReset={() => setFilterSettings(defaultFilterSettings)}
-        />
-      ) : null}
-    </div>
-  );
-}
-
-function renderScreen({
-  filter,
-  events,
-  isLoading,
-  deadlineFilter,
-  setDeadlineFilter,
-  inboxFilter,
-  setInboxFilter,
-  winningTotal,
-  updateStatus,
-  updateDeadline,
-  updateResult,
-  updateAnnouncement,
-  updateWinningMeta,
-  deleteInboxEvent,
-  searchQuery,
-  adminUsers,
-  updatingAdminUserId,
-  handleAdminUserChange,
-  crawlerStatus,
-  isCrawling,
-  handleManualCrawl,
-  setSyncNotice,
-}) {
-  if (filter === 'admin') {
-    return (
-      <AdminScreen
-        users={adminUsers}
-        crawlerStatus={crawlerStatus}
-        isCrawling={isCrawling}
-        onCrawl={handleManualCrawl}
-        onNotice={setSyncNotice}
-        onUserChange={handleAdminUserChange}
-        updatingUserId={updatingAdminUserId}
+      <BottomNav
+        counts={counts}
+        filters={navFilters}
+        selectedFilter={filter}
+        onSelect={setFilter}
       />
-    );
-  }
-
-  if (filter === 'todayDeadline') {
-    return (
-      <DeadlineScreen
-        events={events}
-        isLoading={isLoading}
-        selectedFilter={deadlineFilter}
-        onSelectFilter={setDeadlineFilter}
-        onDeadlineChange={updateDeadline}
-        onStatusChange={updateStatus}
-      />
-    );
-  }
-
-  if (filter === 'inbox') {
-    return (
-      <InboxScreen
-        events={events}
-        isLoading={isLoading}
-        selectedFilter={inboxFilter}
-        onSelectFilter={setInboxFilter}
-        totalAmount={winningTotal}
-        onAnnouncementChange={updateAnnouncement}
-        onResultChange={updateResult}
-        onMetaChange={updateWinningMeta}
-        onDelete={deleteInboxEvent}
-      />
-    );
-  }
-
-  if (events.length === 0 && !isLoading) {
-    return <Empty icon={FILTER_ICONS[filter] || 'inbox'} title={getEmptyMessage(filter)} />;
-  }
-
-  return (
-    <EventsList
-      events={events}
-      filter={filter}
-      isLoading={isLoading}
-      onStatusChange={updateStatus}
-      onDeadlineChange={updateDeadline}
-      onResultChange={updateResult}
-      onAnnouncementChange={updateAnnouncement}
-      query={filter === 'search' ? searchQuery : ''}
-    />
+    </>
   );
 }
 
-function SyncNotice({ notice }) {
-  if (!notice) return null;
-  return (
-    <div className={`dn-sync dn-sync-${notice.type || 'info'}`} role="status">
-      <Icon
-        name={notice.type === 'success' ? 'checkCircle' : notice.type === 'warning' ? 'alert' : 'cloud'}
-        size={15}
-      />
-      <span>{notice.message}</span>
-    </div>
-  );
-}
+const sortOptions = [
+  { value: 'default', label: '기본순' },
+  { value: 'popular', label: '인기순' },
+  { value: 'winners', label: '당첨자수 많은순' },
+  { value: 'deadline', label: '마감임박순' },
+  { value: 'newest', label: '최신수집순' },
+];
 
-function Brandmark({ compact = false }) {
+function SortChips({ selectedSort, onSelectSort }) {
   return (
-    <div className={`dn-brandmark${compact ? ' is-compact' : ''}`}>
-      <span className="dn-brandmark-icon">
-        <Icon name="trophy" size={compact ? 15 : 18} stroke={2.1} />
-      </span>
-      {!compact ? <strong>당첨노트</strong> : null}
-    </div>
-  );
-}
-
-function ProfileCard({ profile, crawlerStatus }) {
-  const name = profile?.display_name || profile?.email?.split('@')[0] || '사용자';
-  const recentSeen = Number.isFinite(crawlerStatus?.recentSeen24h)
-    ? crawlerStatus.recentSeen24h
-    : Array.isArray(crawlerStatus?.recentEvents)
-      ? crawlerStatus.recentEvents.length
-      : null;
-  const crawlerInfo = getCrawlerStatusInfo(crawlerStatus?.status, recentSeen);
-
-  return (
-    <section className="dn-profile">
-      <Avatar initial={getInitials(name)} size={40} admin={profile?.is_admin} />
-      <div>
-        <strong>{name}</strong>
-        <span>
-          <i className={`dn-status-dot dn-status-${crawlerInfo.kind}`} />
-          {crawlerInfo.label}
-        </span>
-      </div>
-      {profile?.is_admin ? <Badge tone="accent">관리자</Badge> : null}
-    </section>
-  );
-}
-
-function NavItem({ item, active, count, onClick, compact = false }) {
-  const icon = item.icon || FILTER_ICONS[item.value] || 'inbox';
-  return (
-    <button
-      type="button"
-      className={`dn-nav-item${active ? ' is-active' : ''}${compact ? ' is-compact' : ''}`}
-      onClick={onClick}
-    >
-      <span className="dn-nav-icon">
-        <Icon name={icon} size={compact ? 19 : 17} />
-        {compact && count > 0 ? <b className="tnum">{count}</b> : null}
-      </span>
-      <span>{item.label}</span>
-      {!compact && count > 0 ? <b className="tnum">{count}</b> : null}
-    </button>
-  );
-}
-
-function PlatformChips({ options, selected, total, onSelect }) {
-  return (
-    <div className="dn-chip-row">
-      <Chip active={selected === 'all'} count={total} onClick={() => onSelect('all')}>
-        전체
-      </Chip>
-      {options.map((option) => (
+    <div className="sort-options" aria-label="이벤트 정렬">
+      {sortOptions.map((option) => (
         <button
-          key={option.platform}
+          key={option.value}
           type="button"
-          className={`dn-platform-chip${selected === option.platform ? ' is-active' : ''}`}
-          onClick={() => onSelect(option.platform)}
+          className={selectedSort === option.value ? 'is-active' : ''}
+          onClick={() => onSelectSort(option.value)}
         >
-          <PlatformBadge platform={option.platform} />
-          <span>{option.platform}</span>
-          <b className="tnum">{option.count}</b>
+          {option.label}
         </button>
       ))}
     </div>
   );
 }
 
-function SearchControls({ query, scope, onQueryChange, onScopeChange }) {
+function isSortableFilter(filter) {
+  return filter === 'ready' || filter === 'todayDeadline';
+}
+
+function sortEventsByMode(events, sortMode, filter) {
+  if (sortMode === 'popular') {
+    return [...events].sort(
+      (first, second) =>
+        getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
+  if (sortMode === 'winners') {
+    return [...events].sort(
+      (first, second) =>
+        getTotalWinnerCount(second) - getTotalWinnerCount(first) ||
+        getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
+  if (sortMode === 'deadline') {
+    return sortTodayDeadlineEvents(events);
+  }
+
+  if (sortMode === 'newest') {
+    return [...events].sort(
+      (first, second) =>
+        getEventTime(second) - getEventTime(first) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
+  return filter === 'todayDeadline' ? sortTodayDeadlineEvents(events) : [...events];
+}
+
+function getNumber(value) {
+  return Number.isFinite(value) ? value : 0;
+}
+
+function getTotalWinnerCount(event) {
+  const raw = event.raw ?? {};
+  const direct = parseCount(event.totalWinnerCount ?? raw.totalWinnerCount);
+  if (Number.isFinite(direct)) return direct;
+
+  const text = [
+    ...(Array.isArray(event.detailMetaLines) ? event.detailMetaLines : []),
+    ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+    event.originalText,
+    raw.originalText,
+  ].filter(Boolean).join('\n');
+
+  const match = text.match(/(?:총\s*)?당첨자\s*수|당첨\s*인원/i);
+  if (!match) return 0;
+  const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 40);
+  return parseCount(afterLabel) || 0;
+}
+
+function parseCount(value) {
+  const match = String(value ?? '').match(/\d[\d,]*/);
+  if (!match) return NaN;
+  const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
+  return Number.isFinite(count) ? count : NaN;
+}
+
+function getEventTime(event) {
+  const value = event.lastSeenAt ?? event.createdAt ?? event.crawledAt ?? '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function GoogleLoginGate({ theme, setTheme, error: initialError }) {
+  const [error, setError] = useState(initialError || '');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  async function handleLogin() {
+    setError('');
+    setIsSubmitting(true);
+
+    try {
+      await signInWithGoogle();
+    } catch (submitError) {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Google \uB85C\uADF8\uC778\uC744 \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+      );
+      setIsSubmitting(false);
+    }
+  }
+
   return (
-    <section className="dn-search-panel">
-      <Icon name="search" size={17} />
-      <input
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="제목, 경품, 본문, 발표 문구를 검색"
-      />
-      <div className="dn-search-scope">
-        {[
-          { value: 'all', label: '전체' },
-          { value: 'ready', label: '대기' },
-          { value: 'done', label: '응모' },
-        ].map((item) => (
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-head">
+          <div>
+            <p className="app-kicker">EVENT CLICK</p>
+            <h1 id="auth-title">Google {'\uB85C\uADF8\uC778'}</h1>
+          </div>
           <button
-            key={item.value}
             type="button"
-            className={scope === item.value ? 'is-active' : ''}
-            onClick={() => onScopeChange(item.value)}
+            className="theme-switch"
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
           >
-            {item.label}
+            {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
-        ))}
-      </div>
-    </section>
+        </div>
+        <div className="auth-form">
+          <p className="auth-help">
+            {'\uC2B9\uC778\uB41C Google \uACC4\uC815\uC73C\uB85C\uB9CC \uC774\uBCA4\uD2B8\uBD07\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'}
+          </p>
+          {error ? <p className="auth-error">{error}</p> : null}
+          <button type="button" onClick={handleLogin} disabled={isSubmitting}>
+            {isSubmitting ? '\uB85C\uADF8\uC778 \uC911' : 'Google\uB85C \uB85C\uADF8\uC778'}
+          </button>
+        </div>
+      </section>
+    </main>
   );
 }
 
-function normalizeAdminUser(user) {
-  const stats = user.stats || {};
-  return {
-    ...user,
-    id: user.user_id || user.id,
-    user_id: user.user_id || user.id,
-    display_name: user.display_name || user.name || user.email?.split('@')[0],
-    is_admin: Boolean(user.is_admin),
-    approved: Boolean(user.approved),
-    stats: {
-      ...stats,
-      done: Number(stats.done) || 0,
-      won: Number(stats.won) || 0,
-      lost: Number(stats.lost) || 0,
-      unreceived: Number(stats.unreceived) || 0,
-      prize: Number(stats.prize ?? stats.prizeAmount) || 0,
-    },
-  };
+function PendingApprovalGate({ theme, setTheme, profile, onSignOut }) {
+  return (
+    <AuthStatusGate
+      theme={theme}
+      setTheme={setTheme}
+      title={'\uC2B9\uC778 \uB300\uAE30 \uC911'}
+      message={
+        (profile?.email ?? '\uD604\uC7AC \uACC4\uC815') +
+        '\uC740 \uC544\uC9C1 \uC2B9\uC778\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uAD00\uB9AC\uC790 \uC2B9\uC778 \uD6C4 \uB2E4\uC2DC \uC811\uC18D\uD574 \uC8FC\uC138\uC694.'
+      }
+      actionLabel={'\uB2E4\uB978 \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778'}
+      onAction={onSignOut}
+    />
+  );
+}
+
+function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction }) {
+  return (
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-head">
+          <div>
+            <p className="app-kicker">EVENT CLICK</p>
+            <h1 id="auth-title">{title}</h1>
+          </div>
+          <button
+            type="button"
+            className="theme-switch"
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+        </div>
+        <div className="auth-form">
+          <p className="auth-help">{message}</p>
+          {actionLabel ? (
+            <button type="button" onClick={onAction}>
+              {actionLabel}
+            </button>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
+}
+function getCrawlerStatusInfo(status, recentSeen) {
+  if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
+  if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
+  if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
+  return { kind: 'success', label: '크롤링 정상' };
+}
+
+function getEmptyMessage(filter) {
+  if (filter === 'ready') return '응모 대기 이벤트가 없습니다.';
+  if (filter === 'later') return '임시저장한 이벤트가 없습니다.';
+  if (filter === 'skipped') return '제외한 이벤트가 없습니다.';
+  return '표시할 이벤트가 없습니다.';
+}
+
+function FilterSettingsPanel({
+  events,
+  settings,
+  commentSettings,
+  counts,
+  selectedFilter,
+  theme,
+  onChange,
+  onCommentSettingsChange,
+  onSaveCommentSettings,
+  onThemeChange,
+  onSelectFilter,
+  onLock,
+  onReset,
+}) {
+  const platforms = useMemo(
+    () =>
+      [...new Set(events.map((event) => event.platform).filter(Boolean))].sort((first, second) =>
+        first.localeCompare(second, 'ko-KR'),
+      ),
+    [events],
+  );
+  const keywordText = settings.excludedKeywords.join('\n');
+  const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
+  const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
+
+  function updateSettings(patch) {
+    onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
+  }
+
+  function togglePlatform(platform) {
+    const hiddenPlatforms = new Set(settings.hiddenPlatforms);
+    if (hiddenPlatforms.has(platform)) {
+      hiddenPlatforms.delete(platform);
+    } else {
+      hiddenPlatforms.add(platform);
+    }
+    updateSettings({ hiddenPlatforms: [...hiddenPlatforms] });
+  }
+
+  const [keywordDraft, setKeywordDraft] = useState(keywordText);
+  const isComposingKeyword = useRef(false);
+
+  useEffect(() => {
+    if (!isComposingKeyword.current && keywordDraft !== keywordText) {
+      setKeywordDraft(keywordText);
+    }
+  }, [keywordDraft, keywordText]);
+
+  function saveKeywordDraft(value) {
+    updateSettings({ excludedKeywords: parseKeywordInput(value) });
+  }
+
+  return (
+    <section className="settings-panel" aria-label="필터 설정">
+      <div className="settings-actions">
+        <button
+          type="button"
+          className="settings-action-button"
+          onClick={() =>
+            onThemeChange((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
+          }
+        >
+          {theme === 'dark' ? '라이트 모드' : '다크 모드'}
+        </button>
+        <button type="button" className="settings-action-button" onClick={onLock}>
+          잠금
+        </button>
+        <button
+          type="button"
+          className={`settings-action-button settings-excluded-button${
+            selectedFilter === 'skipped' ? ' is-active' : ''
+          }`}
+          onClick={() => onSelectFilter('skipped')}
+        >
+          제외 {counts.skipped}
+        </button>
+      </div>
+
+      <label className="keyword-field">
+        <span>제외 키워드</span>
+        <textarea
+          rows="3"
+          value={keywordDraft}
+          placeholder={'\uC608: \uCCB4\uD5D8\uB2E8\n\uB9AC\uADF8\uB7A8'}
+          onChange={(event) => {
+            setKeywordDraft(event.target.value);
+            if (!event.nativeEvent.isComposing && !isComposingKeyword.current) {
+              saveKeywordDraft(event.target.value);
+            }
+          }}
+          onCompositionStart={() => {
+            isComposingKeyword.current = true;
+          }}
+          onCompositionEnd={(event) => {
+            isComposingKeyword.current = false;
+            setKeywordDraft(event.currentTarget.value);
+            saveKeywordDraft(event.currentTarget.value);
+          }}
+          onBlur={(event) => saveKeywordDraft(event.currentTarget.value)}
+        />
+      </label>
+
+      <section className="comment-settings" aria-label="댓글 생성 설정">
+        <div>
+          <strong>댓글 생성 설정</strong>
+          <span>비워두면 기본 마스터 프롬프트와 서버 Gemini 키를 사용합니다.</span>
+        </div>
+        <label>
+          <span>내 Gemini API 키</span>
+          <input
+            type="password"
+            value={commentSettings.geminiApiKey}
+            placeholder="AIza... 개인 키를 쓰고 싶을 때만 입력"
+            autoComplete="off"
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, geminiApiKey: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <label>
+          <span>댓글 작성 프롬프트</span>
+          <textarea
+            rows="5"
+            value={commentSettings.commentPrompt}
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, commentPrompt: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <div className="comment-settings-actions">
+          <button type="button" className="settings-action-button" onClick={onSaveCommentSettings}>
+            댓글 설정 저장
+          </button>
+          <button
+            type="button"
+            className="settings-reset"
+            onClick={() => onCommentSettingsChange(defaultCommentSettings)}
+          >
+            기본값
+          </button>
+        </div>
+      </section>
+
+      <label className="settings-check-row">
+        <input
+          type="checkbox"
+          checked={settings.hideExpiredReadyEvents !== false}
+          onChange={(event) => updateSettings({ hideExpiredReadyEvents: event.target.checked })}
+        />
+        <span>
+          마감 지난 미응모 대기 숨김 <strong>{expiredReadyCount}개</strong>
+        </span>
+      </label>
+
+      <p className="settings-cleanup-note">
+        오래된 제외 이벤트 정리 대상 {oldSkippedCount}개 · 아직 DB 삭제 없이 화면 정리만 합니다.
+      </p>
+
+      {platforms.length > 0 ? (
+        <div className="platform-settings">
+          <span>숨길 플랫폼</span>
+          <div>
+            {platforms.map((platform) => (
+              <button
+                key={platform}
+                type="button"
+                className={settings.hiddenPlatforms.includes(platform) ? 'is-active' : ''}
+                onClick={() => togglePlatform(platform)}
+              >
+                {platform}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <button type="button" className="settings-reset" onClick={onReset}>
+        기본값
+      </button>
+    </section>
+  );
 }
 
 function buildCounts(events, filterSettings) {
   return events.reduce(
     (acc, event) => {
+      if (event.status === 'ready') acc.allReady += 1;
       if (matchesFilter(event, 'ready', filterSettings)) acc.ready += 1;
+      if (event.status === 'done') acc.done += 1;
       if (event.status === 'done') acc.inbox += 1;
       if (matchesFilter(event, 'later', filterSettings)) acc.later += 1;
-      if (matchesFilter(event, 'todayDeadline', filterSettings) && getTodayDeadlineMatch(event).isMatch) {
+      if (event.status === 'done' && event.resultStatus === 'unknown') {
+        acc.resultUnknown += 1;
+      }
+      if (
+        matchesFilter(event, 'todayDeadline', filterSettings) &&
+        getTodayDeadlineMatch(event).isMatch
+      ) {
         acc.todayDeadline += 1;
       }
       if (matchesFilter(event, 'search', filterSettings)) acc.searchable += 1;
-      if (event.resultStatus === 'unknown') acc.resultUnknown += 1;
       if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
       if (event.resultStatus === 'won') acc.won += 1;
       if (event.resultStatus === 'lost') acc.lost += 1;
@@ -1054,7 +1014,9 @@ function buildCounts(events, filterSettings) {
       return acc;
     },
     {
+      allReady: 0,
       ready: 0,
+      done: 0,
       inbox: 0,
       later: 0,
       todayDeadline: 0,
@@ -1068,19 +1030,52 @@ function buildCounts(events, filterSettings) {
   );
 }
 
-function getCrawlerStatusInfo(status, recentSeen) {
-  if (status === 'failure') return { kind: 'failure', label: '크롤러 실패' };
-  if (status === 'requested') return { kind: 'requested', label: '크롤러 요청됨' };
-  if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
-  return { kind: 'success', label: '크롤러 정상' };
-}
+function SidebarProfile({ profile, theme, crawlerStatus, onThemeChange, onLock }) {
+  const displayName = profile?.display_name || profile?.email || '';
+  const shortName = profile?.display_name || shortenEmail(profile?.email || '');
+  const recentSeen = Number.isFinite(crawlerStatus?.recentSeen24h)
+    ? crawlerStatus.recentSeen24h
+    : Array.isArray(crawlerStatus?.recentEvents)
+      ? crawlerStatus.recentEvents.length
+      : null;
+  const crawlerInfo = crawlerStatus
+    ? getCrawlerStatusInfo(crawlerStatus.status, recentSeen)
+    : { kind: 'unknown', label: '상태 확인 중' };
 
-function getEmptyMessage(filter) {
-  if (filter === 'ready') return '응모 대기 이벤트가 없어요';
-  if (filter === 'later') return '임시저장한 이벤트가 없어요';
-  if (filter === 'skipped') return '제외한 이벤트가 없어요';
-  if (filter === 'search') return '검색 결과가 없어요';
-  return '표시할 이벤트가 없어요';
+  return (
+    <div className="sidebar-profile" aria-label="로그인 상태">
+      <div className="sidebar-profile-main">
+        <span className="sidebar-profile-avatar" aria-hidden="true">
+          {getInitials(displayName)}
+        </span>
+        <div className="sidebar-profile-info">
+          <strong title={displayName}>{shortName || '내 계정'}</strong>
+          <span className={`sidebar-profile-status sidebar-profile-status-${crawlerInfo.kind}`}>
+            {crawlerInfo.label}
+          </span>
+        </div>
+      </div>
+      <div className="sidebar-profile-actions">
+        {profile?.is_admin ? <span className="sidebar-profile-badge">관리자</span> : null}
+        <button
+          type="button"
+          className="sidebar-profile-btn"
+          aria-label="테마 변경"
+          onClick={() => onThemeChange((current) => (current === 'dark' ? 'light' : 'dark'))}
+        >
+          {theme === 'dark' ? '☀' : '◑'}
+        </button>
+        <button
+          type="button"
+          className="sidebar-profile-btn sidebar-profile-btn--lock"
+          aria-label="잠금"
+          onClick={onLock}
+        >
+          잠금
+        </button>
+      </div>
+    </div>
+  );
 }
 
 function getInitials(name) {
@@ -1089,6 +1084,10 @@ function getInitials(name) {
   const words = clean.split(/[\s._-]+/).filter(Boolean);
   if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
   return clean.slice(0, 2).toUpperCase();
+}
+
+function shortenEmail(email) {
+  return email.includes('@') ? email.split('@')[0] : email;
 }
 
 export default App;
