@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { announceMeta, inboxSortKey, won, wonShort, parseAmount } from '../../lib/domain.js';
-import { Icon, Badge, Seg, IconBtn, Empty, PlatformBadge } from '../../components/index.jsx';
+import { Icon, Badge, Seg, IconBtn, Empty, PlatformBadge, Chip } from '../../components/index.jsx';
 import { formatDate } from '../../utils/format.js';
 
 const INPUT_STYLE = {
