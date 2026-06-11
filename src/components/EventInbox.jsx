@@ -9,25 +9,32 @@ import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
 import { EventCard } from './EventCards.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { PlatformBadge } from './PlatformBadge.jsx';
 
 const deadlineFilters = [
   { value: 'all', label: '전체' },
   { value: 'today', label: '오늘' },
   { value: 'tomorrow', label: '내일' },
   { value: 'week', label: '7일 이내' },
-  { value: 'unknown', label: '확인 필요' },
+  { value: 'unknown', label: '마감일 미확인' },
 ];
 
 const inboxFilters = [
-  { value: 'all', label: '전체' },
-  { value: 'check', label: '발표확인' },
+  { value: 'all', label: '결과 미확인' },
+  { value: 'check', label: '오늘발표' },
   { value: 'won', label: '당첨' },
   { value: 'unreceived', label: '미수령' },
   { value: 'lost', label: '미당첨' },
 ];
 
-export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
-  const [selectedFilter, setSelectedFilter] = useState('all');
+export function TodayDeadlineList({
+  events,
+  isLoading,
+  selectedFilter,
+  onSelectFilter,
+  onDeadlineChange,
+  onStatusChange,
+}) {
   const sortedEvents = events;
   const filterCounts = useMemo(
     () =>
@@ -60,7 +67,7 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
             type="button"
             key={filter.value}
             className={selectedFilter === filter.value ? 'is-active' : ''}
-            onClick={() => setSelectedFilter(filter.value)}
+            onClick={() => onSelectFilter(filter.value)}
           >
             {filter.label} <strong>{filterCounts[filter.value]}</strong>
           </button>
@@ -74,6 +81,7 @@ export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
               key={event.id}
               event={event}
               filter="todayDeadline"
+              onDeadlineChange={onDeadlineChange}
               onStatusChange={onStatusChange}
             />
           ))
@@ -97,15 +105,18 @@ function matchesDeadlineView(event, view) {
 export function EventInbox({
   events,
   isLoading,
+  selectedFilter,
+  onSelectFilter,
   totalAmount,
   onAnnouncementChange,
   onResultChange,
   onMetaChange,
   onDelete,
 }) {
-  const [selectedFilter, setSelectedFilter] = useState('all');
   const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
   const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
+  const attentionCounts = useMemo(() => buildInboxAttentionCounts(sortedEvents), [sortedEvents]);
+  const winRate = useMemo(() => getWinRateLabel(sortedEvents), [sortedEvents]);
   const visibleEvents = useMemo(
     () => sortedEvents.filter((event) => matchesInboxView(event, selectedFilter)),
     [selectedFilter, sortedEvents],
@@ -120,19 +131,23 @@ export function EventInbox({
   }
 
   return (
-    <div className="inbox-board">
+    <div className={`inbox-board inbox-view-${selectedFilter}`}>
       <div className="inbox-summary">
         <div>
           <span>응모완료</span>
           <strong>{events.length}</strong>
         </div>
-        <div>
-          <span>발표확인</span>
+        <div className={attentionCounts.check > 0 ? 'is-attention' : ''}>
+          <span>오늘발표</span>
           <strong>{inboxCounts.check}</strong>
         </div>
-        <div>
+        <div className={`inbox-summary-unreceived${attentionCounts.unreceived > 0 ? ' is-attention' : ''}`}>
           <span>미수령</span>
           <strong>{inboxCounts.unreceived}</strong>
+        </div>
+        <div>
+          <span>당첨률</span>
+          <strong>{winRate}</strong>
         </div>
         <div>
           <span>당첨금</span>
@@ -146,7 +161,7 @@ export function EventInbox({
             type="button"
             key={filter.value}
             className={selectedFilter === filter.value ? 'is-active' : ''}
-            onClick={() => setSelectedFilter(filter.value)}
+            onClick={() => onSelectFilter(filter.value)}
           >
             {filter.label} <strong>{inboxCounts[filter.value]}</strong>
           </button>
@@ -154,13 +169,6 @@ export function EventInbox({
       </div>
 
       <div className="inbox-list">
-        <div className="inbox-list-head" aria-hidden="true">
-          <span>응모일</span>
-          <span>이벤트</span>
-          <span>발표/결과</span>
-          <span>경품</span>
-          <span>관리</span>
-        </div>
         {visibleEvents.length > 0 ? (
           visibleEvents.map((event) => (
             <InboxRow
@@ -187,10 +195,12 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
   const prize = event.prizeTitle || getPrizeDisplay(event);
   const amount = parsePrizeAmount(event.prizeAmount);
   const isWon = resultStatus === 'won';
+  const isUnreceived = isWon && event.receiptStatus !== 'received';
   const isCheckTarget =
     resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
-  const handleDelete = () => {
-    if (window.confirm('이 응모 기록을 응모함에서 삭제할까요?')) {
+  const originalUrl = getHttpOriginalUrl(event);
+  const handleRestoreToReady = () => {
+    if (window.confirm('이 응모 기록을 대기 상태로 되돌릴까요?')) {
       onDelete(event.id);
     }
   };
@@ -199,11 +209,13 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
     <article
       className={`inbox-row inbox-row-${resultStatus} inbox-announcement-${announcement.state}${
         isCheckTarget ? ' is-check-target' : ''
+      }${
+        isUnreceived ? ' is-unreceived-target' : ''
       }`}
     >
       <div className="inbox-date-cell">
         <time>{formatDate(event.participatedAt)}</time>
-        <span>{event.platform}</span>
+        <PlatformBadge platform={event.platform} />
       </div>
 
       <div className="inbox-title-cell">
@@ -215,6 +227,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
               : '오늘 발표'}
           </p>
         ) : null}
+        {isUnreceived ? <p className="inbox-attention inbox-receipt-attention">미수령</p> : null}
       </div>
 
       <div className="inbox-state-cell">
@@ -235,20 +248,7 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
       </div>
 
       <div className="inbox-action-cell">
-        <div className="inbox-top-actions">
-          <button
-            type="button"
-            className="manage-edit-text-button"
-            onClick={() => setIsEditing((value) => !value)}
-          >
-            수정
-          </button>
-          <button type="button" className="inbox-delete-button" onClick={handleDelete}>
-            삭제
-          </button>
-        </div>
-
-        <div className="manage-result-actions manage-actions-three">
+        <div className="manage-result-actions inbox-result-actions" aria-label={`${event.title} 결과 변경`}>
           <button
             type="button"
             className={resultStatus === 'won' ? 'is-won' : ''}
@@ -263,33 +263,62 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
           >
             미당첨
           </button>
-          {event.originalUrl || event.url ? (
+          {resultStatus !== 'unknown' ? (
+            <button
+              type="button"
+              className="is-reset"
+              onClick={() => onResultChange(event.id, 'unknown')}
+            >
+              미확인
+            </button>
+          ) : null}
+          {originalUrl ? (
             <ApplyLink
               className="manage-link"
-              url={event.originalUrl ?? event.url}
-              label="확인"
+              url={originalUrl}
+              label="원글"
             />
           ) : null}
         </div>
 
         {isWon ? (
-          <div className="ledger-quick-receipt" aria-label={`${event.title} 수령 상태 빠른 변경`}>
+          <div className="inbox-receipt-actions" aria-label={`${event.title} 수령 상태 빠른 변경`}>
+            <button
+              type="button"
+              className={(event.receiptStatus ?? 'unclaimed') === 'unclaimed' ? 'is-unreceived' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'unclaimed' })}
+            >
+              미수령
+            </button>
+            <button
+              type="button"
+              className={event.receiptStatus === 'requested' ? 'is-requested' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'requested' })}
+            >
+              요청
+            </button>
             <button
               type="button"
               className={event.receiptStatus === 'received' ? 'is-received' : ''}
               onClick={() => onMetaChange(event.id, { receiptStatus: 'received' })}
             >
-              수령완료
-            </button>
-            <button
-              type="button"
-              className={event.receiptStatus !== 'received' ? 'is-unreceived' : ''}
-              onClick={() => onMetaChange(event.id, { receiptStatus: 'unclaimed' })}
-            >
-              미수령
+              완료
             </button>
           </div>
         ) : null}
+
+        <div className="inbox-secondary-actions">
+          <button
+            type="button"
+            className="manage-edit-text-button"
+            onClick={() => setIsEditing((value) => !value)}
+          >
+            수정
+          </button>
+          <button type="button" className="inbox-delete-button" onClick={handleRestoreToReady}>
+            대기로
+          </button>
+        </div>
       </div>
 
       {isEditing ? (
@@ -350,6 +379,11 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
   );
 }
 
+function getHttpOriginalUrl(event) {
+  const url = event.originalUrl || event.url;
+  return /^https?:\/\//i.test(url ?? '') ? url : '';
+}
+
 function buildInboxCounts(events) {
   return {
     all: events.length,
@@ -360,9 +394,21 @@ function buildInboxCounts(events) {
   };
 }
 
+function buildInboxAttentionCounts(events) {
+  return {
+    check: events.filter((event) => {
+      const announcement = getAnnouncementStatus(event);
+      return event.resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
+    }).length,
+    unreceived: events.filter(
+      (event) => event.resultStatus === 'won' && event.receiptStatus !== 'received',
+    ).length,
+  };
+}
+
 function matchesInboxView(event, view) {
-  const announcement = getAnnouncementStatus(event);
   if (view === 'check') {
+    const announcement = getAnnouncementStatus(event);
     return event.resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
   }
   if (view === 'won') return event.resultStatus === 'won';
@@ -370,5 +416,12 @@ function matchesInboxView(event, view) {
     return event.resultStatus === 'won' && event.receiptStatus !== 'received';
   }
   if (view === 'lost') return event.resultStatus === 'lost';
-  return true;
+  return event.resultStatus === 'unknown';
+}
+
+function getWinRateLabel(events) {
+  const decidedEvents = events.filter((event) => ['won', 'lost'].includes(event.resultStatus));
+  if (decidedEvents.length === 0) return '-';
+  const wonCount = decidedEvents.filter((event) => event.resultStatus === 'won').length;
+  return `${Math.round((wonCount / decidedEvents.length) * 100)}%`;
 }

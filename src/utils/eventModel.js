@@ -8,6 +8,7 @@ export const FALLBACK_BODY_LINE =
   '아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.';
 
 export const PRIZE_FALLBACK = '경품 정보 미수집';
+const YOUTUBE_PLATFORM = '\uC720\uD29C\uBE0C \uC774\uBCA4\uD2B8';
 
 export function hasCrawledBody(event) {
   // EventBodyToggle/카드가 "원문에서 확인" 단순 안내로 분기할 때 사용한다.
@@ -17,12 +18,32 @@ export function hasCrawledBody(event) {
 
 export function enrichEvent(event) {
   const announcement = getFallbackAnnouncement(event);
+  const platform = getCorrectedPlatform(event);
   return {
     ...event,
     ...getFallbackDecision(event),
+    platform,
+    source: platform !== event.platform ? replaceSourcePlatform(event.source, platform) : event.source,
     resultAnnouncementDate: event.resultAnnouncementDate || announcement.date,
     resultAnnouncementText: event.resultAnnouncementText || announcement.text,
   };
+}
+
+function getCorrectedPlatform(event) {
+  if (hasYoutubeApplyUrl(event)) return YOUTUBE_PLATFORM;
+  return event.platform || '\uAE30\uD0C0 \uC774\uBCA4\uD2B8';
+}
+
+function replaceSourcePlatform(source = '', platform) {
+  if (!source) return platform;
+  if (!source.includes('\u00B7')) return source;
+  return source.replace(/\u00B7\s*.+$/, `\u00B7 ${platform}`);
+}
+
+function hasYoutubeApplyUrl(event = {}) {
+  const raw = event.raw ?? {};
+  const applyUrl = [event.applyTargetUrl, raw.applyTargetUrl].filter(Boolean).join(' ');
+  return /youtube\.com|youtu\.be/i.test(applyUrl);
 }
 
 function getFallbackAnnouncement(event) {
@@ -43,7 +64,7 @@ function getFallbackAnnouncement(event) {
 export function matchesFilter(event, filter, filterSettings) {
   if (isInstagramEvent(event)) return false;
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
-  if (shouldHideExpiredEvent(event, filter)) return false;
+  if (shouldHideExpiredReadyEvent(event, filter, filterSettings)) return false;
 
   if (filter === 'ready') return event.status === 'ready';
   if (filter === 'later') return event.status === 'later';
@@ -91,10 +112,26 @@ export function isExpiredEvent(event) {
   return deadline.getTime() < getLocalToday().getTime();
 }
 
-function shouldHideExpiredEvent(event, filter) {
-  if (!isExpiredEvent(event)) return false;
-  if (event.status === 'done') return false;
-  return ['ready', 'todayDeadline', 'search', 'skipped'].includes(filter);
+export function isExpiredReadyEvent(event) {
+  return event.status === 'ready' && isExpiredEvent(event);
+}
+
+export function isOldSkippedEvent(event) {
+  if (event.status !== 'skipped') return false;
+  const deadline = parseLocalDate(event.deadlineDate);
+  if (deadline) {
+    return deadline.getTime() < getLocalToday().getTime();
+  }
+  const lastSeenAt = parseLocalDate(String(event.lastSeenAt ?? ''));
+  if (!lastSeenAt) return false;
+  const thirtyDaysAgo = new Date(getLocalToday().getTime() - 30 * 86400000);
+  return lastSeenAt.getTime() < thirtyDaysAgo.getTime();
+}
+
+function shouldHideExpiredReadyEvent(event, filter, filterSettings) {
+  if (filter !== 'ready') return false;
+  if (filterSettings?.hideExpiredReadyEvents === false) return false;
+  return isExpiredReadyEvent(event);
 }
 
 export function isHiddenByFilterSettings(event, filterSettings) {

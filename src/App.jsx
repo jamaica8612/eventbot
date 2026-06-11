@@ -6,13 +6,15 @@ import {
 } from './constants.js';
 import {
   buildPlatformOptions,
+  isExpiredReadyEvent,
   isInstagramEvent,
+  isOldSkippedEvent,
   matchesFilter,
   matchesTodayAnnouncement,
   sortInboxEvents,
   sortTodayAnnouncements,
 } from './utils/eventModel.js';
-import { sortTodayDeadlineEvents } from './utils/deadlineModel.js';
+import { getTodayDeadlineMatch, sortTodayDeadlineEvents } from './utils/deadlineModel.js';
 import { parsePrizeAmount } from './utils/format.js';
 import {
   defaultFilterSettings,
@@ -22,17 +24,33 @@ import {
   saveFilterSettings,
 } from './storage/filterSettingsStorage.js';
 import {
+  defaultCommentSettings,
+  loadCommentSettings,
+  normalizeCommentSettings,
+  saveCommentSettings,
+} from './storage/commentSettingsStorage.js';
+import {
+  loadViewState,
+  saveViewState,
+} from './storage/viewStateStorage.js';
+import {
   hasSupabaseConfig,
   loadSupabaseCrawlerStatus,
+  loadSupabaseCommentSettings,
   loadSupabaseFilterSettings,
+  saveSupabaseCommentSettings,
   saveSupabaseFilterSettings,
+  triggerSupabaseCrawler,
 } from './storage/supabaseEventStorage.js';
 import {
-  clearSavedAuth,
-  hasSavedAuth,
+  getCurrentSession,
+  hasAuthConfig,
+  loadAuthProfile,
   onAuthRequired,
-  verifyPasscode,
-} from './storage/passcodeAuthStorage.js';
+  onAuthStateChange,
+  signInWithGoogle,
+  signOut,
+} from './storage/supabaseAuthStorage.js';
 import { useEventActions } from './hooks/useEventActions.js';
 import { useEvents, useTheme } from './hooks/useEvents.js';
 import {
@@ -42,45 +60,121 @@ import {
 import { EventCard } from './components/EventCards.jsx';
 import { EventInbox, TodayDeadlineList } from './components/EventInbox.jsx';
 import { EventSearch } from './components/EventSearch.jsx';
+import { AdminPanel } from './components/AdminPanel.jsx';
 
 function App() {
   const [theme, setTheme] = useTheme();
-  const [isUnlocked, setIsUnlocked] = useState(hasSavedAuth);
+  const [authState, setAuthState] = useState({
+    isLoading: true,
+    session: null,
+    profile: null,
+    error: '',
+  });
 
-  useEffect(() => onAuthRequired(() => setIsUnlocked(false)), []);
+  useEffect(() => {
+    let isMounted = true;
 
-  function lockApp() {
-    clearSavedAuth();
-    setIsUnlocked(false);
+    async function loadAuth(sessionOverride) {
+      try {
+        const session =
+          sessionOverride === undefined ? await getCurrentSession() : sessionOverride;
+        const profile = session ? await loadAuthProfile(session.access_token) : null;
+        if (isMounted) setAuthState({ isLoading: false, session, profile, error: '' });
+      } catch (error) {
+        if (isMounted) {
+          setAuthState({
+            isLoading: false,
+            session: null,
+            profile: null,
+            error: error.message || '\uB85C\uADF8\uC778 \uC0C1\uD0DC\uB97C \uD655\uC778\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+          });
+        }
+      }
+    }
+
+    loadAuth();
+    const unsubscribeAuth = onAuthStateChange((session) => loadAuth(session));
+    const unsubscribeRequired = onAuthRequired(() =>
+      setAuthState((current) => ({ ...current, session: null, profile: null })),
+    );
+    return () => {
+      isMounted = false;
+      unsubscribeAuth();
+      unsubscribeRequired();
+    };
+  }, []);
+
+  async function lockApp() {
+    await signOut();
+    setAuthState({ isLoading: false, session: null, profile: null, error: '' });
   }
 
-  if (!isUnlocked) {
+  if (authState.isLoading) {
     return (
-      <PasscodeGate
+      <AuthStatusGate
         theme={theme}
         setTheme={setTheme}
-        onUnlock={() => setIsUnlocked(true)}
+        title={'\uB85C\uADF8\uC778 \uD655\uC778 \uC911'}
+        message={'\uC7A0\uC2DC\uB9CC \uAE30\uB2E4\uB824 \uC8FC\uC138\uC694.'}
       />
     );
   }
 
-  return <EventBotApp theme={theme} setTheme={setTheme} onLock={lockApp} />;
+  if (!hasAuthConfig || !authState.session) {
+    return (
+      <GoogleLoginGate
+        theme={theme}
+        setTheme={setTheme}
+        error={authState.error}
+      />
+    );
+  }
+
+  if (!authState.profile?.approved) {
+    return (
+      <PendingApprovalGate
+        theme={theme}
+        setTheme={setTheme}
+        profile={authState.profile}
+        onSignOut={lockApp}
+      />
+    );
+  }
+
+  return (
+    <EventBotApp
+      theme={theme}
+      setTheme={setTheme}
+      profile={authState.profile}
+      onLock={lockApp}
+    />
+  );
 }
 
-function EventBotApp({ theme, setTheme, onLock }) {
+function EventBotApp({ theme, setTheme, profile, onLock }) {
   const { events, setEvents, isLoading } = useEvents();
-  const [filter, setFilter] = useState('ready');
-  const [platformFilter, setPlatformFilter] = useState('all');
-  const [sortMode, setSortMode] = useState('default');
+  const [viewState, setViewState] = useState(loadViewState);
+  const [filter, setFilterState] = useState(viewState.filter);
+  const [platformFilter, setPlatformFilterState] = useState(viewState.platformFilter);
+  const [sortMode, setSortModeState] = useState(viewState.sortMode);
+  const [deadlineFilter, setDeadlineFilterState] = useState(viewState.deadlineFilter);
+  const [inboxFilter, setInboxFilterState] = useState(viewState.inboxFilter);
+  const [searchQuery, setSearchQueryState] = useState(viewState.searchQuery);
+  const [searchScope, setSearchScopeState] = useState(viewState.searchScope);
   const [syncNotice, setSyncNotice] = useState(null);
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
+  const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
   const [crawlerStatus, setCrawlerStatus] = useState(null);
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [adminSummary, setAdminSummary] = useState({ pending: 0 });
   const didLoadFilterSettings = useRef(false);
+  const didLoadCommentSettings = useRef(false);
   const {
     updateStatus,
     updateResult,
     updateAnnouncement,
+    updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
   } =
@@ -90,15 +184,60 @@ function EventBotApp({ theme, setTheme, onLock }) {
     updateStatus(eventId, status);
   }
 
-  useEffect(() => {
-    setPlatformFilter('all');
-  }, [filter]);
+  function updateViewState(patch) {
+    setViewState((current) => {
+      const next = { ...current, ...patch };
+      saveViewState(next);
+      return next;
+    });
+  }
+
+  function setFilter(value) {
+    setFilterState(value);
+    updateViewState({ filter: value });
+  }
+
+  function setPlatformFilter(value) {
+    setPlatformFilterState(value);
+    updateViewState({ platformFilter: value });
+  }
+
+  function setSortMode(value) {
+    setSortModeState(value);
+    updateViewState({ sortMode: value });
+  }
+
+  function setDeadlineFilter(value) {
+    setDeadlineFilterState(value);
+    updateViewState({ deadlineFilter: value });
+  }
+
+  function setInboxFilter(value) {
+    setInboxFilterState(value);
+    updateViewState({ inboxFilter: value });
+  }
+
+  function setSearchQuery(value) {
+    setSearchQueryState(value);
+    updateViewState({ searchQuery: value });
+  }
+
+  function setSearchScope(value) {
+    setSearchScopeState(value);
+    updateViewState({ searchScope: value });
+  }
 
   useEffect(() => {
     if (!isSortableFilter(filter)) {
       setSortMode('default');
     }
   }, [filter]);
+
+  useEffect(() => {
+    if (!profile?.is_admin && filter === 'admin') {
+      setFilter('ready');
+    }
+  }, [filter, profile?.is_admin]);
 
   useEffect(() => {
     if (!hasSupabaseConfig) {
@@ -120,6 +259,29 @@ function EventBotApp({ theme, setTheme, onLock }) {
       })
       .finally(() => {
         didLoadFilterSettings.current = true;
+      });
+  }, []);
+
+  useEffect(() => {
+    if (!hasSupabaseConfig) {
+      didLoadCommentSettings.current = true;
+      return;
+    }
+
+    loadSupabaseCommentSettings()
+      .then((remoteSettings) => {
+        if (remoteSettings) {
+          setCommentSettings(normalizeCommentSettings(remoteSettings));
+        }
+      })
+      .catch((error) => {
+        setSyncNotice({
+          type: 'warning',
+          message: `댓글 설정을 DB에서 불러오지 못했습니다. (${error.message})`,
+        });
+      })
+      .finally(() => {
+        didLoadCommentSettings.current = true;
       });
   }, []);
 
@@ -156,9 +318,81 @@ function EventBotApp({ theme, setTheme, onLock }) {
     saveFilterSettings(filterSettings);
   }, [filterSettings]);
 
+  async function handleManualCrawl() {
+    if (isCrawling) return;
+    setIsCrawling(true);
+    setSyncNotice({ type: 'info', message: '크롤링을 시작했습니다. 잠시만 기다려 주세요.' });
+
+    try {
+      if (hasSupabaseConfig) {
+        const payload = await triggerSupabaseCrawler();
+        if (payload?.crawlStatus) {
+          setCrawlerStatus(payload.crawlStatus);
+        }
+        setSyncNotice({
+          type: 'success',
+          message:
+            '크롤링 작업을 GitHub Actions에 요청했습니다. 완료까지 몇 분 걸릴 수 있습니다.',
+        });
+        window.setTimeout(() => setIsCrawling(false), 1200);
+        return;
+      }
+
+      const response = await fetch('/api/crawl-suto', { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
+      setSyncNotice({ type: 'success', message: '크롤링이 완료되었습니다. 목록을 다시 불러옵니다.' });
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      setSyncNotice({
+        type: 'warning',
+        message: error.message || '크롤링 실행에 실패했습니다.',
+      });
+      setIsCrawling(false);
+    }
+  }
+
+  async function handleSaveCommentSettings() {
+    const normalized = normalizeCommentSettings(commentSettings);
+    setCommentSettings(normalized);
+
+    try {
+      if (hasSupabaseConfig) {
+        await saveSupabaseCommentSettings(normalized);
+      } else {
+        saveCommentSettings(normalized);
+      }
+      setSyncNotice({ type: 'success', message: '댓글 설정을 저장했습니다.' });
+    } catch (error) {
+      setSyncNotice({
+        type: 'warning',
+        message: error.message || '댓글 설정 저장에 실패했습니다.',
+      });
+    }
+  }
+
   const appEvents = useMemo(() => events.filter((event) => !isInstagramEvent(event)), [events]);
 
-  const counts = useMemo(() => buildCounts(appEvents, filterSettings), [appEvents, filterSettings]);
+  const isAdmin = Boolean(profile?.is_admin);
+
+  const navFilters = useMemo(
+    () =>
+      isAdmin
+        ? [
+            ...primaryFilters,
+            { value: 'admin', label: '관리자', countKey: 'admin' },
+          ]
+        : primaryFilters,
+    [isAdmin],
+  );
+
+  const counts = useMemo(
+    () => ({
+      ...buildCounts(appEvents, filterSettings),
+      admin: adminSummary.pending,
+    }),
+    [adminSummary.pending, appEvents, filterSettings],
+  );
 
   const filteredByTabEvents = useMemo(
     () => appEvents.filter((event) => matchesFilter(event, filter, filterSettings)),
@@ -169,6 +403,15 @@ function EventBotApp({ theme, setTheme, onLock }) {
     () => buildPlatformOptions(filteredByTabEvents),
     [filteredByTabEvents],
   );
+
+  useEffect(() => {
+    if (
+      platformFilter !== 'all' &&
+      !platformOptions.some((option) => option.platform === platformFilter)
+    ) {
+      setPlatformFilter('all');
+    }
+  }, [platformFilter, platformOptions]);
 
   const visibleEvents = useMemo(() => {
     const platformEvents =
@@ -190,7 +433,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
     [appEvents],
   );
 
-  const isManageMode = manageFilters.has(filter);
+  const isManageMode = manageFilters.has(filter) || filter === 'admin';
 
   return (
     <>
@@ -198,9 +441,16 @@ function EventBotApp({ theme, setTheme, onLock }) {
         <section className="app-hero" aria-label="주요 메뉴">
           <DesktopNav
             counts={counts}
-            filters={primaryFilters}
+            filters={navFilters}
             selectedFilter={filter}
             onSelect={setFilter}
+          />
+          <SidebarProfile
+            profile={profile}
+            theme={theme}
+            crawlerStatus={crawlerStatus}
+            onThemeChange={setTheme}
+            onLock={onLock}
           />
         </section>
 
@@ -230,10 +480,13 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <FilterSettingsPanel
               events={appEvents}
               settings={filterSettings}
+              commentSettings={commentSettings}
               counts={counts}
               selectedFilter={filter}
               theme={theme}
               onChange={setFilterSettings}
+              onCommentSettingsChange={setCommentSettings}
+              onSaveCommentSettings={handleSaveCommentSettings}
               onThemeChange={setTheme}
               onSelectFilter={setFilter}
               onLock={onLock}
@@ -267,22 +520,39 @@ function EventBotApp({ theme, setTheme, onLock }) {
             <SortChips selectedSort={sortMode} onSelectSort={setSortMode} />
           ) : null}
 
-          {filter === 'todayDeadline' ? (
+          {filter === 'admin' ? (
+            <AdminPanel
+              onSummaryChange={setAdminSummary}
+              onNotice={setSyncNotice}
+              crawlerStatus={crawlerStatus}
+              isCrawling={isCrawling}
+              onCrawl={handleManualCrawl}
+            />
+          ) : filter === 'todayDeadline' ? (
             <TodayDeadlineList
               events={visibleEvents}
               isLoading={isLoading}
+              selectedFilter={deadlineFilter}
+              onSelectFilter={setDeadlineFilter}
+              onDeadlineChange={updateDeadline}
               onStatusChange={updateDeadlineStatus}
             />
           ) : filter === 'search' ? (
             <EventSearch
               events={visibleEvents}
               isLoading={isLoading}
+              query={searchQuery}
+              scope={searchScope}
+              onQueryChange={setSearchQuery}
+              onScopeChange={setSearchScope}
               onStatusChange={updateStatus}
             />
           ) : filter === 'inbox' ? (
             <EventInbox
               events={visibleEvents}
               isLoading={isLoading}
+              selectedFilter={inboxFilter}
+              onSelectFilter={setInboxFilter}
               totalAmount={winningTotal}
               onAnnouncementChange={updateAnnouncement}
               onResultChange={updateResult}
@@ -299,6 +569,7 @@ function EventBotApp({ theme, setTheme, onLock }) {
                     filter={filter}
                     onResultChange={updateResult}
                     onAnnouncementChange={updateAnnouncement}
+                    onDeadlineChange={updateDeadline}
                     onStatusChange={updateStatus}
                   />
                 ))
@@ -309,14 +580,12 @@ function EventBotApp({ theme, setTheme, onLock }) {
               )}
             </div>
           )}
-
-          {crawlerStatus ? <CrawlerStatusPanel status={crawlerStatus} /> : null}
         </section>
       </main>
 
       <BottomNav
         counts={counts}
-        filters={primaryFilters}
+        filters={navFilters}
         selectedFilter={filter}
         onSelect={setFilter}
       />
@@ -326,7 +595,8 @@ function EventBotApp({ theme, setTheme, onLock }) {
 
 const sortOptions = [
   { value: 'default', label: '기본순' },
-  { value: 'popular', label: '인원 많은순' },
+  { value: 'popular', label: '인기순' },
+  { value: 'winners', label: '당첨자수 많은순' },
   { value: 'deadline', label: '마감임박순' },
   { value: 'newest', label: '최신수집순' },
 ];
@@ -361,6 +631,15 @@ function sortEventsByMode(events, sortMode, filter) {
     );
   }
 
+  if (sortMode === 'winners') {
+    return [...events].sort(
+      (first, second) =>
+        getTotalWinnerCount(second) - getTotalWinnerCount(first) ||
+        getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+        getNumber(first.rank) - getNumber(second.rank),
+    );
+  }
+
   if (sortMode === 'deadline') {
     return sortTodayDeadlineEvents(events);
   }
@@ -380,28 +659,53 @@ function getNumber(value) {
   return Number.isFinite(value) ? value : 0;
 }
 
+function getTotalWinnerCount(event) {
+  const raw = event.raw ?? {};
+  const direct = parseCount(event.totalWinnerCount ?? raw.totalWinnerCount);
+  if (Number.isFinite(direct)) return direct;
+
+  const text = [
+    ...(Array.isArray(event.detailMetaLines) ? event.detailMetaLines : []),
+    ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+    event.originalText,
+    raw.originalText,
+  ].filter(Boolean).join('\n');
+
+  const match = text.match(/(?:총\s*)?당첨자\s*수|당첨\s*인원/i);
+  if (!match) return 0;
+  const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 40);
+  return parseCount(afterLabel) || 0;
+}
+
+function parseCount(value) {
+  const match = String(value ?? '').match(/\d[\d,]*/);
+  if (!match) return NaN;
+  const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
+  return Number.isFinite(count) ? count : NaN;
+}
+
 function getEventTime(event) {
   const value = event.lastSeenAt ?? event.createdAt ?? event.crawledAt ?? '';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-function PasscodeGate({ theme, setTheme, onUnlock }) {
-  const [passcode, setPasscode] = useState('');
-  const [error, setError] = useState('');
+function GoogleLoginGate({ theme, setTheme, error: initialError }) {
+  const [error, setError] = useState(initialError || '');
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  async function handleSubmit(event) {
-    event.preventDefault();
+  async function handleLogin() {
     setError('');
     setIsSubmitting(true);
 
     try {
-      await verifyPasscode(passcode.trim());
-      onUnlock();
+      await signInWithGoogle();
     } catch (submitError) {
-      setError(submitError instanceof Error ? submitError.message : '비밀번호를 확인해 주세요.');
-    } finally {
+      setError(
+        submitError instanceof Error
+          ? submitError.message
+          : 'Google \uB85C\uADF8\uC778\uC744 \uC2DC\uC791\uD558\uC9C0 \uBABB\uD588\uC2B5\uB2C8\uB2E4.',
+      );
       setIsSubmitting(false);
     }
   }
@@ -412,71 +716,82 @@ function PasscodeGate({ theme, setTheme, onUnlock }) {
         <div className="auth-head">
           <div>
             <p className="app-kicker">EVENT CLICK</p>
-            <h1 id="auth-title">잠금 해제</h1>
+            <h1 id="auth-title">Google {'\uB85C\uADF8\uC778'}</h1>
           </div>
           <button
             type="button"
             className="theme-switch"
-            aria-label="테마 변경"
-            onClick={() =>
-              setTheme((currentTheme) => (currentTheme === 'dark' ? 'light' : 'dark'))
-            }
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
           >
-            {theme === 'dark' ? '다크' : '라이트'}
+            {theme === 'dark' ? 'Light' : 'Dark'}
           </button>
         </div>
-
-        <form className="auth-form" onSubmit={handleSubmit}>
-          <label>
-            <span>비밀번호</span>
-            <input
-              type="password"
-              inputMode="numeric"
-              autoComplete="current-password"
-              value={passcode}
-              onChange={(event) => setPasscode(event.target.value)}
-              autoFocus
-            />
-          </label>
+        <div className="auth-form">
+          <p className="auth-help">
+            {'\uC2B9\uC778\uB41C Google \uACC4\uC815\uC73C\uB85C\uB9CC \uC774\uBCA4\uD2B8\uBD07\uC744 \uC0AC\uC6A9\uD560 \uC218 \uC788\uC2B5\uB2C8\uB2E4.'}
+          </p>
           {error ? <p className="auth-error">{error}</p> : null}
-          <button type="submit" disabled={isSubmitting || !passcode.trim()}>
-            {isSubmitting ? '확인 중' : '열기'}
+          <button type="button" onClick={handleLogin} disabled={isSubmitting}>
+            {isSubmitting ? '\uB85C\uADF8\uC778 \uC911' : 'Google\uB85C \uB85C\uADF8\uC778'}
           </button>
-        </form>
+        </div>
       </section>
     </main>
   );
 }
 
-function CrawlerStatusPanel({ status }) {
-  const checkedAt = formatDateTime(status.checkedAt ?? status.updatedAt);
-  const latestSeenAt = formatDateTime(status.latestSeenAt);
-  const total = Number.isFinite(status.totalEvents) ? status.totalEvents : '-';
-
+function PendingApprovalGate({ theme, setTheme, profile, onSignOut }) {
   return (
-    <section className="crawler-status-panel" aria-label="크롤링 상태">
-      <div>
-        <strong>크롤링 정상</strong>
-        <span>마지막 확인 {checkedAt}</span>
-      </div>
-      <div>
-        <span>DB {total}개</span>
-        <span>최신 수집 {latestSeenAt}</span>
-      </div>
-    </section>
+    <AuthStatusGate
+      theme={theme}
+      setTheme={setTheme}
+      title={'\uC2B9\uC778 \uB300\uAE30 \uC911'}
+      message={
+        (profile?.email ?? '\uD604\uC7AC \uACC4\uC815') +
+        '\uC740 \uC544\uC9C1 \uC2B9\uC778\uB418\uC9C0 \uC54A\uC558\uC2B5\uB2C8\uB2E4. \uAD00\uB9AC\uC790 \uC2B9\uC778 \uD6C4 \uB2E4\uC2DC \uC811\uC18D\uD574 \uC8FC\uC138\uC694.'
+      }
+      actionLabel={'\uB2E4\uB978 \uACC4\uC815\uC73C\uB85C \uB85C\uADF8\uC778'}
+      onAction={onSignOut}
+    />
   );
 }
 
-function formatDateTime(value) {
-  if (!value) return '-';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return '-';
-  return new Intl.DateTimeFormat('ko-KR', {
-    month: '2-digit',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
+function AuthStatusGate({ theme, setTheme, title, message, actionLabel, onAction }) {
+  return (
+    <main className="auth-shell">
+      <section className="auth-card" aria-labelledby="auth-title">
+        <div className="auth-head">
+          <div>
+            <p className="app-kicker">EVENT CLICK</p>
+            <h1 id="auth-title">{title}</h1>
+          </div>
+          <button
+            type="button"
+            className="theme-switch"
+            aria-label={'\uD14C\uB9C8 \uBCC0\uACBD'}
+            onClick={() => setTheme((current) => (current === 'dark' ? 'light' : 'dark'))}
+          >
+            {theme === 'dark' ? 'Light' : 'Dark'}
+          </button>
+        </div>
+        <div className="auth-form">
+          <p className="auth-help">{message}</p>
+          {actionLabel ? (
+            <button type="button" onClick={onAction}>
+              {actionLabel}
+            </button>
+          ) : null}
+        </div>
+      </section>
+    </main>
+  );
+}
+function getCrawlerStatusInfo(status, recentSeen) {
+  if (status === 'failure') return { kind: 'failure', label: '크롤링 실패' };
+  if (status === 'requested') return { kind: 'requested', label: '크롤링 요청됨' };
+  if (recentSeen === 0) return { kind: 'quiet', label: '신규 수집 없음' };
+  return { kind: 'success', label: '크롤링 정상' };
 }
 
 function getEmptyMessage(filter) {
@@ -489,10 +804,13 @@ function getEmptyMessage(filter) {
 function FilterSettingsPanel({
   events,
   settings,
+  commentSettings,
   counts,
   selectedFilter,
   theme,
   onChange,
+  onCommentSettingsChange,
+  onSaveCommentSettings,
   onThemeChange,
   onSelectFilter,
   onLock,
@@ -506,6 +824,8 @@ function FilterSettingsPanel({
     [events],
   );
   const keywordText = settings.excludedKeywords.join('\n');
+  const expiredReadyCount = useMemo(() => events.filter(isExpiredReadyEvent).length, [events]);
+  const oldSkippedCount = useMemo(() => events.filter(isOldSkippedEvent).length, [events]);
 
   function updateSettings(patch) {
     onChange((current) => normalizeFilterSettings({ ...current, ...patch }));
@@ -519,6 +839,19 @@ function FilterSettingsPanel({
       hiddenPlatforms.add(platform);
     }
     updateSettings({ hiddenPlatforms: [...hiddenPlatforms] });
+  }
+
+  const [keywordDraft, setKeywordDraft] = useState(keywordText);
+  const isComposingKeyword = useRef(false);
+
+  useEffect(() => {
+    if (!isComposingKeyword.current && keywordDraft !== keywordText) {
+      setKeywordDraft(keywordText);
+    }
+  }, [keywordDraft, keywordText]);
+
+  function saveKeywordDraft(value) {
+    updateSettings({ excludedKeywords: parseKeywordInput(value) });
   }
 
   return (
@@ -551,13 +884,85 @@ function FilterSettingsPanel({
         <span>제외 키워드</span>
         <textarea
           rows="3"
-          value={keywordText}
-          placeholder={'예: 출석\n리그램'}
-          onChange={(event) =>
-            updateSettings({ excludedKeywords: parseKeywordInput(event.target.value) })
-          }
+          value={keywordDraft}
+          placeholder={'\uC608: \uCCB4\uD5D8\uB2E8\n\uB9AC\uADF8\uB7A8'}
+          onChange={(event) => {
+            setKeywordDraft(event.target.value);
+            if (!event.nativeEvent.isComposing && !isComposingKeyword.current) {
+              saveKeywordDraft(event.target.value);
+            }
+          }}
+          onCompositionStart={() => {
+            isComposingKeyword.current = true;
+          }}
+          onCompositionEnd={(event) => {
+            isComposingKeyword.current = false;
+            setKeywordDraft(event.currentTarget.value);
+            saveKeywordDraft(event.currentTarget.value);
+          }}
+          onBlur={(event) => saveKeywordDraft(event.currentTarget.value)}
         />
       </label>
+
+      <section className="comment-settings" aria-label="댓글 생성 설정">
+        <div>
+          <strong>댓글 생성 설정</strong>
+          <span>비워두면 기본 마스터 프롬프트와 서버 Gemini 키를 사용합니다.</span>
+        </div>
+        <label>
+          <span>내 Gemini API 키</span>
+          <input
+            type="password"
+            value={commentSettings.geminiApiKey}
+            placeholder="AIza... 개인 키를 쓰고 싶을 때만 입력"
+            autoComplete="off"
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, geminiApiKey: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <label>
+          <span>댓글 작성 프롬프트</span>
+          <textarea
+            rows="5"
+            value={commentSettings.commentPrompt}
+            onChange={(event) =>
+              onCommentSettingsChange((current) =>
+                ({ ...current, commentPrompt: event.target.value }),
+              )
+            }
+          />
+        </label>
+        <div className="comment-settings-actions">
+          <button type="button" className="settings-action-button" onClick={onSaveCommentSettings}>
+            댓글 설정 저장
+          </button>
+          <button
+            type="button"
+            className="settings-reset"
+            onClick={() => onCommentSettingsChange(defaultCommentSettings)}
+          >
+            기본값
+          </button>
+        </div>
+      </section>
+
+      <label className="settings-check-row">
+        <input
+          type="checkbox"
+          checked={settings.hideExpiredReadyEvents !== false}
+          onChange={(event) => updateSettings({ hideExpiredReadyEvents: event.target.checked })}
+        />
+        <span>
+          마감 지난 미응모 대기 숨김 <strong>{expiredReadyCount}개</strong>
+        </span>
+      </label>
+
+      <p className="settings-cleanup-note">
+        오래된 제외 이벤트 정리 대상 {oldSkippedCount}개 · 아직 DB 삭제 없이 화면 정리만 합니다.
+      </p>
 
       {platforms.length > 0 ? (
         <div className="platform-settings">
@@ -595,7 +1000,12 @@ function buildCounts(events, filterSettings) {
       if (event.status === 'done' && event.resultStatus === 'unknown') {
         acc.resultUnknown += 1;
       }
-      if (matchesFilter(event, 'todayDeadline', filterSettings)) acc.todayDeadline += 1;
+      if (
+        matchesFilter(event, 'todayDeadline', filterSettings) &&
+        getTodayDeadlineMatch(event).isMatch
+      ) {
+        acc.todayDeadline += 1;
+      }
       if (matchesFilter(event, 'search', filterSettings)) acc.searchable += 1;
       if (matchesTodayAnnouncement(event)) acc.todayAnnouncement += 1;
       if (event.resultStatus === 'won') acc.won += 1;
@@ -618,6 +1028,66 @@ function buildCounts(events, filterSettings) {
       skipped: 0,
     },
   );
+}
+
+function SidebarProfile({ profile, theme, crawlerStatus, onThemeChange, onLock }) {
+  const displayName = profile?.display_name || profile?.email || '';
+  const shortName = profile?.display_name || shortenEmail(profile?.email || '');
+  const recentSeen = Number.isFinite(crawlerStatus?.recentSeen24h)
+    ? crawlerStatus.recentSeen24h
+    : Array.isArray(crawlerStatus?.recentEvents)
+      ? crawlerStatus.recentEvents.length
+      : null;
+  const crawlerInfo = crawlerStatus
+    ? getCrawlerStatusInfo(crawlerStatus.status, recentSeen)
+    : { kind: 'unknown', label: '상태 확인 중' };
+
+  return (
+    <div className="sidebar-profile" aria-label="로그인 상태">
+      <div className="sidebar-profile-main">
+        <span className="sidebar-profile-avatar" aria-hidden="true">
+          {getInitials(displayName)}
+        </span>
+        <div className="sidebar-profile-info">
+          <strong title={displayName}>{shortName || '내 계정'}</strong>
+          <span className={`sidebar-profile-status sidebar-profile-status-${crawlerInfo.kind}`}>
+            {crawlerInfo.label}
+          </span>
+        </div>
+      </div>
+      <div className="sidebar-profile-actions">
+        {profile?.is_admin ? <span className="sidebar-profile-badge">관리자</span> : null}
+        <button
+          type="button"
+          className="sidebar-profile-btn"
+          aria-label="테마 변경"
+          onClick={() => onThemeChange((current) => (current === 'dark' ? 'light' : 'dark'))}
+        >
+          {theme === 'dark' ? '☀' : '◑'}
+        </button>
+        <button
+          type="button"
+          className="sidebar-profile-btn sidebar-profile-btn--lock"
+          aria-label="잠금"
+          onClick={onLock}
+        >
+          잠금
+        </button>
+      </div>
+    </div>
+  );
+}
+
+function getInitials(name) {
+  if (!name) return '?';
+  const clean = name.split('@')[0];
+  const words = clean.split(/[\s._-]+/).filter(Boolean);
+  if (words.length >= 2) return (words[0][0] + words[1][0]).toUpperCase();
+  return clean.slice(0, 2).toUpperCase();
+}
+
+function shortenEmail(email) {
+  return email.includes('@') ? email.split('@')[0] : email;
 }
 
 export default App;

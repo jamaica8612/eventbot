@@ -43,9 +43,14 @@ export function useEvents() {
 
 export function useTheme() {
   const [theme, setTheme] = useState(() => {
-    if (typeof window === 'undefined') return 'dark';
+    if (typeof window === 'undefined') return 'light';
+    if (window.localStorage.getItem('eventbotDesignRefresh') !== '2026-light') {
+      window.localStorage.setItem('eventbotDesignRefresh', '2026-light');
+      window.localStorage.setItem('eventbotTheme', 'light');
+      return 'light';
+    }
     const storedTheme = window.localStorage.getItem('eventbotTheme');
-    return storedTheme === 'light' ? 'light' : 'dark';
+    return storedTheme === 'dark' ? 'dark' : 'light';
   });
 
   useEffect(() => {

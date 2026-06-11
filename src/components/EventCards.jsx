@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { resultLabels, statusActions, statusLabels } from '../constants.js';
 import {
   buildSourceFacts,
@@ -6,12 +7,27 @@ import {
   getAnnouncementStatus,
   getPrizeDisplay,
 } from '../utils/eventModel.js';
+import { getLocalToday, parseLocalDate } from '../utils/format.js';
 import { EventBodyToggle } from './EventBodyToggle.jsx';
-import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+import { AnnouncementPanel, ApplyLink, DeadlinePanel } from './EventShared.jsx';
+import { PlatformBadge } from './PlatformBadge.jsx';
 
-export function EventCard({ event, filter, onResultChange, onAnnouncementChange, onStatusChange }) {
+export function EventCard({
+  event,
+  filter,
+  onResultChange,
+  onAnnouncementChange,
+  onDeadlineChange,
+  onStatusChange,
+}) {
   if (filter === 'ready' || filter === 'todayDeadline' || filter === 'later') {
-    return <ReadyEventCard event={event} onStatusChange={onStatusChange} />;
+    return (
+      <ReadyEventCard
+        event={event}
+        onDeadlineChange={onDeadlineChange}
+        onStatusChange={onStatusChange}
+      />
+    );
   }
   if (filter === 'todayAnnouncement') {
     return (
@@ -57,20 +73,37 @@ function EventSourceSummary({ event }) {
   );
 }
 
-function ReadyEventCard({ event, onStatusChange }) {
+function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
+  const [isDeadlineEditing, setIsDeadlineEditing] = useState(false);
   const userContentLines = buildUserContentLines(event);
   const sourceFacts = buildSourceFacts(event);
   const applyHref = event.applyUrl ?? event.url;
+  const totalWinnerCount = getTotalWinnerCount(event);
 
   return (
     <article className="event-card now-card">
       <div className="score-row">
-        <span>{event.platform}</span>
-        <strong>{Number.isFinite(event.bookmarkCount) ? `${event.bookmarkCount}명` : '대기'}</strong>
+        <PlatformBadge platform={event.platform} />
+        <div className="winner-row-actions">
+          <strong>{Number.isFinite(totalWinnerCount) ? `${totalWinnerCount}명` : '대기'}</strong>
+          {onDeadlineChange ? (
+            <button
+              className="deadline-edit-inline"
+              type="button"
+              onClick={() => setIsDeadlineEditing((current) => !current)}
+            >
+              마감 수정
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
+
+      {isDeadlineEditing && onDeadlineChange ? (
+        <DeadlinePanel event={event} onDeadlineChange={onDeadlineChange} />
+      ) : null}
 
       <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
 
@@ -102,7 +135,7 @@ function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) 
   return (
     <article className="event-card announcement-card">
       <div className="score-row">
-        <span>{event.platform}</span>
+        <PlatformBadge platform={event.platform} />
         <strong>{getAnnouncementStatus(event).label}</strong>
       </div>
 
@@ -174,7 +207,9 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 
       <div className="meta-row">
         <span>{event.source}</span>
-        {getDeadlineDisplay(event) ? <span>{getDeadlineDisplay(event)}</span> : null}
+        {getDeadlineDisplay(event) ? (
+          <span className={getDeadlineClassName(event)}>{getDeadlineDisplay(event)}</span>
+        ) : null}
       </div>
 
       {showCompletionActions ? (
@@ -216,21 +251,92 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
 
 function EventScheduleMeta({ event }) {
   const deadline = getDeadlineDisplay(event);
-  const announcement = event.resultAnnouncementDate || event.resultAnnouncementText;
+  const prize = getSchedulePrizeDisplay(event);
 
-  if (!deadline && !announcement) {
+  if (!deadline && !prize) {
     return null;
   }
 
   return (
     <div className="schedule-row" aria-label={`${event.title} 일정`}>
-      {deadline ? <span>마감 {deadline}</span> : null}
-      {announcement ? <span>발표 {event.resultAnnouncementDate || event.resultAnnouncementText}</span> : null}
+      {deadline ? <span className={getDeadlineClassName(event)}>{deadline}</span> : null}
+      {prize ? <span className="schedule-prize">{prize}</span> : null}
     </div>
   );
 }
 
 function getDeadlineDisplay(event) {
   const value = event.deadlineDate || event.deadlineText || event.due || '';
-  return value === '상세 확인 필요' ? '' : value;
+  if (!value || value === '\uC0C1\uC138 \uD655\uC778 \uD544\uC694') return '';
+
+  const text = String(value).trim();
+  if (
+    new RegExp(
+      '\\uC624\\uB298\\s*\\uB9C8\\uAC10|\\uAE08\\uC77C\\s*\\uB9C8\\uAC10|\\uB9C8\\uAC10\\s*\\uC624\\uB298|\\uC624\\uB298\\s*\\uC885\\uB8CC|\\uAE08\\uC77C\\s*\\uC885\\uB8CC',
+    ).test(text)
+  ) {
+    return '\uC624\uB298\uB9C8\uAC10';
+  }
+  if (
+    new RegExp(
+      '\\uB0B4\\uC77C\\s*\\uB9C8\\uAC10|\\uB9C8\\uAC10\\s*\\uB0B4\\uC77C|\\uB0B4\\uC77C\\s*\\uC885\\uB8CC',
+    ).test(text)
+  ) {
+    return '\uB0B4\uC77C\uB9C8\uAC10';
+  }
+
+  const date = parseLocalDate(event.deadlineDate || text);
+  if (date) {
+    const today = getLocalToday();
+    const diffDays = Math.round((date.getTime() - today.getTime()) / 86400000);
+    if (diffDays === 0) return '\uC624\uB298\uB9C8\uAC10';
+    if (diffDays === 1) return '\uB0B4\uC77C\uB9C8\uAC10';
+  }
+
+  return new RegExp('^\\uB9C8\\uAC10\\s*').test(text) ? text : `\uB9C8\uAC10 ${text}`;
+}
+
+function getDeadlineClassName(event) {
+  const deadline = getDeadlineDisplay(event);
+  if (deadline === '\uC624\uB298\uB9C8\uAC10') return 'deadline-chip deadline-today';
+  if (deadline === '\uB0B4\uC77C\uB9C8\uAC10') return 'deadline-chip deadline-tomorrow';
+  return 'deadline-chip';
+}
+
+function getSchedulePrizeDisplay(event) {
+  const raw = event.raw ?? {};
+  const directPrize = event.prizeText || event.prizeTitle || raw.prizeText || '';
+  const prize = directPrize || getPrizeDisplay(event);
+  if (!prize || /미수집|확인 필요|정보 미수집/i.test(prize)) return '';
+  return String(prize)
+    .replace(/^[\s🎁🎉🏆💝]+/u, '')
+    .replace(/^(?:이벤트\s*)?(?:경품|상품|혜택|리워드|선물|경품태그)\s*[:：]?\s*/u, '')
+    .replace(/\s+/g, ' ')
+    .trim()
+    .slice(0, 42);
+}
+
+function getTotalWinnerCount(event) {
+  const raw = event.raw ?? {};
+  const direct = parseCount(event.totalWinnerCount ?? raw.totalWinnerCount);
+  if (Number.isFinite(direct)) return direct;
+
+  const text = [
+    ...(Array.isArray(event.detailMetaLines) ? event.detailMetaLines : []),
+    ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines : []),
+    event.originalText,
+    raw.originalText,
+  ].filter(Boolean).join('\n');
+
+  const match = text.match(/(?:총\s*)?당첨자\s*수|당첨\s*인원/i);
+  if (!match) return NaN;
+  const afterLabel = text.slice(match.index + match[0].length, match.index + match[0].length + 40);
+  return parseCount(afterLabel);
+}
+
+function parseCount(value) {
+  const match = String(value ?? '').match(/\d[\d,]*/);
+  if (!match) return NaN;
+  const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
+  return Number.isFinite(count) ? count : NaN;
 }

@@ -11,6 +11,7 @@
     "crawl:suto:youtube": "node -e \"process.env.SUTO_YOUTUBE_TRANSCRIPT_LIMIT='1'; import('./crawler/sutoCrawler.js')\"",
     "crawl:suto:body": "node crawler/sutoBrowserCrawler.js",
     "crawl:full": "node scripts/crawlFull.js",
+    "backfill:announcement": "node scripts/backfillAnnouncementDates.js",
     "verify:supabase": "node scripts/verifySupabase.js"
   },
   "dependencies": {
@@ -18,6 +19,7 @@
     "@vitejs/plugin-react": "^5.0.4",
     "react": "^19.1.1",
     "react-dom": "^19.1.1",
+    "simple-icons": "^16.19.0",
     "vite": "^7.1.11"
   }
 }

@@ -83,7 +83,30 @@ function isAnnouncementLabelOnly(line) {
 }
 
 function extractAnnouncementDate(text) {
+  const focusedText = getAnnouncementDateFocusedText(text);
+  const focusedDate = extractKoreanEventDate(focusedText);
+  if (focusedDate || focusedText !== String(text ?? '')) return focusedDate;
   return extractKoreanEventDate(text);
+}
+
+function getAnnouncementDateFocusedText(text) {
+  const source = String(text ?? '');
+  const patterns = [
+    /당첨자?\s*발표\s*일?/i,
+    /당첨\s*발표\s*일?/i,
+    /결과\s*발표/i,
+    /발표\s*예정/i,
+    /발표\s*일/i,
+    /수상작\s*발표/i,
+    /선정자?\s*발표/i,
+    /당첨\s*안내/i,
+  ];
+  const matches = patterns
+    .map((pattern) => source.search(pattern))
+    .filter((index) => index >= 0);
+  if (matches.length === 0) return source;
+  const start = Math.min(...matches);
+  return source.slice(start, start + 120);
 }
 
 function extractPrizeText(text) {

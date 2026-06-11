@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { buildUserContentLines, hasCrawledBody } from '../utils/eventModel.js';
-import { getAuthToken, requireUnlock } from '../storage/passcodeAuthStorage.js';
+import { getAuthToken, requireUnlock } from '../storage/supabaseAuthStorage.js';
+import { updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 
-const YOUTUBE_CONTEXT_TIMEOUT_MS = 95000;
+const YOUTUBE_CONTEXT_TIMEOUT_MS = 35000;
 const YOUTUBE_INFO_TIMEOUT_MS = 45000;
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
 const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
@@ -33,7 +34,7 @@ async function copyTextToClipboard(text) {
 
 export function EventBodyToggle({ event, lines, facts }) {
   const [isBodyOpen, setIsBodyOpen] = useState(false);
-  const [youtubeContext, setYoutubeContext] = useState(null);
+  const [youtubeContext, setYoutubeContext] = useState(() => normalizeSavedYoutubeContext(event.youtubeContext));
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [infoStatus, setInfoStatus] = useState('idle');
   const [transcriptError, setTranscriptError] = useState('');
@@ -43,15 +44,16 @@ export function EventBodyToggle({ event, lines, facts }) {
   const [manualCopyText, setManualCopyText] = useState('');
   const originalHref = event.originalUrl ?? event.url;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const canFetchYoutubeTranscript = isYoutubeEvent(event) && Boolean(youtubeLink);
+  const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
+  const youtubeDisplayUrl = youtubeContext?.url || youtubeLink;
 
   async function fetchYoutubeContextPayload({ mode, signal }) {
     const endpoint = getYoutubeContextEndpoint();
     const response = await fetch(endpoint, {
       method: 'POST',
-      headers: getYoutubeContextHeaders(endpoint),
+      headers: await getYoutubeContextHeaders(endpoint),
       signal,
       body: JSON.stringify({
         mode,
@@ -83,6 +85,7 @@ export function EventBodyToggle({ event, lines, facts }) {
         signal: abortController.signal,
       });
       setYoutubeContext(payload);
+      persistYoutubeContext(event.id, payload);
       setAreCandidatesVisible(false);
       const materialText = buildYoutubeCommentMaterialText(event, payload);
       try {
@@ -107,9 +110,9 @@ export function EventBodyToggle({ event, lines, facts }) {
     }
   }
 
-  async function handleYoutubeTranscriptFetch(clickEvent) {
+  async function handleYoutubeTranscriptFetch(clickEvent, options = {}) {
     clickEvent.stopPropagation();
-    if (hasCommentCandidates) {
+    if (hasCommentCandidates && !options.force) {
       setAreCandidatesVisible(true);
       setTranscriptError('');
       return;
@@ -126,6 +129,7 @@ export function EventBodyToggle({ event, lines, facts }) {
         signal: abortController.signal,
       });
       setYoutubeContext(payload);
+      persistYoutubeContext(event.id, payload);
       setAreCandidatesVisible(true);
       setTranscriptError('');
       setTranscriptStatus('done');
@@ -230,10 +234,10 @@ export function EventBodyToggle({ event, lines, facts }) {
                 disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
               >
                 {transcriptStatus === 'loading'
-                  ? '댓글 후보 생성 중'
+                  ? '댓글 생성 중'
                   : hasCommentCandidates
-                    ? '댓글 후보 보기'
-                    : '댓글 후보 만들기'}
+                    ? '댓글 보기'
+                    : '댓글 만들기'}
               </button>
             </>
           ) : null}
@@ -245,6 +249,19 @@ export function EventBodyToggle({ event, lines, facts }) {
               <p>채널: {youtubeContext.channelName || '-'}</p>
               {youtubeContext.description ? <p>설명: {youtubeContext.description}</p> : null}
               {youtubeContext.keywords?.length ? <p>키워드: {youtubeContext.keywords.join(', ')}</p> : null}
+              {youtubeDisplayUrl ? (
+                <p>
+                  {'\uC720\uD29C\uBE0C URL: '}
+                  <a
+                    href={youtubeDisplayUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={(clickEvent) => clickEvent.stopPropagation()}
+                  >
+                    {youtubeDisplayUrl}
+                  </a>
+                </p>
+              ) : null}
               <button
                 type="button"
                 onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
@@ -261,8 +278,8 @@ export function EventBodyToggle({ event, lines, facts }) {
           {areCandidatesVisible && hasCommentCandidates ? (
             <div className="comment-candidates">
               <div className="comment-candidates-head">
-                <strong>댓글 후보</strong>
-                <span>복사해서 필요한 부분만 다듬어 쓰세요</span>
+                <strong>추천 댓글</strong>
+                <span>복사 전에 내 말투로 한 번만 다듬어 주세요</span>
               </div>
               {youtubeContext.commentCandidates.map((candidate, index) => (
                 <div key={index} className="comment-candidate">
@@ -277,17 +294,27 @@ export function EventBodyToggle({ event, lines, facts }) {
                     onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
                     onClick={(clickEvent) => handleCopyCandidate(clickEvent, candidate.text, index)}
                   >
-                    {copiedCandidateIndex === index ? '복사됨' : '이 댓글 복사'}
+                    {copiedCandidateIndex === index ? '복사됨' : '댓글 복사'}
                   </button>
                 </div>
               ))}
               {copiedCandidateIndex === -2 ? (
                 <p className="youtube-transcript-error">복사에 실패했습니다. 아래 텍스트를 직접 복사하세요.</p>
               ) : null}
+              <button
+                type="button"
+                className="comment-candidate-copy"
+                onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
+                onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
+                onClick={(clickEvent) => handleYoutubeTranscriptFetch(clickEvent, { force: true })}
+                disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
+              >
+                {transcriptStatus === 'loading' ? '다시 생성 중' : '다시 만들기'}
+              </button>
             </div>
           ) : youtubeContext?.commentCandidatesError ? (
             <p className="youtube-transcript-error">
-              댓글 후보 생성 실패: {youtubeContext.commentCandidatesError}
+              댓글 생성 실패: {youtubeContext.commentCandidatesError}
             </p>
           ) : null}
           {manualCopyText ? (
@@ -328,6 +355,18 @@ export function EventBodyToggle({ event, lines, facts }) {
   );
 }
 
+function normalizeSavedYoutubeContext(value) {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
+  return Object.keys(value).length > 0 ? value : null;
+}
+
+function persistYoutubeContext(eventId, youtubeContext) {
+  if (!eventId || !youtubeContext) return;
+  updateSupabaseEventState(eventId, { youtubeContext }).catch(() => {
+    // 저장 실패는 댓글 생성 흐름을 막지 않는다. 새로고침 후 재사용만 못할 수 있다.
+  });
+}
+
 function getYoutubeContextEndpoint() {
   if (API_BASE_URL) return `${API_BASE_URL}/api/youtube-transcript`;
   if (shouldUseSupabaseFunction()) return `${SUPABASE_URL}/functions/v1/youtube-transcript`;
@@ -338,12 +377,11 @@ function shouldUseSupabaseFunction() {
   return Boolean(SUPABASE_URL && SUPABASE_ANON_KEY);
 }
 
-function getYoutubeContextHeaders(endpoint) {
+async function getYoutubeContextHeaders(endpoint) {
   const headers = { 'content-type': 'application/json' };
   if (SUPABASE_URL && endpoint.startsWith(`${SUPABASE_URL}/functions/v1/`)) {
     headers.apikey = SUPABASE_ANON_KEY;
-    headers.authorization = `Bearer ${SUPABASE_ANON_KEY}`;
-    headers['x-eventbot-token'] = getAuthToken();
+    headers.authorization = `Bearer ${await getAuthToken()}`;
   }
   return headers;
 }
@@ -372,15 +410,10 @@ async function readJsonResponse(response) {
 
 function buildYoutubeLinks(event) {
   const raw = event.raw ?? {};
-  return [event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+  return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
     .filter((url) => extractYoutubeVideoId(url));
-}
-
-function isYoutubeEvent(event) {
-  const platform = String(event.platform ?? '').toLowerCase();
-  return platform.includes('유튜브') || platform.includes('youtube');
 }
 
 function extractYoutubeVideoId(url) {
@@ -404,6 +437,7 @@ function buildYoutubeCommentMaterialText(event, context) {
   const candidateLines = (context.commentCandidates ?? []).map(
     (candidate, index) => `${index + 1}. ${candidate.style ? `${candidate.style}: ` : ''}${candidate.text}`,
   );
+  const youtubeUrl = context.url || buildYoutubeLinks(event)[0] || eventInfo.applyUrl || '';
 
   return [
     '[유튜브 이벤트 자료]',
@@ -445,8 +479,11 @@ function buildYoutubeCommentMaterialText(event, context) {
     '[인기 댓글 참고]',
     commentLines.join('\n') || '-',
     '',
-    '[생성된 댓글 후보]',
+    '[생성된 추천 댓글]',
     candidateLines.join('\n') || '-',
+    '',
+    '[YouTube URL]',
+    youtubeUrl || '-',
   ].join('\n');
 }
 

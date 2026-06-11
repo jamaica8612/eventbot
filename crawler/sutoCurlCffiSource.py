@@ -30,7 +30,7 @@ BASE = "https://suto.co.kr"
 LIST_URL = f"{BASE}/cpevent?isActive=1"
 IMPERSONATE = "chrome124"
 TIMEOUT = 20
-DETAIL_LIMIT = 80
+DETAIL_LIMIT = int(os.environ.get("SUTO_DETAIL_LIMIT", "80"))
 LIST_PAGE_LIMIT = int(os.environ.get("SUTO_LIST_PAGE_LIMIT", "20"))
 DETAIL_DELAY_SECONDS = float(os.environ.get("SUTO_DETAIL_DELAY_SECONDS", "1.1"))
 RATE_LIMIT_BACKOFF_SECONDS = [4, 9, 16]
@@ -314,6 +314,8 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
     )
     links = []
     seen = set()
+    apply_links = []
+    apply_seen = set()
     scopes = []
     for selector in ["#bo_v_con", ".bo_v_con", ".item-box", ".view_content", "#bo_v_link"]:
         scopes.extend(soup.select(selector))
@@ -326,6 +328,12 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
         for iframe in scope.find_all("iframe", src=True):
             add_link(links, seen, iframe["src"].strip(), link_pattern)
 
+    for scope in soup.select("#bo_v_link"):
+        for a in scope.find_all("a", href=True):
+            add_link(apply_links, apply_seen, a["href"].strip(), link_pattern)
+        for iframe in scope.find_all("iframe", src=True):
+            add_link(apply_links, apply_seen, iframe["src"].strip(), link_pattern)
+
     for el in soup.find_all(["input", "textarea"]):
         for attr in ("value", "data-original", "data-url", "placeholder"):
             add_link(links, seen, (el.get(attr) or "").strip(), link_pattern)
@@ -333,14 +341,20 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
     for match in re.finditer(r"https?://[^\s\"'<>)]+", body_text):
         add_link(links, seen, match.group(0), link_pattern)
 
+    if apply_links:
+        metadata["applyTargetUrl"] = apply_links[0]
+
     return body_text, links, metadata_lines, metadata
 
 
 def extract_detail_metadata(soup: BeautifulSoup) -> dict:
     metadata = {
+        "deadlineDate": "",
+        "deadlineText": "",
         "resultAnnouncementDate": "",
         "resultAnnouncementText": "",
         "prizeText": "",
+        "totalWinnerCount": "",
     }
 
     for item in soup.select(".item-box li"):
@@ -348,13 +362,23 @@ def extract_detail_metadata(soup: BeautifulSoup) -> dict:
         if not label_node:
             continue
         label = label_node.get_text(" ", strip=True)
-        value = item.get_text(" ", strip=True).replace(label, "", 1).strip()
+        value_node = item.select_one(".item_desc")
+        value = (
+            value_node.get_text(" ", strip=True)
+            if value_node
+            else item.get_text(" ", strip=True).replace(label, "", 1).strip()
+        )
         if not label or not value:
             continue
 
-        if is_announcement_label(label):
+        if is_period_label(label):
+            metadata["deadlineDate"] = normalize_detail_date(value, prefer_last=True)
+            metadata["deadlineText"] = f"{label} {value}".strip()[:100]
+        elif is_announcement_label(label):
             metadata["resultAnnouncementDate"] = normalize_detail_date(value)
             metadata["resultAnnouncementText"] = f"{label} {value}".strip()[:100]
+        elif is_total_winner_label(label):
+            metadata["totalWinnerCount"] = parse_first_number(value) or ""
         elif "경품태그" in label:
             prize_tags = unique_texts(item.select("a"))
             metadata["prizeText"] = ", ".join(prize_tags) or value[:50]
@@ -366,26 +390,42 @@ def is_announcement_label(label: str) -> bool:
     return "발표" in label and ("일" in label or "예정" in label)
 
 
-def normalize_detail_date(value: str) -> str:
+def is_period_label(label: str) -> bool:
+    text = re.sub(r"\s+", "", label)
+    return any(word in text for word in ["응모기간", "이벤트기간", "참여기간", "접수기간", "기간"])
+
+
+def is_total_winner_label(label: str) -> bool:
+    text = re.sub(r"\s+", "", label)
+    return "\uCD1D\uB2F9\uCCA8\uC790\uC218" in text or "\uB2F9\uCCA8\uC790\uC218" in text or "\uB2F9\uCCA8\uC778\uC6D0" in text
+
+
+def parse_first_number(value: str) -> int | None:
+    match = re.search(r"\d[\d,]*", value or "")
+    if not match:
+        return None
+    return int(match.group(0).replace(",", ""))
+def normalize_detail_date(value: str, prefer_last: bool = False) -> str:
     today = datetime.now()
     text = re.sub(r"\s+", " ", value).strip()
+    matches = []
 
-    full = re.search(r"(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
-    if full:
-        return format_date_parts(int(full.group(1)), int(full.group(2)), int(full.group(3)))
+    for full in re.finditer(r"(20\d{2})\s*[.\-/년]\s*(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text):
+        matches.append(format_date_parts(int(full.group(1)), int(full.group(2)), int(full.group(3))))
 
-    short_year = re.search(r"(?<!\d)(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})", text)
-    if short_year:
-        return format_date_parts(2000 + int(short_year.group(1)), int(short_year.group(2)), int(short_year.group(3)))
+    for short_year in re.finditer(r"(?<!\d)(\d{2})\s*[.\-/]\s*(\d{1,2})\s*[.\-/]\s*(\d{1,2})", text):
+        matches.append(format_date_parts(2000 + int(short_year.group(1)), int(short_year.group(2)), int(short_year.group(3))))
 
-    month_day = re.search(r"(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text)
-    if month_day:
+    for month_day in re.finditer(r"(\d{1,2})\s*[.\-/월]\s*(\d{1,2})", text):
         month = int(month_day.group(1))
         day = int(month_day.group(2))
         year = today.year + (1 if today.month >= 11 and month <= 2 else 0)
-        return format_date_parts(year, month, day)
+        matches.append(format_date_parts(year, month, day))
 
-    return ""
+    matches = [match for match in matches if match]
+    if not matches:
+        return ""
+    return matches[-1] if prefer_last else matches[0]
 
 
 def format_date_parts(year: int, month: int, day: int) -> str:
