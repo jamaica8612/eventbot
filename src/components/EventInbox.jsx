@@ -20,8 +20,9 @@ const deadlineFilters = [
 ];
 
 const inboxFilters = [
-  { value: 'all', label: '결과 미확인' },
-  { value: 'check', label: '오늘발표' },
+  { value: 'all', label: '전체' },
+  { value: 'check', label: '확인필요' },
+  { value: 'pending', label: '미확인' },
   { value: 'won', label: '당첨' },
   { value: 'unreceived', label: '미수령' },
   { value: 'lost', label: '미당첨' },
@@ -138,7 +139,7 @@ export function EventInbox({
           <strong>{events.length}</strong>
         </div>
         <div className={attentionCounts.check > 0 ? 'is-attention' : ''}>
-          <span>오늘발표</span>
+          <span>확인필요</span>
           <strong>{inboxCounts.check}</strong>
         </div>
         <div className={`inbox-summary-unreceived${attentionCounts.unreceived > 0 ? ' is-attention' : ''}`}>
@@ -153,6 +154,23 @@ export function EventInbox({
           <span>당첨금</span>
           <strong>{formatWon(totalAmount)}</strong>
         </div>
+      </div>
+
+      <div className="inbox-priority-strip" aria-label="응모함 우선 확인">
+        <button
+          type="button"
+          className={selectedFilter === 'check' ? 'is-active' : ''}
+          onClick={() => onSelectFilter('check')}
+        >
+          발표 확인 <strong>{inboxCounts.check}</strong>
+        </button>
+        <button
+          type="button"
+          className={selectedFilter === 'unreceived' ? 'is-active' : ''}
+          onClick={() => onSelectFilter('unreceived')}
+        >
+          수령 처리 <strong>{inboxCounts.unreceived}</strong>
+        </button>
       </div>
 
       <div className="filter-chips" aria-label="응모함 보기">
@@ -388,6 +406,7 @@ function buildInboxCounts(events) {
   return {
     all: events.length,
     check: events.filter((event) => matchesInboxView(event, 'check')).length,
+    pending: events.filter((event) => matchesInboxView(event, 'pending')).length,
     won: events.filter((event) => matchesInboxView(event, 'won')).length,
     unreceived: events.filter((event) => matchesInboxView(event, 'unreceived')).length,
     lost: events.filter((event) => matchesInboxView(event, 'lost')).length,
@@ -411,12 +430,14 @@ function matchesInboxView(event, view) {
     const announcement = getAnnouncementStatus(event);
     return event.resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
   }
+  if (view === 'pending') return event.resultStatus === 'unknown';
+  if (view === 'all') return true;
   if (view === 'won') return event.resultStatus === 'won';
   if (view === 'unreceived') {
     return event.resultStatus === 'won' && event.receiptStatus !== 'received';
   }
   if (view === 'lost') return event.resultStatus === 'lost';
-  return event.resultStatus === 'unknown';
+  return true;
 }
 
 function getWinRateLabel(events) {

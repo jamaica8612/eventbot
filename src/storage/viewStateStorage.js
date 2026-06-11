@@ -15,7 +15,7 @@ const allowedValues = {
   platformFilter: null,
   sortMode: new Set(['default', 'popular', 'winners', 'deadline', 'newest']),
   deadlineFilter: new Set(['all', 'today', 'tomorrow', 'week', 'unknown']),
-  inboxFilter: new Set(['all', 'check', 'won', 'unreceived', 'lost']),
+  inboxFilter: new Set(['all', 'check', 'pending', 'won', 'unreceived', 'lost']),
   searchQuery: null,
   searchScope: new Set(['all', 'ready', 'done', 'won']),
 };
