@@ -182,6 +182,9 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
   const showAnnouncementPanel =
     filter === 'todayAnnouncement' && event.status === 'done' && resultStatus === 'unknown';
   const showCompletionActions = filter !== 'done';
+  const userContentLines = buildUserContentLines(event);
+  const sourceFacts = buildSourceFacts(event);
+  const showYoutubeTools = hasYoutubeLink(event);
 
   return (
     <article className="event-card">
@@ -192,6 +195,9 @@ function CompletedEventCard({ event, filter, onResultChange, onAnnouncementChang
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
       <EventSourceSummary event={event} />
+      {showYoutubeTools ? (
+        <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
+      ) : null}
 
       {event.status === 'done' ? (
         <div className={`result-badge result-${resultStatus}`}>{resultLabels[resultStatus]}</div>
@@ -339,4 +345,22 @@ function parseCount(value) {
   if (!match) return NaN;
   const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
   return Number.isFinite(count) ? count : NaN;
+}
+
+function hasYoutubeLink(event) {
+  const raw = event.raw ?? {};
+  return [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    event.applyUrl,
+    event.url,
+    event.originalUrl,
+    ...(raw.externalLinks ?? []),
+  ]
+    .filter(Boolean)
+    .some((url) =>
+      /youtu\.be\/[A-Za-z0-9_-]{6,}|youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)[A-Za-z0-9_-]{6,}/i.test(
+        String(url),
+      ),
+    );
 }

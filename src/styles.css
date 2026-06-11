@@ -1014,6 +1014,14 @@ h3 {
   white-space: nowrap;
 }
 
+.inbox-youtube-tools {
+  min-width: 0;
+}
+
+.inbox-youtube-tools .event-body-toggle {
+  margin-top: 0;
+}
+
 .inbox-prize-cell > span {
   overflow: hidden;
 }
