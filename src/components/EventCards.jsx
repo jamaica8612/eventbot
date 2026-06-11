@@ -131,6 +131,9 @@ function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
 function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) {
   const resultStatus = event.resultStatus ?? 'unknown';
   const prize = getPrizeDisplay(event);
+  const userContentLines = buildUserContentLines(event);
+  const sourceFacts = buildSourceFacts(event);
+  const showYoutubeTools = hasYoutubeLink(event);
 
   return (
     <article className="event-card announcement-card">
@@ -141,6 +144,9 @@ function TodayAnnouncementCard({ event, onAnnouncementChange, onResultChange }) 
 
       <h3>{event.title}</h3>
       <EventScheduleMeta event={event} />
+      {showYoutubeTools ? (
+        <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
+      ) : null}
 
       <div className="prize-panel">
         <span>경품</span>
@@ -358,9 +364,5 @@ function hasYoutubeLink(event) {
     ...(raw.externalLinks ?? []),
   ]
     .filter(Boolean)
-    .some((url) =>
-      /youtu\.be\/[A-Za-z0-9_-]{6,}|youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)[A-Za-z0-9_-]{6,}/i.test(
-        String(url),
-      ),
-    );
+    .some((url) => /youtube\.com|youtu\.be/i.test(String(url)));
 }

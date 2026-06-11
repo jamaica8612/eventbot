@@ -443,7 +443,11 @@ function buildYoutubeLinks(event) {
   return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
-    .filter((url) => extractYoutubeVideoId(url));
+    .filter((url) => isYoutubeUrl(url));
+}
+
+function isYoutubeUrl(url) {
+  return /youtube\.com|youtu\.be/i.test(String(url ?? ''));
 }
 
 function extractYoutubeVideoId(url) {

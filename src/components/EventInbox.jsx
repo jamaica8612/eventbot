@@ -425,11 +425,7 @@ function hasYoutubeLink(event) {
     ...(raw.externalLinks ?? []),
   ]
     .filter(Boolean)
-    .some((url) =>
-      /youtu\.be\/[A-Za-z0-9_-]{6,}|youtube\.com\/(?:watch\?[^#]*v=|embed\/|shorts\/)[A-Za-z0-9_-]{6,}/i.test(
-        String(url),
-      ),
-    );
+    .some((url) => /youtube\.com|youtu\.be/i.test(String(url)));
 }
 
 function buildInboxCounts(events) {
