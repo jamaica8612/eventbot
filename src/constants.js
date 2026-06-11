@@ -43,7 +43,6 @@ export const filterTitles = {
   later: '임시저장 이벤트',
   search: '이벤트 검색',
   inbox: '응모함',
-  admin: '관리자',
   skipped: '제외한 이벤트',
 };
 
@@ -54,5 +53,3 @@ export function getFilterLabel(item) {
 export function getFilterTitle(filter) {
   return filterTitles[filter];
 }
-
-export { LABELS } from './lib/domain.js';

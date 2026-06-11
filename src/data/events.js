@@ -1,0 +1,32 @@
+export const initialEvents = [
+  {
+    id: 'sample-quick-1',
+    title: '편의점 앱 출석 이벤트',
+    source: '앱 이벤트',
+    due: '오늘 밤',
+    effort: 'quick',
+    effortLabel: '현장 딸각',
+    status: 'ready',
+    memo: '짧게 열고 출석만 확인하면 되는 유형입니다.',
+  },
+  {
+    id: 'sample-home-1',
+    title: '유튜브 댓글 이벤트',
+    source: '유튜브',
+    due: '이번 주',
+    effort: 'home',
+    effortLabel: '집에서 처리',
+    status: 'later',
+    memo: '댓글 내용을 천천히 읽고 집에서 참여하는 편이 좋습니다.',
+  },
+  {
+    id: 'sample-hard-1',
+    title: '긴 설문 참여 이벤트',
+    source: '브랜드 페이지',
+    due: '마감 임박',
+    effort: 'hard',
+    effortLabel: '복잡함',
+    status: 'ready',
+    memo: '현장에서는 어렵고 제외하거나 집에서 다시 볼 후보입니다.',
+  },
+];

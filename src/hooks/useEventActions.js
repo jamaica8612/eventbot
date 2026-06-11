@@ -1,8 +1,13 @@
 import { useCallback, useEffect } from 'react';
 import {
-  updateSupabaseEventDetails,
-  updateSupabaseEventState,
-} from '../storage/supabaseEventStorage.js';
+  saveEventAnnouncement,
+  saveEventResult,
+  saveEventStatus,
+  saveWinningMeta,
+  removeEventState,
+} from '../storage/eventStatusStorage.js';
+import { saveExcludedEvent } from '../storage/excludedEventStorage.js';
+import { hasSupabaseConfig, updateSupabaseEventState } from '../storage/supabaseEventStorage.js';
 import {
   enqueueSyncPatch,
   getSyncQueueSummary,
@@ -97,6 +102,12 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     (eventId, status) => {
       const changedAt = new Date().toISOString();
       const currentEvent = events.find((event) => event.id === eventId);
+      if (!hasSupabaseConfig) {
+        saveEventStatus(eventId, status);
+      }
+      if (!hasSupabaseConfig && status === 'skipped') {
+        saveExcludedEvent(currentEvent);
+      }
       persistRemote(eventId, buildStatusPatch(currentEvent, status, changedAt), setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -117,6 +128,9 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
           ? currentEvent?.prizeTitle || getPrizeDisplay(currentEvent)
           : undefined;
 
+      if (!hasSupabaseConfig) {
+        saveEventResult(eventId, resultStatus, { prizeTitle });
+      }
       persistRemote(
         eventId,
         {
@@ -153,6 +167,9 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     (eventId, meta) => {
       const currentEvent = events.find((event) => event.id === eventId);
       const participatedAt = currentEvent?.participatedAt ?? new Date().toISOString();
+      if (!hasSupabaseConfig) {
+        saveEventAnnouncement(eventId, meta);
+      }
       persistRemote(
         eventId,
         {
@@ -180,51 +197,11 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     [events, setEvents, setSyncNotice],
   );
 
-  const updateDeadline = useCallback(
-    (eventId, meta) => {
-      const deadlineText =
-        typeof meta.deadlineText === 'string'
-          ? meta.deadlineText.trim()
-          : meta.deadlineDate || '상세 확인 필요';
-      const patch = {
-        deadlineDate: meta.deadlineDate || '',
-        deadlineText,
-      };
-
-      setSyncNotice(null);
-      updateSupabaseEventDetails(eventId, patch)
-        .then(() => setSyncNotice({ type: 'success', message: '마감일을 저장했습니다.' }))
-        .catch((error) =>
-          setSyncNotice({
-            type: 'warning',
-            message: `마감일 저장 실패. (${error.message})`,
-          }),
-        );
-
-      setEvents((currentEvents) =>
-        currentEvents.map((event) =>
-          event.id === eventId
-            ? {
-                ...event,
-                deadlineDate: patch.deadlineDate,
-                deadlineText,
-                due: deadlineText,
-                raw: {
-                  ...(event.raw ?? {}),
-                  deadlineDate: patch.deadlineDate,
-                  deadlineText,
-                  due: deadlineText,
-                },
-              }
-            : event,
-        ),
-      );
-    },
-    [setEvents, setSyncNotice],
-  );
-
   const updateWinningMeta = useCallback(
     (eventId, meta) => {
+      if (!hasSupabaseConfig) {
+        saveWinningMeta(eventId, meta);
+      }
       persistRemote(eventId, { status: 'done', resultStatus: 'won', ...meta }, setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -265,6 +242,9 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
         winningMemo: '',
       };
 
+      if (!hasSupabaseConfig) {
+        removeEventState(eventId);
+      }
       persistRemote(eventId, patch, setSyncNotice);
       setEvents((currentEvents) =>
         currentEvents.map((event) =>
@@ -293,7 +273,6 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
     updateStatus,
     updateResult,
     updateAnnouncement,
-    updateDeadline,
     updateWinningMeta,
     deleteInboxEvent,
   };

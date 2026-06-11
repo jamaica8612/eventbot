@@ -6,10 +6,8 @@ import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
 
 const SOURCE_NAME = '슈퍼투데이';
-const AJAX_ROWS = Number.parseInt(process.env.SUTO_AJAX_ROWS ?? '80', 10);
-const AJAX_HOT_COUNT = Number.parseInt(process.env.SUTO_AJAX_HOT_COUNT ?? '50', 10);
 const SOURCE_URL =
-  `https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=${AJAX_ROWS}&hot_cnt=${AJAX_HOT_COUNT}&skin_dir=mo_simple`;
+  'https://www.suto.co.kr/plugin/yun/ajax.hot_list.php?gr_id=cpevent&rows=80&hot_cnt=50&skin_dir=mo_simple';
 const OUTPUT_PATH = path.join(process.cwd(), 'public', 'crawled-events.json');
 
 async function main() {
@@ -45,9 +43,7 @@ async function loadSutoEvents() {
   }
 
   const html = await fetchHtml(SOURCE_URL);
-  const events = await hydrateEventDetails(parseSutoHotEvents(html));
-  printCrawlQualitySummary(events);
-  return events.filter((event) => !isInstagramEvent(event));
+  return hydrateEventDetails(parseSutoHotEvents(html)).filter((event) => !isInstagramEvent(event));
 }
 
 function printCrawlQualitySummary(events) {
@@ -156,7 +152,6 @@ function getPythonCommand() {
 }
 
 function hydrateCurlCffiEvent(event) {
-  const platform = getCorrectedPlatform(event);
   const lines = event.originalLines ?? [];
   const text = event.originalText ?? '';
   const detailMetaText = Array.isArray(event.detailMetaLines) ? event.detailMetaLines.join('\n') : '';
@@ -179,8 +174,6 @@ function hydrateCurlCffiEvent(event) {
 
   return {
     ...event,
-    platform,
-    source: platform !== event.platform ? replaceSourcePlatform(event.source, platform) : event.source,
     due: event.deadlineText || decision.deadlineText,
     deadlineText: event.deadlineText || decision.deadlineText,
     deadlineDate: event.deadlineDate || decision.deadlineDate || '',
@@ -195,20 +188,6 @@ function hydrateCurlCffiEvent(event) {
     memo: decision.decisionReason,
     ...announcement,
   };
-}
-
-function getCorrectedPlatform(event) {
-  return hasYoutubeApplyUrl(event) ? '\uC720\uD29C\uBE0C \uC774\uBCA4\uD2B8' : event.platform;
-}
-
-function hasYoutubeApplyUrl(event = {}) {
-  return /youtube\.com|youtu\.be/i.test(String(event.applyTargetUrl ?? ''));
-}
-
-function replaceSourcePlatform(source = '', platform) {
-  if (!source) return platform;
-  if (!source.includes('\u00B7')) return source;
-  return source.replace(/\u00B7\s*.+$/, `\u00B7 ${platform}`);
 }
 
 // Cloudflare가 모바일 UA를 더 자주 의심하므로 데스크톱 UA를 1순위로 둔다.

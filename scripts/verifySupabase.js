@@ -46,24 +46,11 @@ async function verifySupabase() {
     throw new Error(`Supabase recent query failed: ${recentError.message}`);
   }
 
-  const since = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-  const { count: recentSeenCount, error: recentSeenError } = await supabase
-    .from('events')
-    .select('id', { count: 'exact', head: true })
-    .gte('last_seen_at', since);
-
-  if (recentSeenError) {
-    throw new Error(`Supabase recent seen count failed: ${recentSeenError.message}`);
-  }
-
   const latestSeenAt = data?.[0]?.last_seen_at ?? 'none';
-  const checkedAt = new Date().toISOString();
   await saveCrawlStatus(supabase, {
     status: 'success',
-    checkedAt,
-    lastSuccessAt: checkedAt,
+    checkedAt: new Date().toISOString(),
     totalEvents: count ?? 0,
-    recentSeen24h: recentSeenCount ?? 0,
     latestSeenAt,
     recentEvents: (data ?? []).map((event) => ({
       sourceSite: event.source_site,

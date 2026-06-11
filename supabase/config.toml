@@ -4,8 +4,5 @@ verify_jwt = false
 [functions.eventbot-data]
 verify_jwt = false
 
-[functions.eventbot-crawl-trigger]
-verify_jwt = false
-
 [functions.youtube-transcript]
 verify_jwt = false

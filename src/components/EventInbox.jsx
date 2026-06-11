@@ -1,0 +1,374 @@
+import { useMemo, useState } from 'react';
+import { receiptLabels, resultLabels } from '../constants.js';
+import {
+  getAnnouncementStatus,
+  getPrizeDisplay,
+  sortInboxEvents,
+} from '../utils/eventModel.js';
+import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
+import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
+import { EventCard } from './EventCards.jsx';
+import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
+
+const deadlineFilters = [
+  { value: 'all', label: '전체' },
+  { value: 'today', label: '오늘' },
+  { value: 'tomorrow', label: '내일' },
+  { value: 'week', label: '7일 이내' },
+  { value: 'unknown', label: '확인 필요' },
+];
+
+const inboxFilters = [
+  { value: 'all', label: '전체' },
+  { value: 'check', label: '발표확인' },
+  { value: 'won', label: '당첨' },
+  { value: 'unreceived', label: '미수령' },
+  { value: 'lost', label: '미당첨' },
+];
+
+export function TodayDeadlineList({ events, isLoading, onStatusChange }) {
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const sortedEvents = events;
+  const filterCounts = useMemo(
+    () =>
+      Object.fromEntries(
+        deadlineFilters.map((filter) => [
+          filter.value,
+          sortedEvents.filter((event) => matchesDeadlineView(event, filter.value)).length,
+        ]),
+      ),
+    [sortedEvents],
+  );
+  const visibleEvents = useMemo(
+    () => sortedEvents.filter((event) => matchesDeadlineView(event, selectedFilter)),
+    [selectedFilter, sortedEvents],
+  );
+
+  if (events.length === 0) {
+    return (
+      <p className="empty-message">
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '마감일을 확인할 이벤트가 없습니다.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="deadline-board">
+      <div className="filter-chips" aria-label="마감일순 보기">
+        {deadlineFilters.map((filter) => (
+          <button
+            type="button"
+            key={filter.value}
+            className={selectedFilter === filter.value ? 'is-active' : ''}
+            onClick={() => setSelectedFilter(filter.value)}
+          >
+            {filter.label} <strong>{filterCounts[filter.value]}</strong>
+          </button>
+        ))}
+      </div>
+
+      <div className="deadline-list">
+        {visibleEvents.length > 0 ? (
+          visibleEvents.map((event) => (
+            <EventCard
+              key={event.id}
+              event={event}
+              filter="todayDeadline"
+              onStatusChange={onStatusChange}
+            />
+          ))
+        ) : (
+          <p className="empty-message">이 조건에 맞는 마감 이벤트가 없습니다.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function matchesDeadlineView(event, view) {
+  const match = getUpcomingDeadlineMatch(event);
+  if (view === 'today') return match.bucket === 'today';
+  if (view === 'tomorrow') return match.bucket === 'tomorrow';
+  if (view === 'week') return ['today', 'tomorrow', 'week'].includes(match.bucket);
+  if (view === 'unknown') return match.bucket === 'unknown';
+  return match.isMatch;
+}
+
+export function EventInbox({
+  events,
+  isLoading,
+  totalAmount,
+  onAnnouncementChange,
+  onResultChange,
+  onMetaChange,
+  onDelete,
+}) {
+  const [selectedFilter, setSelectedFilter] = useState('all');
+  const sortedEvents = useMemo(() => sortInboxEvents(events), [events]);
+  const inboxCounts = useMemo(() => buildInboxCounts(sortedEvents), [sortedEvents]);
+  const visibleEvents = useMemo(
+    () => sortedEvents.filter((event) => matchesInboxView(event, selectedFilter)),
+    [selectedFilter, sortedEvents],
+  );
+
+  if (events.length === 0) {
+    return (
+      <p className="empty-message">
+        {isLoading ? '이벤트를 불러오는 중입니다.' : '응모함에 담긴 이벤트가 없습니다.'}
+      </p>
+    );
+  }
+
+  return (
+    <div className="inbox-board">
+      <div className="inbox-summary">
+        <div>
+          <span>응모완료</span>
+          <strong>{events.length}</strong>
+        </div>
+        <div>
+          <span>발표확인</span>
+          <strong>{inboxCounts.check}</strong>
+        </div>
+        <div>
+          <span>미수령</span>
+          <strong>{inboxCounts.unreceived}</strong>
+        </div>
+        <div>
+          <span>당첨금</span>
+          <strong>{formatWon(totalAmount)}</strong>
+        </div>
+      </div>
+
+      <div className="filter-chips" aria-label="응모함 보기">
+        {inboxFilters.map((filter) => (
+          <button
+            type="button"
+            key={filter.value}
+            className={selectedFilter === filter.value ? 'is-active' : ''}
+            onClick={() => setSelectedFilter(filter.value)}
+          >
+            {filter.label} <strong>{inboxCounts[filter.value]}</strong>
+          </button>
+        ))}
+      </div>
+
+      <div className="inbox-list">
+        <div className="inbox-list-head" aria-hidden="true">
+          <span>응모일</span>
+          <span>이벤트</span>
+          <span>발표/결과</span>
+          <span>경품</span>
+          <span>관리</span>
+        </div>
+        {visibleEvents.length > 0 ? (
+          visibleEvents.map((event) => (
+            <InboxRow
+              key={event.id}
+              event={event}
+              onAnnouncementChange={onAnnouncementChange}
+              onResultChange={onResultChange}
+              onMetaChange={onMetaChange}
+              onDelete={onDelete}
+            />
+          ))
+        ) : (
+          <p className="empty-message">이 조건에 맞는 응모 내역이 없습니다.</p>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, onDelete }) {
+  const [isEditing, setIsEditing] = useState(false);
+  const resultStatus = event.resultStatus ?? 'unknown';
+  const announcement = getAnnouncementStatus(event);
+  const prize = event.prizeTitle || getPrizeDisplay(event);
+  const amount = parsePrizeAmount(event.prizeAmount);
+  const isWon = resultStatus === 'won';
+  const isCheckTarget =
+    resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
+  const handleDelete = () => {
+    if (window.confirm('이 응모 기록을 응모함에서 삭제할까요?')) {
+      onDelete(event.id);
+    }
+  };
+
+  return (
+    <article
+      className={`inbox-row inbox-row-${resultStatus} inbox-announcement-${announcement.state}${
+        isCheckTarget ? ' is-check-target' : ''
+      }`}
+    >
+      <div className="inbox-date-cell">
+        <time>{formatDate(event.participatedAt)}</time>
+        <span>{event.platform}</span>
+      </div>
+
+      <div className="inbox-title-cell">
+        <strong className="manage-row-title">{event.title}</strong>
+        {isCheckTarget ? (
+          <p className="inbox-attention">
+            {announcement.state === 'overdue'
+              ? '발표일 지남'
+              : '오늘 발표'}
+          </p>
+        ) : null}
+      </div>
+
+      <div className="inbox-state-cell">
+        <span className={`announcement-state announcement-state-${announcement.state}`}>
+          {announcement.label}
+        </span>
+        <span className={`result-badge result-${resultStatus}`}>{resultLabels[resultStatus]}</span>
+      </div>
+
+      <div className="inbox-prize-cell">
+        <span>{prize}</span>
+        {isWon ? (
+          <div className="inbox-winning-meta">
+            <span>{amount > 0 ? formatWon(amount) : '금액 미입력'}</span>
+            <span>{receiptLabels[event.receiptStatus ?? 'unclaimed']}</span>
+          </div>
+        ) : null}
+      </div>
+
+      <div className="inbox-action-cell">
+        <div className="inbox-top-actions">
+          <button
+            type="button"
+            className="manage-edit-text-button"
+            onClick={() => setIsEditing((value) => !value)}
+          >
+            수정
+          </button>
+          <button type="button" className="inbox-delete-button" onClick={handleDelete}>
+            삭제
+          </button>
+        </div>
+
+        <div className="manage-result-actions manage-actions-three">
+          <button
+            type="button"
+            className={resultStatus === 'won' ? 'is-won' : ''}
+            onClick={() => onResultChange(event.id, resultStatus === 'won' ? 'unknown' : 'won')}
+          >
+            당첨
+          </button>
+          <button
+            type="button"
+            className={resultStatus === 'lost' ? 'is-lost' : ''}
+            onClick={() => onResultChange(event.id, resultStatus === 'lost' ? 'unknown' : 'lost')}
+          >
+            미당첨
+          </button>
+          {event.originalUrl || event.url ? (
+            <ApplyLink
+              className="manage-link"
+              url={event.originalUrl ?? event.url}
+              label="확인"
+            />
+          ) : null}
+        </div>
+
+        {isWon ? (
+          <div className="ledger-quick-receipt" aria-label={`${event.title} 수령 상태 빠른 변경`}>
+            <button
+              type="button"
+              className={event.receiptStatus === 'received' ? 'is-received' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'received' })}
+            >
+              수령완료
+            </button>
+            <button
+              type="button"
+              className={event.receiptStatus !== 'received' ? 'is-unreceived' : ''}
+              onClick={() => onMetaChange(event.id, { receiptStatus: 'unclaimed' })}
+            >
+              미수령
+            </button>
+          </div>
+        ) : null}
+      </div>
+
+      {isEditing ? (
+        <div className="manage-edit-panel inbox-edit-panel">
+          <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
+          {isWon ? (
+            <>
+              <label className="prize-title-field">
+                <span>상품명</span>
+                <input
+                  value={event.prizeTitle ?? prize}
+                  onChange={(changeEvent) =>
+                    onMetaChange(event.id, { prizeTitle: changeEvent.target.value })
+                  }
+                />
+              </label>
+              <label className="amount-field">
+                <span>금액</span>
+                <input
+                  inputMode="decimal"
+                  placeholder="예: 1만 5000"
+                  value={event.prizeAmount ?? ''}
+                  onChange={(changeEvent) =>
+                    onMetaChange(event.id, { prizeAmount: changeEvent.target.value })
+                  }
+                />
+              </label>
+              <label className="receipt-field">
+                <span>상태</span>
+                <select
+                  value={event.receiptStatus ?? 'unclaimed'}
+                  onChange={(changeEvent) =>
+                    onMetaChange(event.id, { receiptStatus: changeEvent.target.value })
+                  }
+                >
+                  {Object.entries(receiptLabels).map(([value, label]) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <label className="winning-memo-field">
+                <span>메모</span>
+                <input
+                  placeholder="수령 조건, 문의번호, 계정 등"
+                  value={event.winningMemo ?? ''}
+                  onChange={(changeEvent) =>
+                    onMetaChange(event.id, { winningMemo: changeEvent.target.value })
+                  }
+                />
+              </label>
+            </>
+          ) : null}
+        </div>
+      ) : null}
+    </article>
+  );
+}
+
+function buildInboxCounts(events) {
+  return {
+    all: events.length,
+    check: events.filter((event) => matchesInboxView(event, 'check')).length,
+    won: events.filter((event) => matchesInboxView(event, 'won')).length,
+    unreceived: events.filter((event) => matchesInboxView(event, 'unreceived')).length,
+    lost: events.filter((event) => matchesInboxView(event, 'lost')).length,
+  };
+}
+
+function matchesInboxView(event, view) {
+  const announcement = getAnnouncementStatus(event);
+  if (view === 'check') {
+    return event.resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
+  }
+  if (view === 'won') return event.resultStatus === 'won';
+  if (view === 'unreceived') {
+    return event.resultStatus === 'won' && event.receiptStatus !== 'received';
+  }
+  if (view === 'lost') return event.resultStatus === 'lost';
+  return true;
+}

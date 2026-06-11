@@ -3,7 +3,6 @@ const FILTER_SETTINGS_KEY = 'event-click-filter-settings';
 export const defaultFilterSettings = {
   excludedKeywords: [],
   hiddenPlatforms: [],
-  hideExpiredReadyEvents: true,
 };
 
 export function loadFilterSettings() {
@@ -30,7 +29,6 @@ export function normalizeFilterSettings(settings) {
   return {
     excludedKeywords: normalizeStringList(settings?.excludedKeywords),
     hiddenPlatforms: normalizeStringList(settings?.hiddenPlatforms),
-    hideExpiredReadyEvents: settings?.hideExpiredReadyEvents !== false,
   };
 }
 
