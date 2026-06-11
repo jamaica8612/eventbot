@@ -231,6 +231,8 @@ export function EventCard({ event, onAction, onUpdate, query }) {
   const body = getBody(event);
   const isYoutube = /youtube|유튜브/i.test(event.platform || '');
   const prizeSummary = event.prizeText || event.prizeTitle || '경품 정보 미수집';
+  // 유튜브 이벤트는 실제 영상 URL(externalLinks)로 보낸다. applyUrl/url 은 suto 출처라 영상이 아님.
+  const applyHref = (isYoutube && buildYoutubeLinks(event)[0]) || event.applyUrl || event.url;
 
   return (
     <article style={{
@@ -346,7 +348,7 @@ export function EventCard({ event, onAction, onUpdate, query }) {
 
       {/* actions */}
       <div style={{ marginTop: 14, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Button variant="primary" icon="ext" onClick={() => window.open(event.applyUrl ?? event.url, '_blank')}>참여하기</Button>
+        <Button variant="primary" icon="ext" onClick={() => window.open(applyHref, '_blank')}>참여하기</Button>
         <Button variant="win" icon="check" onClick={() => onAction(event.id, 'enter')}>참여완료</Button>
         {event.status === 'later'
           ? <Button variant="soft" icon="undo" onClick={() => onAction(event.id, 'toWaiting')}>대기로</Button>
