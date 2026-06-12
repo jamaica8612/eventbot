@@ -1909,6 +1909,11 @@ html[data-theme="dark"] .meta-row .deadline-tomorrow {
   width: 100%;
 }
 
+.inbox-youtube-tools {
+  grid-column: 1 / -1;
+  margin-top: 4px;
+}
+
 .youtube-transcript-error {
   color: var(--danger);
   font-size: 0.82rem;

@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { receiptLabels, resultLabels } from '../constants.js';
 import {
+  buildSourceFacts,
+  buildUserContentLines,
   getAnnouncementStatus,
   getPrizeDisplay,
   sortInboxEvents,
@@ -8,6 +10,7 @@ import {
 import { getUpcomingDeadlineMatch } from '../utils/deadlineModel.js';
 import { formatDate, formatWon, parsePrizeAmount } from '../utils/format.js';
 import { EventCard } from './EventCards.jsx';
+import { EventBodyToggle } from './EventBodyToggle.jsx';
 import { AnnouncementPanel, ApplyLink } from './EventShared.jsx';
 import { PlatformBadge } from './PlatformBadge.jsx';
 
@@ -217,6 +220,9 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
   const isCheckTarget =
     resultStatus === 'unknown' && ['overdue', 'today'].includes(announcement.state);
   const originalUrl = getHttpOriginalUrl(event);
+  const userContentLines = buildUserContentLines(event);
+  const sourceFacts = buildSourceFacts(event);
+  const showYoutubeTools = hasYoutubeLink(event);
   const handleRestoreToReady = () => {
     if (window.confirm('이 응모 기록을 대기 상태로 되돌릴까요?')) {
       onDelete(event.id);
@@ -339,6 +345,12 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
         </div>
       </div>
 
+      {showYoutubeTools ? (
+        <div className="inbox-youtube-tools">
+          <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
+        </div>
+      ) : null}
+
       {isEditing ? (
         <div className="manage-edit-panel inbox-edit-panel">
           <AnnouncementPanel event={event} onAnnouncementChange={onAnnouncementChange} />
@@ -400,6 +412,20 @@ function InboxRow({ event, onAnnouncementChange, onResultChange, onMetaChange, o
 function getHttpOriginalUrl(event) {
   const url = event.originalUrl || event.url;
   return /^https?:\/\//i.test(url ?? '') ? url : '';
+}
+
+function hasYoutubeLink(event) {
+  const raw = event.raw ?? {};
+  return [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    event.applyUrl,
+    event.url,
+    event.originalUrl,
+    ...(raw.externalLinks ?? []),
+  ]
+    .filter(Boolean)
+    .some((url) => /youtube\.com|youtu\.be/i.test(String(url)));
 }
 
 function buildInboxCounts(events) {
