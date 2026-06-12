@@ -50,6 +50,25 @@ ALLOWED_PLATFORMS = {
     "앱 전용 이벤트",
 }
 
+EXTERNAL_LINK_PATTERN = re.compile(
+    "|".join(
+        [
+            r"youtube\.com/watch",
+            r"youtube\.com/shorts/",
+            r"youtube\.com/post/",
+            r"youtube\.com/embed/",
+            r"youtu\.be/",
+            r"instagram\.com/",
+            r"naver\.me/",
+            r"forms\.gle/",
+            r"docs\.google\.com/forms",
+            r"form\.naver\.com",
+        ]
+    )
+)
+
+SUTO_REDIRECT_PATTERN = re.compile(r"suto\.co\.kr/bbs/link\.php", re.IGNORECASE)
+
 
 def main() -> None:
     events = fetch_list()
@@ -227,8 +246,18 @@ def fetch_detail(s, url: str) -> dict:
         if response is None:
             raise RuntimeError("No response returned.")
         response.raise_for_status()
-        body, links, metadata_lines, metadata = parse_detail(response.text)
+        body, links, metadata_lines, metadata, suto_redirects = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
+        # suto link.php 리다이렉트를 따라가 YouTube 등 실제 URL 수집
+        if suto_redirects and not any(
+            EXTERNAL_LINK_PATTERN.search(u) for u in links
+        ):
+            resolved = resolve_suto_redirects(s, suto_redirects)
+            for resolved_url in resolved:
+                if resolved_url not in set(links):
+                    links.append(resolved_url)
+            if resolved and not metadata.get("applyTargetUrl"):
+                metadata["applyTargetUrl"] = resolved[0]
         youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),
@@ -296,26 +325,12 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
         metadata_lines.extend(normalize_lines(scope.get_text("\n", strip=True).splitlines()))
     metadata = extract_detail_metadata(soup)
 
-    link_pattern = re.compile(
-        "|".join(
-            [
-                r"youtube\.com/watch",
-                r"youtube\.com/shorts/",
-                r"youtube\.com/post/",
-                r"youtube\.com/embed/",
-                r"youtu\.be/",
-                r"instagram\.com/",
-                r"naver\.me/",
-                r"forms\.gle/",
-                r"docs\.google\.com/forms",
-                r"form\.naver\.com",
-            ]
-        )
-    )
     links = []
     seen = set()
     apply_links = []
     apply_seen = set()
+    suto_redirect_urls = []
+    suto_redirect_seen: set[str] = set()
     scopes = []
     for selector in ["#bo_v_con", ".bo_v_con", ".item-box", ".view_content", "#bo_v_link"]:
         scopes.extend(soup.select(selector))
@@ -324,27 +339,31 @@ def parse_detail(html: str) -> tuple[str, list[str], list[str], dict]:
 
     for scope in scopes:
         for a in scope.find_all("a", href=True):
-            add_link(links, seen, a["href"].strip(), link_pattern)
+            href = a["href"].strip()
+            add_link(links, seen, href, EXTERNAL_LINK_PATTERN)
+            if SUTO_REDIRECT_PATTERN.search(href) and href not in suto_redirect_seen:
+                suto_redirect_seen.add(href)
+                suto_redirect_urls.append(href)
         for iframe in scope.find_all("iframe", src=True):
-            add_link(links, seen, iframe["src"].strip(), link_pattern)
+            add_link(links, seen, iframe["src"].strip(), EXTERNAL_LINK_PATTERN)
 
     for scope in soup.select("#bo_v_link"):
         for a in scope.find_all("a", href=True):
-            add_link(apply_links, apply_seen, a["href"].strip(), link_pattern)
+            add_link(apply_links, apply_seen, a["href"].strip(), EXTERNAL_LINK_PATTERN)
         for iframe in scope.find_all("iframe", src=True):
-            add_link(apply_links, apply_seen, iframe["src"].strip(), link_pattern)
+            add_link(apply_links, apply_seen, iframe["src"].strip(), EXTERNAL_LINK_PATTERN)
 
     for el in soup.find_all(["input", "textarea"]):
         for attr in ("value", "data-original", "data-url", "placeholder"):
-            add_link(links, seen, (el.get(attr) or "").strip(), link_pattern)
+            add_link(links, seen, (el.get(attr) or "").strip(), EXTERNAL_LINK_PATTERN)
 
     for match in re.finditer(r"https?://[^\s\"'<>)]+", body_text):
-        add_link(links, seen, match.group(0), link_pattern)
+        add_link(links, seen, match.group(0), EXTERNAL_LINK_PATTERN)
 
     if apply_links:
         metadata["applyTargetUrl"] = apply_links[0]
 
-    return body_text, links, metadata_lines, metadata
+    return body_text, links, metadata_lines, metadata, suto_redirect_urls
 
 
 def extract_detail_metadata(soup: BeautifulSoup) -> dict:
@@ -452,6 +471,23 @@ def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) 
     if value and pattern.search(value) and value not in seen:
         seen.add(value)
         links.append(value)
+
+
+def resolve_suto_redirects(s, suto_urls: list[str]) -> list[str]:
+    """suto link.php 리다이렉트를 따라가 실제 목적지 URL(YouTube 등)을 반환."""
+    resolved = []
+    seen: set[str] = set()
+    for url in suto_urls[:8]:
+        try:
+            resp = s.get(url, timeout=8)
+            final_url = str(resp.url)
+            if final_url and final_url not in seen and EXTERNAL_LINK_PATTERN.search(final_url):
+                seen.add(final_url)
+                resolved.append(final_url)
+        except Exception:
+            pass
+        time.sleep(0.25)
+    return resolved
 
 
 def fetch_youtube_transcripts(links: list[str]) -> list[dict]:
