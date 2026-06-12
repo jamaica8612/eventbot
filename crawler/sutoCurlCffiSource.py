@@ -67,8 +67,7 @@ EXTERNAL_LINK_PATTERN = re.compile(
     )
 )
 
-SUTO_REDIRECT_PATTERN = re.compile(r"suto\.co\.kr/bbs/link\.php", re.IGNORECASE)
-
+SUTO_REDIRECT_PATTERN = re.compile(r"(?:https?://(?:www\.)?suto\.co\.kr)?/bbs/link\.php", re.IGNORECASE)
 
 def main() -> None:
     events = fetch_list()
@@ -249,9 +248,7 @@ def fetch_detail(s, url: str) -> dict:
         body, links, metadata_lines, metadata, suto_redirects = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
         # suto link.php 리다이렉트를 따라가 YouTube 등 실제 URL 수집
-        if suto_redirects and not any(
-            EXTERNAL_LINK_PATTERN.search(u) for u in links
-        ):
+        if suto_redirects and not any(is_youtube_video_link(u) for u in links):
             resolved = resolve_suto_redirects(s, suto_redirects)
             for resolved_url in resolved:
                 if resolved_url not in set(links):
@@ -473,13 +470,17 @@ def add_link(links: list[str], seen: set[str], value: str, pattern: re.Pattern) 
         links.append(value)
 
 
+def is_youtube_video_link(url: str) -> bool:
+    return bool(extract_youtube_video_id(str(url or "")))
+
+
 def resolve_suto_redirects(s, suto_urls: list[str]) -> list[str]:
     """suto link.php 리다이렉트를 따라가 실제 목적지 URL(YouTube 등)을 반환."""
     resolved = []
     seen: set[str] = set()
     for url in suto_urls[:8]:
         try:
-            resp = s.get(url, timeout=8)
+            resp = s.get(absolute_suto_url(url), timeout=8)
             final_url = str(resp.url)
             if final_url and final_url not in seen and EXTERNAL_LINK_PATTERN.search(final_url):
                 seen.add(final_url)
@@ -488,6 +489,12 @@ def resolve_suto_redirects(s, suto_urls: list[str]) -> list[str]:
             pass
         time.sleep(0.25)
     return resolved
+
+
+def absolute_suto_url(url: str) -> str:
+    if re.match(r"^https?://", url, re.IGNORECASE):
+        return url
+    return f"{BASE}{url if url.startswith('/') else f'/{url}'}"
 
 
 def fetch_youtube_transcripts(links: list[str]) -> list[dict]:
