@@ -44,8 +44,7 @@ export function EventBodyToggle({ event, lines, facts }) {
   const [manualCopyText, setManualCopyText] = useState('');
   const originalHref = event.originalUrl ?? event.url;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const isYoutubePlatform = /youtube|유튜브/i.test(String(event.platform ?? ''));
-  const canFetchYoutubeTranscript = Boolean(youtubeLink) || isYoutubePlatform;
+  const canFetchYoutubeTranscript = Boolean(youtubeLink);
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
   const youtubeDisplayUrl = youtubeContext?.url || youtubeLink;
@@ -74,12 +73,7 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   async function handleYoutubeInfoFetch(clickEvent) {
     clickEvent.stopPropagation();
-    if (infoStatus === 'loading') return;
-    if (!youtubeLink) {
-      setTranscriptError('영상 URL을 아직 수집하지 못했습니다. 크롤러 재실행 후 다시 시도하세요.');
-      setInfoStatus('failed');
-      return;
-    }
+    if (!youtubeLink || infoStatus === 'loading') return;
 
     setInfoStatus('loading');
     setTranscriptError('');
@@ -123,12 +117,7 @@ export function EventBodyToggle({ event, lines, facts }) {
       setTranscriptError('');
       return;
     }
-    if (transcriptStatus === 'loading') return;
-    if (!youtubeLink) {
-      setTranscriptError('영상 URL을 아직 수집하지 못했습니다. 크롤러 재실행 후 다시 시도하세요.');
-      setTranscriptStatus('failed');
-      return;
-    }
+    if (!youtubeLink || transcriptStatus === 'loading') return;
 
     setTranscriptStatus('loading');
     setTranscriptError('');
@@ -188,7 +177,7 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   // 본문 수집이 막힌 경우(Cloudflare 등)에는 토글을 펼쳐도 안내 문구뿐이라
   // 토글 대신 "원문에서 확인" 안내 카드를 보여준다.
-  if (!hasCrawledBody(event) && !canFetchYoutubeTranscript) {
+  if (!hasCrawledBody(event)) {
     return (
       <div className="event-body-empty">
         <p>본문은 슈퍼투데이 사이트에서 직접 확인하세요.</p>
@@ -224,7 +213,7 @@ export function EventBodyToggle({ event, lines, facts }) {
           {lines.map((line) => (
             <p key={line}>{line}</p>
           ))}
-          {false ? (
+          {canFetchYoutubeTranscript ? (
             <>
               <button
                 type="button"
@@ -357,41 +346,11 @@ export function EventBodyToggle({ event, lines, facts }) {
         </div>
       ) : (
         <div className="event-body-preview">
-          {lines.length > 0
-            ? lines.slice(0, 3).map((line) => (
-                <p key={line}>{line}</p>
-              ))
-            : <p>본문 수집이 제한된 유튜브 이벤트입니다. 아래 버튼으로 댓글 자료를 수집할 수 있어요.</p>}
+          {lines.slice(0, 3).map((line) => (
+            <p key={line}>{line}</p>
+          ))}
         </div>
       )}
-      {canFetchYoutubeTranscript ? (
-        <div className="youtube-quick-tools" onClick={(clickEvent) => clickEvent.stopPropagation()}>
-          <button
-            type="button"
-            className="youtube-transcript-button"
-            onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-            onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-            onClick={handleYoutubeInfoFetch}
-            disabled={infoStatus === 'loading' || transcriptStatus === 'loading'}
-          >
-            {infoStatus === 'loading' ? '유튜브 정보수집 중' : '유튜브 정보수집'}
-          </button>
-          <button
-            type="button"
-            className="youtube-transcript-button"
-            onPointerDown={(pointerEvent) => pointerEvent.stopPropagation()}
-            onMouseDown={(mouseEvent) => mouseEvent.stopPropagation()}
-            onClick={handleYoutubeTranscriptFetch}
-            disabled={transcriptStatus === 'loading' || infoStatus === 'loading'}
-          >
-            {transcriptStatus === 'loading'
-              ? '댓글 생성 중'
-              : hasCommentCandidates
-                ? '댓글 보기'
-                : '댓글 만들기'}
-          </button>
-        </div>
-      ) : null}
     </div>
   );
 }
@@ -454,11 +413,7 @@ function buildYoutubeLinks(event) {
   return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
-    .filter((url) => isYoutubeUrl(url));
-}
-
-function isYoutubeUrl(url) {
-  return /youtube\.com|youtu\.be/i.test(String(url ?? ''));
+    .filter((url) => extractYoutubeVideoId(url));
 }
 
 function extractYoutubeVideoId(url) {
