@@ -44,7 +44,8 @@ export function EventBodyToggle({ event, lines, facts }) {
   const [manualCopyText, setManualCopyText] = useState('');
   const originalHref = event.originalUrl ?? event.url;
   const youtubeLink = buildYoutubeLinks(event)[0];
-  const canFetchYoutubeTranscript = Boolean(youtubeLink);
+  const isYoutubePlatform = /youtube|유튜브/i.test(String(event.platform ?? ''));
+  const canFetchYoutubeTranscript = Boolean(youtubeLink) || isYoutubePlatform;
   const commentMaterialText = buildYoutubeCommentMaterialText(event, youtubeContext);
   const hasCommentCandidates = Boolean(youtubeContext?.commentCandidates?.length);
   const youtubeDisplayUrl = youtubeContext?.url || youtubeLink;
@@ -73,7 +74,12 @@ export function EventBodyToggle({ event, lines, facts }) {
 
   async function handleYoutubeInfoFetch(clickEvent) {
     clickEvent.stopPropagation();
-    if (!youtubeLink || infoStatus === 'loading') return;
+    if (infoStatus === 'loading') return;
+    if (!youtubeLink) {
+      setTranscriptError('영상 URL을 아직 수집하지 못했습니다. 크롤러 재실행 후 다시 시도하세요.');
+      setInfoStatus('failed');
+      return;
+    }
 
     setInfoStatus('loading');
     setTranscriptError('');
@@ -117,7 +123,12 @@ export function EventBodyToggle({ event, lines, facts }) {
       setTranscriptError('');
       return;
     }
-    if (!youtubeLink || transcriptStatus === 'loading') return;
+    if (transcriptStatus === 'loading') return;
+    if (!youtubeLink) {
+      setTranscriptError('영상 URL을 아직 수집하지 못했습니다. 크롤러 재실행 후 다시 시도하세요.');
+      setTranscriptStatus('failed');
+      return;
+    }
 
     setTranscriptStatus('loading');
     setTranscriptError('');
