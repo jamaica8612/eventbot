@@ -4,6 +4,7 @@ import { spawn } from 'node:child_process';
 import { analyzeAnnouncementByRules } from './eventDecision/announcementDecision.js';
 import { analyzeEventByRules } from './eventDecision/ruleDecision.js';
 import { canUseSupabase, upsertEvents } from './supabaseEventRepository.js';
+import { notifyNewEvents } from './telegramNotifier.js';
 
 const SOURCE_NAME = '슈퍼투데이';
 const AJAX_ROWS = Number.parseInt(process.env.SUTO_AJAX_ROWS ?? '80', 10);
@@ -23,8 +24,12 @@ async function main() {
   };
 
   if (canUseSupabase()) {
-    const savedCount = await upsertEvents(events);
-    console.log(`Upserted ${savedCount} events to Supabase`);
+    const { savedCount, newEvents } = await upsertEvents(events);
+    console.log(`Upserted ${savedCount} events to Supabase (${newEvents.length} new)`);
+    // 알림 발송 실패가 크롤 자체를 실패시키지 않도록 격리한다.
+    await notifyNewEvents(newEvents).catch((error) => {
+      console.warn(`Telegram notification step failed: ${error.message}`);
+    });
     return;
   }
 
