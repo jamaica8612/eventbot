@@ -16,11 +16,13 @@ import {
   signOut,
 } from '../storage/supabaseAuthStorage.js';
 import { loadFilterSettings } from '../storage/filterSettingsStorage.js';
-import { isInstagramEvent, matchesFilter } from '../utils/eventModel.js';
+import { enrichEvent, isInstagramEvent, matchesFilter, sortInboxEvents } from '../utils/eventModel.js';
 import { Icon } from './lib/icons.jsx';
 import { Avatar, Badge, Brandmark, Btn, Empty, IconBtn } from './components/primitives.jsx';
-import { makeEventActions } from './lib/adapter.js';
+import { makeEventActions, toEv } from './lib/adapter.js';
 import { AuthGate } from './features/auth/AuthGate.jsx';
+import { InboxScreen } from './features/inbox/InboxScreen.jsx';
+import { DEMO_EVENTS } from './_demoEvents.js';
 
 /* ---------------- responsive helper ---------------- */
 function useMedia(q) {
@@ -137,7 +139,11 @@ const TITLES = {
 
 /* ---------------- shell ---------------- */
 function AppV2Main({ theme, toggleTheme, profile, onLock }) {
-  const { events, setEvents, isLoading } = useEvents();
+  const live = useEvents();
+  const [demoEvents, setDemoEvents] = useState(() => (DEMO_MODE ? DEMO_EVENTS.map(enrichEvent) : []));
+  const events = DEMO_MODE ? demoEvents : live.events;
+  const setEvents = DEMO_MODE ? setDemoEvents : live.setEvents;
+  const isLoading = DEMO_MODE ? false : live.isLoading;
   const [tab, setTab] = useState('waiting');
   const [syncNotice, setSyncNotice] = useState(null);
   const [filterSettings] = useState(loadFilterSettings);
@@ -162,17 +168,24 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     admin: 0,
   }), [appEvents, filterSettings]);
 
-  // 탭 콘텐츠 (단계 5·6에서 실제 화면으로 교체)
+  const inboxEvents = useMemo(
+    () => sortInboxEvents(appEvents.filter((e) => e.status === 'done')).map(toEv),
+    [appEvents],
+  );
+
+  // 탭 콘텐츠 (대기/마감/임시/검색은 단계 6에서 교체)
   function screen() {
+    if (isLoading) return <Empty icon="hourglass" title="이벤트를 불러오는 중…" />;
+    if (tab === 'inbox') {
+      return <InboxScreen events={inboxEvents} onUpdate={dispatchUpdate} onAction={actInbox} />;
+    }
     const tabEventCount = {
       waiting: counts.waiting,
       deadline: appEvents.filter((e) => e.status === 'ready').length,
       draft: counts.draft,
       search: appEvents.filter((e) => e.status !== 'skipped').length,
-      inbox: appEvents.filter((e) => e.status === 'done').length,
       admin: 0,
     }[tab];
-    if (isLoading) return <Empty icon="hourglass" title="이벤트를 불러오는 중…" />;
     return <Empty icon="sparkles" title={`${TITLES[tab]} · 화면 준비 중`} sub={`다음 단계에서 추가됩니다 (현재 ${tabEventCount ?? 0}건)`} />;
   }
 
