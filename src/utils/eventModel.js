@@ -68,7 +68,9 @@ export function matchesFilter(event, filter, filterSettings) {
 
   if (filter === 'ready') return event.status === 'ready';
   if (filter === 'later') return event.status === 'later';
-  if (filter === 'todayDeadline') return getUpcomingDeadlineMatch(event).isMatch;
+  if (filter === 'todayDeadline') {
+    return ['ready', 'later'].includes(event.status) && getUpcomingDeadlineMatch(event).isMatch;
+  }
   if (filter === 'search') return event.status !== 'skipped';
   if (filter === 'inbox') return event.status === 'done';
   if (filter === 'done') return event.status === 'done';
