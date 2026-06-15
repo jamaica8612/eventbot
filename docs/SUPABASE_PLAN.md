@@ -124,5 +124,4 @@ SUPABASE_SERVICE_ROLE_KEY=
 - 로그인
 - 사용자별 상태 분리
 - 자동 주기 실행
-- 알림
 - AI 댓글 생성
