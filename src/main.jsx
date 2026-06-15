@@ -5,10 +5,10 @@ const root = createRoot(document.getElementById('root'));
 const useV2 = new URLSearchParams(window.location.search).has('v2');
 
 if (useV2) {
-  // v2 디자인 미리보기 (?v2). 단계별로 갤러리 → AppV2로 교체된다.
+  // v2 디자인 미리보기 (?v2).
   Promise.all([
     import('./v2/styles/tokens.css'),
-    import('./v2/_Gallery.jsx'),
+    import('./v2/AppV2.jsx'),
   ]).then(([, mod]) => {
     const V2 = mod.default;
     root.render(
