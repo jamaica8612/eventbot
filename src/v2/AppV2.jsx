@@ -22,6 +22,7 @@ import { Avatar, Badge, Brandmark, Btn, Empty, IconBtn } from './components/prim
 import { makeEventActions, toEv } from './lib/adapter.js';
 import { AuthGate } from './features/auth/AuthGate.jsx';
 import { InboxScreen } from './features/inbox/InboxScreen.jsx';
+import { ListScreen, DeadlineScreen, SearchScreen } from './features/events/EventLists.jsx';
 import { DEMO_EVENTS } from './_demoEvents.js';
 
 /* ---------------- responsive helper ---------------- */
@@ -172,21 +173,41 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     () => sortInboxEvents(appEvents.filter((e) => e.status === 'done')).map(toEv),
     [appEvents],
   );
+  const waitingEvents = useMemo(
+    () => appEvents.filter((e) => matchesFilter(e, 'ready', filterSettings)).map(toEv),
+    [appEvents, filterSettings],
+  );
+  const deadlineEvents = useMemo(
+    () => appEvents.filter((e) => e.status === 'ready').map(toEv),
+    [appEvents],
+  );
+  const draftEvents = useMemo(
+    () => appEvents.filter((e) => matchesFilter(e, 'later', filterSettings)).map(toEv),
+    [appEvents, filterSettings],
+  );
+  const searchEvents = useMemo(
+    () => appEvents.filter((e) => e.status !== 'skipped').map(toEv),
+    [appEvents],
+  );
 
-  // 탭 콘텐츠 (대기/마감/임시/검색은 단계 6에서 교체)
   function screen() {
     if (isLoading) return <Empty icon="hourglass" title="이벤트를 불러오는 중…" />;
-    if (tab === 'inbox') {
-      return <InboxScreen events={inboxEvents} onUpdate={dispatchUpdate} onAction={actInbox} />;
+    switch (tab) {
+      case 'inbox':
+        return <InboxScreen events={inboxEvents} onUpdate={dispatchUpdate} onAction={actInbox} />;
+      case 'waiting':
+        return <ListScreen events={waitingEvents} onAction={actList} onUpdate={dispatchUpdate} />;
+      case 'deadline':
+        return <DeadlineScreen events={deadlineEvents} onAction={actList} onUpdate={dispatchUpdate} />;
+      case 'draft':
+        return <ListScreen events={draftEvents} onAction={actList} onUpdate={dispatchUpdate} emptyTitle="임시저장이 비어 있어요" emptySub="‘나중에 할’ 이벤트를 임시저장해 두세요." />;
+      case 'search':
+        return <SearchScreen events={searchEvents} onAction={actList} onUpdate={dispatchUpdate} />;
+      case 'admin':
+        return <Empty icon="shield" title="관리자 · 화면 준비 중" sub="다음 세션에서 추가됩니다." />;
+      default:
+        return null;
     }
-    const tabEventCount = {
-      waiting: counts.waiting,
-      deadline: appEvents.filter((e) => e.status === 'ready').length,
-      draft: counts.draft,
-      search: appEvents.filter((e) => e.status !== 'skipped').length,
-      admin: 0,
-    }[tab];
-    return <Empty icon="sparkles" title={`${TITLES[tab]} · 화면 준비 중`} sub={`다음 단계에서 추가됩니다 (현재 ${tabEventCount ?? 0}건)`} />;
   }
 
   const me = {

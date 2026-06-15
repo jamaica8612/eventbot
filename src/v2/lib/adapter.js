@@ -48,6 +48,7 @@ export function toEv(event) {
     link: event.originalUrl || event.url || '',
     applyUrl: event.applyUrl || event.applyTargetUrl || event.originalUrl || event.url || '',
     note: event.memo || '',
+    collectedAt: event.lastSeenAt || event.createdAt || event.crawledAt || '',
 
     // 응모함(entered)
     enteredAt: event.participatedAt || null,
