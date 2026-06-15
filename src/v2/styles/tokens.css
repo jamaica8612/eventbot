@@ -28,6 +28,7 @@
   --accent-weak-2:#e0e3ff;
   --accent-text: #4338ca;
   --on-accent:   #ffffff;
+  --on-color:    #ffffff;   /* 컬러 배경 위 고정 흰 텍스트 (테마 무관, dark에서 오버라이드 안 함) */
 
   /* ---- attention / semantic ---- */
   --warn:        #d97706;   /* 오늘 발표 / 미수령 */
