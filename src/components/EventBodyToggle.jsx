@@ -32,8 +32,8 @@ async function copyTextToClipboard(text) {
   }
 }
 
-export function EventBodyToggle({ event, lines, facts }) {
-  const [isBodyOpen, setIsBodyOpen] = useState(false);
+export function EventBodyToggle({ event, lines, facts, defaultOpen = false }) {
+  const [isBodyOpen, setIsBodyOpen] = useState(defaultOpen);
   const [youtubeContext, setYoutubeContext] = useState(() => normalizeSavedYoutubeContext(event.youtubeContext));
   const [transcriptStatus, setTranscriptStatus] = useState('idle');
   const [infoStatus, setInfoStatus] = useState('idle');

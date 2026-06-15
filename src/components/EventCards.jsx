@@ -105,7 +105,12 @@ function ReadyEventCard({ event, onDeadlineChange, onStatusChange }) {
         <DeadlinePanel event={event} onDeadlineChange={onDeadlineChange} />
       ) : null}
 
-      <EventBodyToggle event={event} lines={userContentLines} facts={sourceFacts} />
+      <EventBodyToggle
+        event={event}
+        lines={userContentLines}
+        facts={sourceFacts}
+        defaultOpen={hasYoutubeLink(event)}
+      />
 
       <div className="quick-actions now-actions" aria-label={`${event.title} 처리`}>
         {applyHref ? (
@@ -339,4 +344,18 @@ function parseCount(value) {
   if (!match) return NaN;
   const count = Number.parseInt(match[0].replace(/,/g, ''), 10);
   return Number.isFinite(count) ? count : NaN;
+}
+
+function hasYoutubeLink(event) {
+  const raw = event.raw ?? {};
+  return [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    event.applyUrl,
+    event.url,
+    event.originalUrl,
+    ...(raw.externalLinks ?? []),
+  ]
+    .filter(Boolean)
+    .some((url) => /youtube\.com|youtu\.be/i.test(String(url)));
 }
