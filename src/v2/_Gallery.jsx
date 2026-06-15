@@ -4,7 +4,25 @@
    ============================================================ */
 import { useState } from 'react';
 import { useTheme } from '../hooks/useEvents.js';
+import { initialEvents } from '../data/events.js';
+import { enrichEvent } from '../utils/eventModel.js';
 import { Badge, PlatformBadge, Chip, Btn, IconBtn, SegToggle, Switch, Avatar, Empty, Spinner, Brandmark, ThemeToggleFloat } from './components/primitives.jsx';
+import { toEv } from './lib/adapter.js';
+import { deadlineMeta, announceMeta, wonShort, parseAmount } from './lib/domain.js';
+
+// 어댑터 스모크 테스트 (단계 3 검증용, 단계 4에서 갤러리와 함께 제거)
+const _sample = enrichEvent(initialEvents[0] || {});
+const _ev = toEv(_sample);
+const _adapterCheck = {
+  platform: _ev.platform,
+  status: _ev.status,
+  result: _ev.result,
+  prizeSummary: _ev.prizeSummary,
+  deadline: deadlineMeta(_ev),
+  announce: announceMeta(_ev),
+  parseAmount_1만5000: parseAmount('1만 5000'),
+  wonShort_15000: wonShort(15000),
+};
 
 const box = { display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 18 };
 const h = { fontSize: 12, fontWeight: 700, color: 'var(--text-3)', margin: '22px 0 8px', textTransform: 'uppercase', letterSpacing: '.04em' };
@@ -57,6 +75,11 @@ export default function Gallery() {
           <Switch on={sw} onChange={setSw} label="라벨" />
           <Spinner />
         </div>
+
+        <div style={h}>어댑터 스모크 테스트 (toEv / domain)</div>
+        <pre style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, fontSize: 12, color: 'var(--text-2)', overflow: 'auto' }}>
+          {JSON.stringify(_adapterCheck, null, 2)}
+        </pre>
 
         <div style={h}>Avatar / Empty</div>
         <div style={box}>
