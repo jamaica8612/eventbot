@@ -247,14 +247,22 @@ def fetch_detail(s, url: str) -> dict:
         response.raise_for_status()
         body, links, metadata_lines, metadata, suto_redirects = parse_detail(response.text)
         lines = normalize_lines(body.splitlines())
-        # suto link.php 리다이렉트를 따라가 YouTube 등 실제 URL 수집
-        if suto_redirects and not any(is_youtube_video_link(u) for u in links):
-            resolved = resolve_suto_redirects(s, suto_redirects)
-            for resolved_url in resolved:
-                if resolved_url not in set(links):
-                    links.append(resolved_url)
-            if resolved and not metadata.get("applyTargetUrl"):
-                metadata["applyTargetUrl"] = resolved[0]
+        # YouTube 영상 링크가 없으면 상세의 link.php + 생성한 응모 링크를 따라가 실제 URL을 수집한다.
+        # curl_cffi 크롬 위장이라 Cloudflare를 통과한다(Edge Function의 평범한 fetch는 403으로 막힘).
+        if not any(is_youtube_video_link(u) for u in links):
+            candidate_redirects = list(suto_redirects)
+            id_match = re.search(r"/cpevent/(\d+)", url)
+            if id_match:
+                apply_url = f"{BASE}/bbs/link.php?bo_table=cpevent&wr_id={id_match.group(1)}&no=1"
+                if apply_url not in candidate_redirects:
+                    candidate_redirects.append(apply_url)
+            if candidate_redirects:
+                resolved = resolve_suto_redirects(s, candidate_redirects)
+                for resolved_url in resolved:
+                    if resolved_url not in set(links):
+                        links.append(resolved_url)
+                if resolved and not metadata.get("applyTargetUrl"):
+                    metadata["applyTargetUrl"] = resolved[0]
         youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),
