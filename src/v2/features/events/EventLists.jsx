@@ -3,14 +3,16 @@
    Source: prototype screens-events(ListScreen) + app-parts(DeadlineScreen/SearchScreen)
    검색은 현재 matchesSearchQuery(ev._event) 재사용으로 raw까지 매칭.
    ============================================================ */
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Icon } from '../../lib/icons.jsx';
-import { Chip, Empty } from '../../components/primitives.jsx';
+import { Btn, Chip, Empty } from '../../components/primitives.jsx';
 import { deadlineMeta } from '../../lib/domain.js';
 import { matchesSearchQuery } from '../../../utils/eventModel.js';
 import { EventCard } from './EventCard.jsx';
 
 /* ---------------- 대기/임시저장 ---------------- */
+const PAGE_SIZE = 10;
+
 const SORTS = [
   { key: 'default', label: '기본순' },
   { key: 'popular', label: '인기순' },
@@ -39,9 +41,7 @@ export function ListScreen({ events, onAction, onUpdate, emptyTitle, emptySub })
       </div>
       {list.length === 0
         ? <Empty icon="hourglass" title={emptyTitle || '이벤트가 없어요'} sub={emptySub || '크롤러가 새 이벤트를 수집하면 여기에 표시됩니다.'} />
-        : <div style={{ display: 'grid', gap: 12 }}>
-            {list.map((ev) => <EventCard key={ev.id} ev={ev} onAction={onAction} onUpdate={onUpdate} />)}
-          </div>}
+        : <PaginatedEventGrid events={list} onAction={onAction} onUpdate={onUpdate} resetKey={sort} />}
     </div>
   );
 }
@@ -80,7 +80,7 @@ export function DeadlineScreen({ events, onAction, onUpdate }) {
       </div>
       {filtered.length === 0
         ? <Empty icon="clock" title="해당하는 이벤트가 없어요" />
-        : <div style={{ display: 'grid', gap: 12 }}>{filtered.map((ev) => <EventCard key={ev.id} ev={ev} onAction={onAction} onUpdate={onUpdate} />)}</div>}
+        : <PaginatedEventGrid events={filtered} onAction={onAction} onUpdate={onUpdate} resetKey={chip} />}
     </div>
   );
 }
@@ -123,7 +123,77 @@ export function SearchScreen({ events, onAction, onUpdate }) {
         ? <Empty icon="search" title="검색어를 입력하세요" sub="제목·본문·경품명에서 모든 단어를 포함한 이벤트를 찾아요." />
         : results.length === 0
           ? <Empty icon="search" title="결과가 없어요" sub={`"${q}"와 일치하는 이벤트가 없습니다.`} />
-          : <div style={{ display: 'grid', gap: 12 }}>{results.map((ev) => <EventCard key={ev.id} ev={ev} onAction={onAction} onUpdate={onUpdate} query={q} />)}</div>}
+          : <PaginatedEventGrid events={results} onAction={onAction} onUpdate={onUpdate} query={q} resetKey={`${scope}:${q}`} />}
+    </div>
+  );
+}
+
+function PaginatedEventGrid({ events, onAction, onUpdate, query, resetKey }) {
+  const [page, setPage] = useState(1);
+  const pageCount = Math.max(1, Math.ceil(events.length / PAGE_SIZE));
+  const safePage = Math.min(page, pageCount);
+  const start = (safePage - 1) * PAGE_SIZE;
+  const pageEvents = events.slice(start, start + PAGE_SIZE);
+
+  useEffect(() => {
+    setPage(1);
+  }, [resetKey, events.length]);
+
+  useEffect(() => {
+    if (page > pageCount) setPage(pageCount);
+  }, [page, pageCount]);
+
+  return (
+    <div style={{ display: 'grid', gap: 12 }}>
+      <PaginationBar
+        page={safePage}
+        pageCount={pageCount}
+        total={events.length}
+        onPrev={() => setPage((current) => Math.max(1, current - 1))}
+        onNext={() => setPage((current) => Math.min(pageCount, current + 1))}
+      />
+      {pageEvents.map((ev) => <EventCard key={ev.id} ev={ev} onAction={onAction} onUpdate={onUpdate} query={query} />)}
+      {pageCount > 1 ? (
+        <PaginationBar
+          page={safePage}
+          pageCount={pageCount}
+          total={events.length}
+          onPrev={() => setPage((current) => Math.max(1, current - 1))}
+          onNext={() => setPage((current) => Math.min(pageCount, current + 1))}
+          compact
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function PaginationBar({ page, pageCount, total, onPrev, onNext, compact }) {
+  if (total <= PAGE_SIZE && compact) return null;
+  const from = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const to = Math.min(total, page * PAGE_SIZE);
+  return (
+    <div style={{
+      display: 'flex',
+      justifyContent: 'space-between',
+      alignItems: 'center',
+      gap: 10,
+      flexWrap: 'wrap',
+      color: 'var(--text-3)',
+      fontSize: 12.5,
+      padding: compact ? '2px 0 0' : '0 0 2px',
+    }}>
+      <span className="tnum">{from}-{to} / {total.toLocaleString('ko-KR')}</span>
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+        <Btn size="sm" variant="outline" icon="chevLeft" disabled={page <= 1} onClick={onPrev} title="이전 페이지">
+          이전
+        </Btn>
+        <span className="tnum" style={{ minWidth: 54, textAlign: 'center', color: 'var(--text-2)', fontWeight: 650 }}>
+          {page}/{pageCount}
+        </span>
+        <Btn size="sm" variant="outline" iconRight="chevRight" disabled={page >= pageCount} onClick={onNext} title="다음 페이지">
+          다음
+        </Btn>
+      </div>
     </div>
   );
 }

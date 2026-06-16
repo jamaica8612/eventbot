@@ -55,6 +55,26 @@ Deno.serve(async (request) => {
         return json({ profile: auth.profile });
       }
 
+      if (resource === 'bootstrap') {
+        const auth = await authenticate(request, { requireApproved: false });
+        if (!auth.profile.approved) {
+          return json({ profile: auth.profile });
+        }
+        const [events, filterSettings, commentSettings, crawlStatus] = await Promise.all([
+          loadEvents(auth.user.id),
+          loadSetting(userSettingKey(FILTER_SETTINGS_KEY, auth.user.id)),
+          loadSetting(userSettingKey(COMMENT_SETTINGS_KEY, auth.user.id)),
+          loadSetting(CRAWL_STATUS_KEY),
+        ]);
+        return json({
+          profile: auth.profile,
+          events,
+          filterSettings,
+          commentSettings,
+          crawlStatus,
+        });
+      }
+
       const auth = await authenticate(request);
       if (resource === 'events') return json({ events: await loadEvents(auth.user.id) });
       if (resource === 'filterSettings') {

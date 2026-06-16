@@ -17,11 +17,18 @@ async function loadRemoteEvents() {
   return applyStoredStatuses(crawledEvents);
 }
 
-export function useEvents() {
-  const [events, setEvents] = useState([]);
-  const [isLoading, setIsLoading] = useState(true);
+export function useEvents(initialRemoteEvents = null) {
+  const [events, setEvents] = useState(() => (
+    Array.isArray(initialRemoteEvents) ? initialRemoteEvents.map(enrichEvent) : []
+  ));
+  const [isLoading, setIsLoading] = useState(() => !Array.isArray(initialRemoteEvents));
 
   useEffect(() => {
+    if (Array.isArray(initialRemoteEvents)) {
+      setEvents(initialRemoteEvents.map(enrichEvent));
+      setIsLoading(false);
+      return undefined;
+    }
     let isMounted = true;
     loadRemoteEvents().then((remoteEvents) => {
       if (!isMounted) return;
@@ -36,7 +43,7 @@ export function useEvents() {
     return () => {
       isMounted = false;
     };
-  }, []);
+  }, [initialRemoteEvents]);
 
   return { events, setEvents, isLoading };
 }

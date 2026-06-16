@@ -27,6 +27,21 @@ export async function loadSupabaseEvents() {
 
   return rows.map(toAppEvent);
 }
+
+export async function loadSupabaseBootstrap(accessToken) {
+  if (!hasSupabaseConfig) {
+    return null;
+  }
+
+  const payload = await callDataFunction('GET', 'bootstrap', undefined, accessToken);
+  return {
+    profile: payload.profile ?? null,
+    events: Array.isArray(payload.events) ? payload.events.map(toAppEvent) : null,
+    filterSettings: payload.filterSettings ?? null,
+    commentSettings: payload.commentSettings ?? null,
+    crawlStatus: payload.crawlStatus ?? null,
+  };
+}
 export async function updateSupabaseEventState(eventId, patch) {
   if (!hasSupabaseConfig) {
     return;
@@ -147,8 +162,8 @@ export async function triggerSupabaseCrawler() {
   return payload;
 }
 
-async function callDataFunction(method, resource, body) {
-  const token = await getAuthToken();
+async function callDataFunction(method, resource, body, accessToken) {
+  const token = accessToken ?? await getAuthToken();
   if (!token) {
     throw new Error('\uB85C\uADF8\uC778\uC774 \uD544\uC694\uD569\uB2C8\uB2E4.');
   }

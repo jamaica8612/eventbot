@@ -9,7 +9,6 @@ import { useEventActions } from '../hooks/useEventActions.js';
 import {
   getCurrentSession,
   hasAuthConfig,
-  loadAuthProfile,
   onAuthRequired,
   onAuthStateChange,
   signInWithGoogle,
@@ -29,6 +28,7 @@ import {
 } from '../storage/commentSettingsStorage.js';
 import {
   hasSupabaseConfig,
+  loadSupabaseBootstrap,
   loadSupabaseCommentSettings,
   loadSupabaseCrawlerStatus,
   loadSupabaseFilterSettings,
@@ -70,26 +70,29 @@ function useMedia(q) {
 export default function AppV2() {
   const [theme, setTheme] = useTheme();
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
-  const [authState, setAuthState] = useState({ isLoading: true, session: null, profile: null, error: '' });
+  const [authState, setAuthState] = useState({ isLoading: true, session: null, profile: null, bootstrap: null, error: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    let unsubscribeAuth = () => {};
     async function loadAuth(sessionOverride) {
       try {
         const session = sessionOverride === undefined ? await getCurrentSession() : sessionOverride;
-        const profile = session ? await loadAuthProfile(session.access_token) : null;
-        if (isMounted) setAuthState({ isLoading: false, session, profile, error: '' });
+        const bootstrap = session ? await loadSupabaseBootstrap(session.access_token) : null;
+        const profile = bootstrap?.profile ?? null;
+        if (isMounted) setAuthState({ isLoading: false, session, profile, bootstrap, error: '' });
       } catch (error) {
         if (isMounted) {
-          setAuthState({ isLoading: false, session: null, profile: null, error: error.message || '로그인 상태를 확인하지 못했습니다.' });
+          setAuthState({ isLoading: false, session: null, profile: null, bootstrap: null, error: error.message || '로그인 상태를 확인하지 못했습니다.' });
         }
       }
     }
-    loadAuth();
-    const unsubscribeAuth = onAuthStateChange((session) => loadAuth(session));
+    loadAuth().finally(() => {
+      if (isMounted) unsubscribeAuth = onAuthStateChange((session) => loadAuth(session));
+    });
     const unsubscribeRequired = onAuthRequired(() =>
-      setAuthState((current) => ({ ...current, session: null, profile: null })),
+      setAuthState((current) => ({ ...current, session: null, profile: null, bootstrap: null })),
     );
     return () => {
       isMounted = false;
@@ -100,7 +103,7 @@ export default function AppV2() {
 
   async function lockApp() {
     await signOut();
-    setAuthState({ isLoading: false, session: null, profile: null, error: '' });
+    setAuthState({ isLoading: false, session: null, profile: null, bootstrap: null, error: '' });
   }
 
   async function handleLogin() {
@@ -141,7 +144,7 @@ export default function AppV2() {
     );
   }
 
-  return <AppV2Main theme={theme} setTheme={setTheme} toggleTheme={toggleTheme} profile={authState.profile} onLock={lockApp} />;
+  return <AppV2Main theme={theme} setTheme={setTheme} toggleTheme={toggleTheme} profile={authState.profile} bootstrap={authState.bootstrap} onLock={lockApp} />;
 }
 
 /* ---------------- nav config (기프티콘 제외) ---------------- */
@@ -160,17 +163,18 @@ const TITLES = {
 };
 
 /* ---------------- shell ---------------- */
-function AppV2Main({ theme, toggleTheme, profile, onLock }) {
-  const { events, setEvents, isLoading } = useEvents();
+function AppV2Main({ theme, toggleTheme, profile, bootstrap, onLock }) {
+  const { events, setEvents, isLoading } = useEvents(bootstrap?.events);
   const [tab, setTab] = useState('waiting');
   const [syncNotice, setSyncNotice] = useState(null);
-  const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
-  const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
-  const [crawlerStatus, setCrawlerStatus] = useState(null);
+  const [filterSettings, setFilterSettings] = useState(() => normalizeFilterSettings(bootstrap?.filterSettings ?? loadFilterSettings()));
+  const [commentSettings, setCommentSettings] = useState(() => normalizeCommentSettings(bootstrap?.commentSettings ?? loadCommentSettings()));
+  const [crawlerStatus, setCrawlerStatus] = useState(bootstrap?.crawlStatus ?? null);
   const [isCrawling, setIsCrawling] = useState(false);
   const [adminSummary, setAdminSummary] = useState({ pending: 0 });
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
-  const didLoadFilter = useRef(false);
+  const didLoadFilter = useRef(Boolean(bootstrap));
+  const didMountFilterSave = useRef(false);
   const isDesktop = useMedia('(min-width: 901px)');
 
   const actions = useEventActions({ events, setEvents, setSyncNotice });
@@ -180,6 +184,7 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
 
   // 설정/크롤러 로딩 (demo·미설정이면 로컬 기본 유지)
   useEffect(() => {
+    if (bootstrap) { didLoadFilter.current = true; return; }
     if (!hasSupabaseConfig) { didLoadFilter.current = true; return; }
     loadSupabaseFilterSettings()
       .then((r) => { if (r) setFilterSettings(normalizeFilterSettings(r)); })
@@ -187,16 +192,22 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
       .finally(() => { didLoadFilter.current = true; });
   }, []);
   useEffect(() => {
+    if (bootstrap) return;
     if (!hasSupabaseConfig) return;
     loadSupabaseCommentSettings().then((r) => { if (r) setCommentSettings(normalizeCommentSettings(r)); }).catch(() => {});
   }, []);
   useEffect(() => {
+    if (bootstrap) return;
     if (!hasSupabaseConfig) return;
     let m = true;
     loadSupabaseCrawlerStatus().then((s) => { if (m) setCrawlerStatus(s); }).catch(() => { if (m) setCrawlerStatus(null); });
     return () => { m = false; };
   }, []);
   useEffect(() => {
+    if (!didMountFilterSave.current) {
+      didMountFilterSave.current = true;
+      return;
+    }
     if (!didLoadFilter.current) return;
     if (hasSupabaseConfig) { saveSupabaseFilterSettings(filterSettings).catch(() => {}); return; }
     saveFilterSettings(filterSettings);
