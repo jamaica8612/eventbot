@@ -263,6 +263,10 @@ def fetch_detail(s, url: str) -> dict:
                         links.append(resolved_url)
                 if resolved and not metadata.get("applyTargetUrl"):
                     metadata["applyTargetUrl"] = resolved[0]
+        if not metadata.get("applyTargetUrl"):
+            youtube_link = next((link for link in links if is_youtube_video_link(link)), "")
+            if youtube_link:
+                metadata["applyTargetUrl"] = youtube_link
         youtube_transcripts = fetch_youtube_transcripts(links)
         return {
             "originalText": "\n".join(lines),

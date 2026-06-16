@@ -42,7 +42,12 @@ function replaceSourcePlatform(source = '', platform) {
 
 function hasYoutubeApplyUrl(event = {}) {
   const raw = event.raw ?? {};
-  const applyUrl = [event.applyTargetUrl, raw.applyTargetUrl].filter(Boolean).join(' ');
+  const applyUrl = [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    ...(Array.isArray(event.externalLinks) ? event.externalLinks : []),
+    ...(Array.isArray(raw.externalLinks) ? raw.externalLinks : []),
+  ].filter(Boolean).join(' ');
   return /youtube\.com|youtu\.be/i.test(applyUrl);
 }
 

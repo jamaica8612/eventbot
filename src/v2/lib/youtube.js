@@ -67,7 +67,15 @@ async function readJsonResponse(response) {
 
 export function buildYoutubeLinks(event) {
   const raw = event.raw ?? {};
-  return [event.applyTargetUrl, raw.applyTargetUrl, event.applyUrl, event.url, event.originalUrl, ...(raw.externalLinks ?? [])]
+  return [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    event.applyUrl,
+    event.url,
+    event.originalUrl,
+    ...(Array.isArray(event.externalLinks) ? event.externalLinks : []),
+    ...(Array.isArray(raw.externalLinks) ? raw.externalLinks : []),
+  ]
     .filter(Boolean)
     .filter((url, index, urls) => urls.indexOf(url) === index)
     .filter((url) => extractYoutubeVideoId(url));
