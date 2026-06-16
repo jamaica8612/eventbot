@@ -2,6 +2,8 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { createClient } from '@supabase/supabase-js';
 
+const HOTDEAL_TABLE = 'eventbot_hotdeals';
+
 export function canUseSupabase() {
   loadLocalEnv();
   return Boolean(getSupabaseUrl() && getServiceRoleKey());
@@ -19,11 +21,11 @@ export async function upsertHotdeals(deals) {
 
   const rows = deals.map(toHotdealRow);
   const { error } = await supabase
-    .from('hotdeals')
+    .from(HOTDEAL_TABLE)
     .upsert(rows, { onConflict: 'source,source_post_id' });
 
   if (error) {
-    throw new Error(`Supabase hotdeal upsert failed: ${error.message}`);
+    throw new Error(`Supabase ${HOTDEAL_TABLE} upsert failed: ${error.message}`);
   }
 
   return rows.length;
