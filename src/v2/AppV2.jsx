@@ -15,14 +15,44 @@ import {
   signInWithGoogle,
   signOut,
 } from '../storage/supabaseAuthStorage.js';
-import { loadFilterSettings } from '../storage/filterSettingsStorage.js';
-import { enrichEvent, isInstagramEvent, matchesFilter, sortInboxEvents } from '../utils/eventModel.js';
+import {
+  defaultFilterSettings,
+  loadFilterSettings,
+  normalizeFilterSettings,
+  saveFilterSettings,
+} from '../storage/filterSettingsStorage.js';
+import {
+  defaultCommentSettings,
+  loadCommentSettings,
+  normalizeCommentSettings,
+  saveCommentSettings,
+} from '../storage/commentSettingsStorage.js';
+import {
+  hasSupabaseConfig,
+  loadSupabaseCommentSettings,
+  loadSupabaseCrawlerStatus,
+  loadSupabaseFilterSettings,
+  saveSupabaseCommentSettings,
+  saveSupabaseFilterSettings,
+  triggerSupabaseCrawler,
+} from '../storage/supabaseEventStorage.js';
+import {
+  buildPlatformOptions,
+  enrichEvent,
+  isExpiredReadyEvent,
+  isInstagramEvent,
+  isOldSkippedEvent,
+  matchesFilter,
+  sortInboxEvents,
+} from '../utils/eventModel.js';
 import { Icon } from './lib/icons.jsx';
 import { Avatar, Badge, Brandmark, Btn, Empty, IconBtn } from './components/primitives.jsx';
 import { makeEventActions, toEv } from './lib/adapter.js';
 import { AuthGate } from './features/auth/AuthGate.jsx';
 import { InboxScreen } from './features/inbox/InboxScreen.jsx';
 import { ListScreen, DeadlineScreen, SearchScreen } from './features/events/EventLists.jsx';
+import { AdminScreen } from './features/admin/AdminScreen.jsx';
+import { FilterPanel } from './features/filter/FilterPanel.jsx';
 import { DEMO_EVENTS } from './_demoEvents.js';
 
 /* ---------------- responsive helper ---------------- */
@@ -135,7 +165,7 @@ const NAV = [
 const ADMIN_NAV = { id: 'admin', label: '관리자', icon: 'shield' };
 const TITLES = {
   waiting: '대기', deadline: '마감 임박', draft: '임시저장',
-  search: '검색', inbox: '응모함', admin: '관리자',
+  search: '검색', inbox: '응모함', admin: '관리자', excluded: '제외된 이벤트',
 };
 
 /* ---------------- shell ---------------- */
@@ -147,13 +177,89 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
   const isLoading = DEMO_MODE ? false : live.isLoading;
   const [tab, setTab] = useState('waiting');
   const [syncNotice, setSyncNotice] = useState(null);
-  const [filterSettings] = useState(loadFilterSettings);
+  const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
+  const [commentSettings, setCommentSettings] = useState(loadCommentSettings);
+  const [crawlerStatus, setCrawlerStatus] = useState(null);
+  const [isCrawling, setIsCrawling] = useState(false);
+  const [adminSummary, setAdminSummary] = useState({ pending: 0 });
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const didLoadFilter = useRef(false);
   const isDesktop = useMedia('(min-width: 901px)');
 
   const actions = useEventActions({ events, setEvents, setSyncNotice });
   const { actList, actInbox, dispatchUpdate } = useMemo(() => makeEventActions(actions), [actions]);
 
   const appEvents = useMemo(() => events.filter((e) => !isInstagramEvent(e)), [events]);
+
+  // 설정/크롤러 로딩 (demo·미설정이면 로컬 기본 유지)
+  useEffect(() => {
+    if (DEMO_MODE || !hasSupabaseConfig) { didLoadFilter.current = true; return; }
+    loadSupabaseFilterSettings()
+      .then((r) => { if (r) setFilterSettings(normalizeFilterSettings(r)); })
+      .catch(() => {})
+      .finally(() => { didLoadFilter.current = true; });
+  }, []);
+  useEffect(() => {
+    if (DEMO_MODE || !hasSupabaseConfig) return;
+    loadSupabaseCommentSettings().then((r) => { if (r) setCommentSettings(normalizeCommentSettings(r)); }).catch(() => {});
+  }, []);
+  useEffect(() => {
+    if (DEMO_MODE || !hasSupabaseConfig) return;
+    let m = true;
+    loadSupabaseCrawlerStatus().then((s) => { if (m) setCrawlerStatus(s); }).catch(() => { if (m) setCrawlerStatus(null); });
+    return () => { m = false; };
+  }, []);
+  useEffect(() => {
+    if (!didLoadFilter.current || DEMO_MODE) return;
+    if (hasSupabaseConfig) { saveSupabaseFilterSettings(filterSettings).catch(() => {}); return; }
+    saveFilterSettings(filterSettings);
+  }, [filterSettings]);
+
+  async function handleManualCrawl() {
+    if (isCrawling) return;
+    setIsCrawling(true);
+    setSyncNotice({ type: 'info', message: '크롤링을 시작했습니다. 잠시만 기다려 주세요.' });
+    try {
+      if (hasSupabaseConfig) {
+        const payload = await triggerSupabaseCrawler();
+        if (payload?.crawlStatus) setCrawlerStatus(payload.crawlStatus);
+        setSyncNotice({ type: 'success', message: '크롤링 작업을 GitHub Actions에 요청했습니다. 완료까지 몇 분 걸릴 수 있습니다.' });
+        window.setTimeout(() => setIsCrawling(false), 1200);
+        return;
+      }
+      const response = await fetch('/api/crawl-suto', { method: 'POST' });
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(payload.error || '크롤링 실행에 실패했습니다.');
+      setSyncNotice({ type: 'success', message: '크롤링이 완료되었습니다. 목록을 다시 불러옵니다.' });
+      window.setTimeout(() => window.location.reload(), 900);
+    } catch (error) {
+      setSyncNotice({ type: 'warning', message: error.message || '크롤링 실행에 실패했습니다.' });
+      setIsCrawling(false);
+    }
+  }
+
+  async function handleSaveComment() {
+    const normalized = normalizeCommentSettings(commentSettings);
+    setCommentSettings(normalized);
+    try {
+      if (hasSupabaseConfig) await saveSupabaseCommentSettings(normalized);
+      else saveCommentSettings(normalized);
+      setSyncNotice({ type: 'success', message: '댓글 설정을 저장했습니다.' });
+    } catch (error) {
+      setSyncNotice({ type: 'warning', message: error.message || '댓글 설정 저장에 실패했습니다.' });
+    }
+  }
+
+  const changeFilter = (patch) => setFilterSettings((cur) => normalizeFilterSettings({ ...cur, ...patch }));
+  const changeComment = (patch) => setCommentSettings((cur) => ({ ...cur, ...patch }));
+  const resetSettings = () => { setFilterSettings(defaultFilterSettings); setCommentSettings(defaultCommentSettings); };
+
+  const platforms = useMemo(() => buildPlatformOptions(appEvents).map((o) => o.platform), [appEvents]);
+  const drawerCounts = useMemo(() => ({
+    excluded: appEvents.filter((e) => e.status === 'skipped').length,
+    passed: appEvents.filter((e) => isExpiredReadyEvent(e)).length,
+    oldExcluded: appEvents.filter((e) => isOldSkippedEvent(e)).length,
+  }), [appEvents]);
 
   const isAdmin = Boolean(profile?.is_admin);
   const navItems = isAdmin ? [...NAV, ADMIN_NAV] : NAV;
@@ -166,8 +272,8 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     inbox: appEvents.filter(
       (e) => e.status === 'done' && (e.resultStatus === 'unknown' || (e.resultStatus === 'won' && e.receiptStatus !== 'received')),
     ).length,
-    admin: 0,
-  }), [appEvents, filterSettings]);
+    admin: adminSummary.pending,
+  }), [appEvents, filterSettings, adminSummary.pending]);
 
   const inboxEvents = useMemo(
     () => sortInboxEvents(appEvents.filter((e) => e.status === 'done')).map(toEv),
@@ -189,6 +295,10 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     () => appEvents.filter((e) => e.status !== 'skipped').map(toEv),
     [appEvents],
   );
+  const excludedEvents = useMemo(
+    () => appEvents.filter((e) => e.status === 'skipped').map(toEv),
+    [appEvents],
+  );
 
   function screen() {
     if (isLoading) return <Empty icon="hourglass" title="이벤트를 불러오는 중…" />;
@@ -203,8 +313,10 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
         return <ListScreen events={draftEvents} onAction={actList} onUpdate={dispatchUpdate} emptyTitle="임시저장이 비어 있어요" emptySub="‘나중에 할’ 이벤트를 임시저장해 두세요." />;
       case 'search':
         return <SearchScreen events={searchEvents} onAction={actList} onUpdate={dispatchUpdate} />;
+      case 'excluded':
+        return <ListScreen events={excludedEvents} onAction={actList} onUpdate={dispatchUpdate} emptyTitle="제외된 이벤트가 없어요" emptySub="제외한 이벤트는 여기서 복구할 수 있어요." />;
       case 'admin':
-        return <Empty icon="shield" title="관리자 · 화면 준비 중" sub="다음 세션에서 추가됩니다." />;
+        return <AdminScreen crawlerStatus={crawlerStatus} isCrawling={isCrawling} onCrawl={handleManualCrawl} onNotice={setSyncNotice} onSummaryChange={setAdminSummary} />;
       default:
         return null;
     }
@@ -260,7 +372,7 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
             {resultCount != null && <span className="tnum topbar-title-sub" style={{ fontSize: 13, color: 'var(--text-3)', fontWeight: 600 }}>{resultCount}건</span>}
           </div>
           <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-            <Btn variant="outline" icon="filter" size={isDesktop ? 'md' : 'sm'} title="필터설정">{isDesktop ? '필터설정' : ''}</Btn>
+            <Btn variant="outline" icon="filter" size={isDesktop ? 'md' : 'sm'} title="필터설정" onClick={() => setIsSettingsOpen(true)}>{isDesktop ? '필터설정' : ''}</Btn>
           </div>
         </header>
 
@@ -275,6 +387,24 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
       <nav className="tabbar">
         {navItems.map((it) => <NavItem key={it.id} item={it} active={tab === it.id} count={counts[it.id]} onClick={() => setTab(it.id)} compact />)}
       </nav>
+
+      {isSettingsOpen && (
+        <FilterPanel
+          filterSettings={filterSettings}
+          commentSettings={commentSettings}
+          platforms={platforms}
+          counts={drawerCounts}
+          theme={theme}
+          onFilterChange={changeFilter}
+          onCommentChange={changeComment}
+          onSaveComment={handleSaveComment}
+          onToggleTheme={toggleTheme}
+          onLock={onLock}
+          onReset={resetSettings}
+          onGoExcluded={() => { setTab('excluded'); setIsSettingsOpen(false); }}
+          onClose={() => setIsSettingsOpen(false)}
+        />
+      )}
     </div>
   );
 }
