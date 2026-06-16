@@ -7,6 +7,7 @@ import { useState } from 'react';
 import { Icon } from '../../lib/icons.jsx';
 import { Badge, Btn, PlatformBadge } from '../../components/primitives.jsx';
 import { deadlineMeta } from '../../lib/domain.js';
+import { buildYoutubeLinks } from '../../lib/youtube.js';
 import { YoutubeAI, hasYoutubeHelper } from './YoutubeAI.jsx';
 
 const inputStyle = {
@@ -30,7 +31,12 @@ export function EventCard({ ev, onAction, onUpdate, query }) {
       : p));
   };
 
-  const openApply = () => window.open(ev.applyUrl || ev.link, '_blank', 'noopener');
+  // 유튜브 이벤트의 영상 URL은 raw.externalLinks에만 있고 applyUrl/link는 슈퍼투데이 출처일 수 있어,
+  // youtube면 실제 영상 링크를 우선 연다.
+  const openApply = () => {
+    const ytLink = ev.platform === 'youtube' && ev._event ? buildYoutubeLinks(ev._event)[0] : '';
+    window.open(ytLink || ev.applyUrl || ev.link, '_blank', 'noopener');
+  };
 
   return (
     <article style={{
