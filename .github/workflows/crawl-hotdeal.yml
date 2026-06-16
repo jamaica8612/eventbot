@@ -1,0 +1,43 @@
+name: Crawl Hotdeals
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Every 30 minutes.
+    - cron: "*/30 * * * *"
+
+permissions:
+  contents: read
+
+jobs:
+  crawl:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Install Python crawler dependencies
+        run: pip install -r requirements.txt
+
+      - name: Crawl hotdeals
+        run: npm run crawl:hotdeal
+        env:
+          VITE_SUPABASE_URL: ${{ secrets.VITE_SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          HOTDEAL_LIMIT_PER_SOURCE: "30"
+          HOTDEAL_SOURCE_DELAY_SECONDS: "1.5"
