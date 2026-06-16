@@ -31,10 +31,10 @@ export function EventCard({ ev, onAction, onUpdate, query }) {
       : p));
   };
 
-  // 유튜브 이벤트의 영상 URL은 raw.externalLinks에만 있고 applyUrl/link는 슈퍼투데이 출처일 수 있어,
-  // youtube면 실제 영상 링크를 우선 연다.
+  // 영상 URL은 raw.externalLinks에만 있고 applyUrl/link는 슈퍼투데이 출처일 수 있어,
+  // 유튜브 영상 링크가 있으면 그걸 우선 연다.
   const openApply = () => {
-    const ytLink = ev.platform === 'youtube' && ev._event ? buildYoutubeLinks(ev._event)[0] : '';
+    const ytLink = ev._event ? buildYoutubeLinks(ev._event)[0] : '';
     window.open(ytLink || ev.applyUrl || ev.link, '_blank', 'noopener');
   };
 
@@ -42,7 +42,7 @@ export function EventCard({ ev, onAction, onUpdate, query }) {
     <article style={{
       background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)',
       padding: 16, boxShadow: 'var(--shadow-1)', opacity: ev.status === 'excluded' ? 0.62 : 1,
-      transition: 'box-shadow .2s var(--ease)',
+      transition: 'box-shadow .2s var(--ease)', minWidth: 0, overflowWrap: 'anywhere',
     }}>
       {/* header */}
       <div style={{ display: 'flex', gap: 11, alignItems: 'flex-start' }}>
@@ -61,7 +61,7 @@ export function EventCard({ ev, onAction, onUpdate, query }) {
               </span>
             )}
           </div>
-          <h3 style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.4, color: 'var(--text)', wordBreak: 'keep-all' }}>{hi(ev.title)}</h3>
+          <h3 style={{ margin: 0, fontSize: 15.5, fontWeight: 700, lineHeight: 1.4, color: 'var(--text)', wordBreak: 'keep-all', overflowWrap: 'anywhere' }}>{hi(ev.title)}</h3>
           <div style={{ marginTop: 5, fontSize: 12.5, color: 'var(--text-2)' }}>🎁 {ev.prizeSummary}</div>
         </div>
         <button onClick={() => setEditing((e) => !e)} title="마감 수정" style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12, color: editing ? 'var(--accent-text)' : 'var(--text-3)', background: editing ? 'var(--accent-weak)' : 'transparent', border: 'none', borderRadius: 7, padding: '5px 8px', fontWeight: 600, cursor: 'pointer' }}>
@@ -89,7 +89,7 @@ export function EventCard({ ev, onAction, onUpdate, query }) {
           </div>
         ) : (
           <>
-            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line',
+            <p style={{ margin: 0, fontSize: 13, lineHeight: 1.6, color: 'var(--text-2)', whiteSpace: 'pre-line', overflowWrap: 'anywhere',
               display: expanded ? 'block' : '-webkit-box', WebkitLineClamp: expanded ? 'none' : 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>{hi(ev.body)}</p>
             <button onClick={() => setExpanded((e) => !e)} style={{ marginTop: 6, display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 12.5, fontWeight: 650, color: 'var(--accent-text)', background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}>
               {expanded ? '접기' : '본문 펼치기'} <Icon name="chevDown" size={13} style={{ transform: expanded ? 'rotate(180deg)' : 'none', transition: 'transform .2s' }} />

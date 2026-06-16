@@ -18,7 +18,9 @@ import {
 } from '../../lib/youtube.js';
 
 export function hasYoutubeHelper(ev) {
-  return ev?.platform === 'youtube' && Boolean(ev._event) && hasYoutubeLink(ev._event);
+  // platform 매핑이 아니라 실제 영상 링크 존재로 판정(원본 EventBodyToggle과 동일).
+  // 영상 URL이 raw.externalLinks에만 있는 이벤트는 platform이 youtube로 보정되지 않기 때문.
+  return Boolean(ev && ev._event) && hasYoutubeLink(ev._event);
 }
 
 export function YoutubeAI({ ev }) {
@@ -95,7 +97,7 @@ export function YoutubeAI({ ev }) {
 
         {/* collected video info */}
         {ctx && (ctx.title || ctx.channelName) && (
-          <div style={{ marginTop: 11, padding: 11, borderRadius: 'var(--r-sm)', background: 'var(--surface-2)', fontSize: 12.5 }}>
+          <div style={{ marginTop: 11, padding: 11, borderRadius: 'var(--r-sm)', background: 'var(--surface-2)', fontSize: 12.5, overflowWrap: 'anywhere' }}>
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', color: 'var(--text-2)' }}>
               {ctx.title && <span><b style={{ color: 'var(--text)' }}>영상</b> {ctx.title}</span>}
               {ctx.channelName && <span><b style={{ color: 'var(--text)' }}>채널</b> {ctx.channelName}</span>}
