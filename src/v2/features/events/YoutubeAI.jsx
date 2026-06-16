@@ -12,15 +12,14 @@ import {
   buildYoutubeCommentMaterialText,
   copyTextToClipboard,
   fetchYoutubeContext,
-  hasYoutubeLink,
+  hasResolvableYoutube,
   normalizeSavedYoutubeContext,
   persistYoutubeContext,
 } from '../../lib/youtube.js';
 
 export function hasYoutubeHelper(ev) {
-  // platform 매핑이 아니라 실제 영상 링크 존재로 판정(원본 EventBodyToggle과 동일).
-  // 영상 URL이 raw.externalLinks에만 있는 이벤트는 platform이 youtube로 보정되지 않기 때문.
-  return Boolean(ev && ev._event) && hasYoutubeLink(ev._event);
+  // 직접 영상 링크가 있거나, 유튜브 카테고리 + 응모 링크(서버가 redirect로 영상 해석)면 표시.
+  return Boolean(ev && ev._event) && hasResolvableYoutube(ev._event);
 }
 
 export function YoutubeAI({ ev }) {
