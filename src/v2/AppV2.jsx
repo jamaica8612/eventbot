@@ -52,6 +52,7 @@ import { InboxScreen } from './features/inbox/InboxScreen.jsx';
 import { ListScreen, DeadlineScreen, SearchScreen } from './features/events/EventLists.jsx';
 import { AdminScreen } from './features/admin/AdminScreen.jsx';
 import { FilterPanel } from './features/filter/FilterPanel.jsx';
+import { HotdealScreen } from './features/hotdeals/HotdealScreen.jsx';
 
 /* ---------------- responsive helper ---------------- */
 function useMedia(q) {
@@ -150,11 +151,12 @@ const NAV = [
   { id: 'draft', label: '임시저장', icon: 'bookmark' },
   { id: 'search', label: '검색', icon: 'search' },
   { id: 'inbox', label: '응모함', icon: 'inbox' },
+  { id: 'hotdeal', label: '핫딜', icon: 'gift' },
 ];
 const ADMIN_NAV = { id: 'admin', label: '관리자', icon: 'shield' };
 const TITLES = {
   waiting: '대기', deadline: '마감 임박', draft: '임시저장',
-  search: '검색', inbox: '응모함', admin: '관리자', excluded: '제외된 이벤트',
+  search: '검색', inbox: '응모함', hotdeal: '핫딜', admin: '관리자', excluded: '제외된 이벤트',
 };
 
 /* ---------------- shell ---------------- */
@@ -257,6 +259,7 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     inbox: appEvents.filter(
       (e) => e.status === 'done' && (e.resultStatus === 'unknown' || (e.resultStatus === 'won' && e.receiptStatus !== 'received')),
     ).length,
+    hotdeal: 0,
     admin: adminSummary.pending,
   }), [appEvents, filterSettings, adminSummary.pending]);
 
@@ -298,6 +301,8 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
         return <ListScreen events={draftEvents} onAction={actList} onUpdate={dispatchUpdate} emptyTitle="임시저장이 비어 있어요" emptySub="‘나중에 할’ 이벤트를 임시저장해 두세요." />;
       case 'search':
         return <SearchScreen events={searchEvents} onAction={actList} onUpdate={dispatchUpdate} />;
+      case 'hotdeal':
+        return <HotdealScreen />;
       case 'excluded':
         return <ListScreen events={excludedEvents} onAction={actList} onUpdate={dispatchUpdate} emptyTitle="제외된 이벤트가 없어요" emptySub="제외한 이벤트는 여기서 복구할 수 있어요." />;
       case 'admin':
@@ -319,6 +324,7 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
     deadline: appEvents.filter((e) => e.status === 'ready').length,
     draft: counts.draft,
     inbox: appEvents.filter((e) => e.status === 'done').length,
+    hotdeal: null,
     search: null,
     admin: null,
   }[tab];

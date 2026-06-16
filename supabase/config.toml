@@ -9,3 +9,6 @@ verify_jwt = false
 
 [functions.youtube-transcript]
 verify_jwt = false
+
+[functions.hotdeal-data]
+verify_jwt = false
