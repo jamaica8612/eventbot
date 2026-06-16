@@ -38,7 +38,6 @@ import {
 } from '../storage/supabaseEventStorage.js';
 import {
   buildPlatformOptions,
-  enrichEvent,
   isExpiredReadyEvent,
   isInstagramEvent,
   isOldSkippedEvent,
@@ -53,7 +52,6 @@ import { InboxScreen } from './features/inbox/InboxScreen.jsx';
 import { ListScreen, DeadlineScreen, SearchScreen } from './features/events/EventLists.jsx';
 import { AdminScreen } from './features/admin/AdminScreen.jsx';
 import { FilterPanel } from './features/filter/FilterPanel.jsx';
-import { DEMO_EVENTS } from './_demoEvents.js';
 
 /* ---------------- responsive helper ---------------- */
 function useMedia(q) {
@@ -67,10 +65,6 @@ function useMedia(q) {
   return m;
 }
 
-// dev 전용: ?v2&demo 로 인증을 건너뛰고 셸/화면을 확인 (실제 전환 시 제거 검토)
-const DEMO_MODE = typeof window !== 'undefined' && new URLSearchParams(window.location.search).has('demo');
-const DEMO_PROFILE = { approved: true, is_admin: true, email: 'demo@local', display_name: '데모 사용자' };
-
 /* ---------------- root: auth gate ---------------- */
 export default function AppV2() {
   const [theme, setTheme] = useTheme();
@@ -79,7 +73,6 @@ export default function AppV2() {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
-    if (DEMO_MODE) return undefined;
     let isMounted = true;
     async function loadAuth(sessionOverride) {
       try {
@@ -118,10 +111,6 @@ export default function AppV2() {
       setAuthState((c) => ({ ...c, error: error.message || 'Google 로그인을 시작하지 못했습니다.' }));
       setIsSubmitting(false);
     }
-  }
-
-  if (DEMO_MODE) {
-    return <AppV2Main theme={theme} setTheme={setTheme} toggleTheme={toggleTheme} profile={DEMO_PROFILE} onLock={() => {}} />;
   }
 
   if (authState.isLoading) {
@@ -170,11 +159,7 @@ const TITLES = {
 
 /* ---------------- shell ---------------- */
 function AppV2Main({ theme, toggleTheme, profile, onLock }) {
-  const live = useEvents();
-  const [demoEvents, setDemoEvents] = useState(() => (DEMO_MODE ? DEMO_EVENTS.map(enrichEvent) : []));
-  const events = DEMO_MODE ? demoEvents : live.events;
-  const setEvents = DEMO_MODE ? setDemoEvents : live.setEvents;
-  const isLoading = DEMO_MODE ? false : live.isLoading;
+  const { events, setEvents, isLoading } = useEvents();
   const [tab, setTab] = useState('waiting');
   const [syncNotice, setSyncNotice] = useState(null);
   const [filterSettings, setFilterSettings] = useState(loadFilterSettings);
@@ -193,24 +178,24 @@ function AppV2Main({ theme, toggleTheme, profile, onLock }) {
 
   // 설정/크롤러 로딩 (demo·미설정이면 로컬 기본 유지)
   useEffect(() => {
-    if (DEMO_MODE || !hasSupabaseConfig) { didLoadFilter.current = true; return; }
+    if (!hasSupabaseConfig) { didLoadFilter.current = true; return; }
     loadSupabaseFilterSettings()
       .then((r) => { if (r) setFilterSettings(normalizeFilterSettings(r)); })
       .catch(() => {})
       .finally(() => { didLoadFilter.current = true; });
   }, []);
   useEffect(() => {
-    if (DEMO_MODE || !hasSupabaseConfig) return;
+    if (!hasSupabaseConfig) return;
     loadSupabaseCommentSettings().then((r) => { if (r) setCommentSettings(normalizeCommentSettings(r)); }).catch(() => {});
   }, []);
   useEffect(() => {
-    if (DEMO_MODE || !hasSupabaseConfig) return;
+    if (!hasSupabaseConfig) return;
     let m = true;
     loadSupabaseCrawlerStatus().then((s) => { if (m) setCrawlerStatus(s); }).catch(() => { if (m) setCrawlerStatus(null); });
     return () => { m = false; };
   }, []);
   useEffect(() => {
-    if (!didLoadFilter.current || DEMO_MODE) return;
+    if (!didLoadFilter.current) return;
     if (hasSupabaseConfig) { saveSupabaseFilterSettings(filterSettings).catch(() => {}); return; }
     saveFilterSettings(filterSettings);
   }, [filterSettings]);

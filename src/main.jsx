@@ -1,34 +1,13 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import './v2/styles/tokens.css';
+import AppV2 from './v2/AppV2.jsx';
+import { registerServiceWorker } from './pwa.js';
 
-const root = createRoot(document.getElementById('root'));
-const useV2 = new URLSearchParams(window.location.search).has('v2');
+registerServiceWorker();
 
-if (useV2) {
-  // v2 디자인 미리보기 (?v2).
-  Promise.all([
-    import('./v2/styles/tokens.css'),
-    import('./v2/AppV2.jsx'),
-  ]).then(([, mod]) => {
-    const V2 = mod.default;
-    root.render(
-      <StrictMode>
-        <V2 />
-      </StrictMode>,
-    );
-  });
-} else {
-  Promise.all([
-    import('./App.jsx'),
-    import('./styles.css'),
-    import('./pwa.js'),
-  ]).then(([appMod, , pwaMod]) => {
-    const App = appMod.default;
-    pwaMod.registerServiceWorker();
-    root.render(
-      <StrictMode>
-        <App />
-      </StrictMode>,
-    );
-  });
-}
+createRoot(document.getElementById('root')).render(
+  <StrictMode>
+    <AppV2 />
+  </StrictMode>,
+);
