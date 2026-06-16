@@ -12,14 +12,15 @@ import {
   buildYoutubeCommentMaterialText,
   copyTextToClipboard,
   fetchYoutubeContext,
-  hasResolvableYoutube,
+  hasYoutubeLink,
   normalizeSavedYoutubeContext,
   persistYoutubeContext,
 } from '../../lib/youtube.js';
 
 export function hasYoutubeHelper(ev) {
-  // 직접 영상 링크가 있거나, 유튜브 카테고리 + 응모 링크(서버가 redirect로 영상 해석)면 표시.
-  return Boolean(ev && ev._event) && hasResolvableYoutube(ev._event);
+  // 직접 영상 링크(raw.externalLinks에 수집된 YouTube URL)가 있을 때만 표시.
+  // 크롤러가 응모 링크(link.php)를 따라가 채운다.
+  return Boolean(ev && ev._event) && hasYoutubeLink(ev._event);
 }
 
 export function YoutubeAI({ ev }) {

@@ -86,20 +86,6 @@ export function hasYoutubeLink(event) {
   return buildYoutubeLinks(event).length > 0;
 }
 
-// 영상 URL은 없지만 유튜브 카테고리 + suto 응모 링크(link.php)가 있으면,
-// 백엔드가 그 리다이렉트를 따라가 영상에 도달할 수 있다.
-export function hasResolvableYoutube(event) {
-  if (hasYoutubeLink(event)) return true;
-  const isYoutubeCategory = /youtube|유튜브/i.test(`${event.platform || ''} ${event.source || ''}`);
-  const applyUrl = event.applyUrl || event.applyTargetUrl || event.url || '';
-  return isYoutubeCategory && /\/bbs\/link\.php/i.test(applyUrl);
-}
-
-// fetch에 보낼 URL: 직접 영상 링크 우선, 없으면 응모 링크(서버가 redirect 해석)
-export function youtubeFetchUrl(event) {
-  return buildYoutubeLinks(event)[0] || event.applyUrl || event.applyTargetUrl || event.url || '';
-}
-
 export function normalizeSavedYoutubeContext(value) {
   if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
   return Object.keys(value).length > 0 ? value : null;
@@ -118,7 +104,7 @@ export async function fetchYoutubeContext({ event, mode, signal }) {
     method: 'POST',
     headers: await getHeaders(endpoint),
     signal,
-    body: JSON.stringify({ mode, url: youtubeFetchUrl(event), eventInfo: buildCommentEventInfo(event) }),
+    body: JSON.stringify({ mode, url: buildYoutubeLinks(event)[0], eventInfo: buildCommentEventInfo(event) }),
   });
   const payload = await readJsonResponse(response);
   if (!response.ok) {
