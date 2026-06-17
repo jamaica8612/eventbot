@@ -8,6 +8,7 @@ const JSON_HEADERS = {
 const FILTER_SETTINGS_KEY = 'filter_settings';
 const CRAWL_STATUS_KEY = 'crawl_status';
 const COMMENT_SETTINGS_KEY = 'comment_settings';
+const EVENT_LOAD_LIMIT = 2000;
 
 type Profile = {
   user_id: string;
@@ -208,7 +209,7 @@ async function ensureProfile(user: AuthUser): Promise<Profile> {
 
 async function loadEvents(userId: string) {
   const [events, states] = await Promise.all([
-    restFetch('/rest/v1/events?select=*&order=last_seen_at.desc&limit=240'),
+    restFetch(`/rest/v1/events?select=*&order=last_seen_at.desc&limit=${EVENT_LOAD_LIMIT}`),
     restFetch(
       `/rest/v1/user_event_states?select=*&user_id=eq.${encodeURIComponent(userId)}`,
     ),
