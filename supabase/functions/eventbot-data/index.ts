@@ -222,7 +222,25 @@ async function loadEvents(userId: string) {
   }
 
   if (!Array.isArray(events)) return [];
-  return events.map((event) => mergeEventState(event, stateByEventId.get(String(event.id))));
+
+  // Some user-interacted events (inbox/draft) may fall outside the top-240 window.
+  // Fetch them separately so they always appear.
+  const loadedIds = new Set<string>(events.map((e: any) => String(e.id)));
+  const missingIds: string[] = Array.isArray(states)
+    ? states
+        .filter((s: any) => s?.event_id && !loadedIds.has(String(s.event_id)))
+        .map((s: any) => String(s.event_id))
+    : [];
+
+  let allEvents = events;
+  if (missingIds.length > 0) {
+    const extra = await restFetch(
+      `/rest/v1/events?select=*&id=in.(${missingIds.join(',')})`,
+    ).catch(() => null);
+    if (Array.isArray(extra)) allEvents = [...events, ...extra];
+  }
+
+  return allEvents.map((event: any) => mergeEventState(event, stateByEventId.get(String(event.id))));
 }
 
 function mergeEventState(event: Record<string, unknown>, state?: Record<string, unknown>) {
