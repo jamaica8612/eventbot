@@ -7,7 +7,7 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../lib/icons.jsx';
 import { Badge, Chip, IconBtn, SegToggle, Empty, PlatformBadge } from '../../components/primitives.jsx';
-import { announceMeta, won, wonShort, parseAmount } from '../../lib/domain.js';
+import { announceMeta, won, parseAmount } from '../../lib/domain.js';
 
 const RESULT_META = {
   pending: { label: '결과 미확인', tone: 'muted', icon: 'clock' },
@@ -27,36 +27,63 @@ const inputStyle = {
 };
 
 function SummaryStrip({ events }) {
-  const entered = events.length;
   const today = events.filter((e) => e.result === 'pending' && announceMeta(e).key === 'today').length;
   const overdue = events.filter((e) => e.result === 'pending' && announceMeta(e).key === 'overdue').length;
   const wins = events.filter((e) => e.result === 'win');
   const unreceived = wins.filter((e) => e.receiveStatus !== 'done').length;
-  const decided = events.filter((e) => e.result !== 'pending').length;
-  const rate = decided ? Math.round((wins.length / decided) * 1000) / 10 : 0;
-  const prize = wins.reduce((s, e) => s + (e.prizeAmount || 0), 0);
+  const needsAnnouncement = today + overdue;
 
-  const Stat = ({ label, value, sub, attention }) => (
+  const Stat = ({ label, value, sub, tone, icon }) => (
     <div style={{
-      flex: '1 1 120px', minWidth: 110, padding: '13px 15px', borderRadius: 'var(--r-md)',
-      background: attention ? 'var(--warn-weak)' : 'var(--surface)',
-      border: '1px solid ' + (attention ? 'var(--warn)' : 'var(--border)'),
+      flex: '1 1 220px',
+      minWidth: 190,
+      padding: '10px 12px',
+      borderRadius: 'var(--r-md)',
+      background: tone === 'urgent' ? 'var(--urgent-weak)' : tone === 'warn' ? 'var(--warn-weak)' : 'var(--surface)',
+      border: '1px solid ' + (tone === 'urgent' ? 'var(--urgent)' : tone === 'warn' ? 'var(--warn)' : 'var(--border)'),
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      gap: 12,
     }}>
-      <div style={{ fontSize: 11.5, fontWeight: 650, color: attention ? 'var(--warn-text)' : 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 4 }}>
-        {attention && <Icon name="alert" size={12} />}{label}
+      <div style={{ minWidth: 0 }}>
+        <div style={{
+          fontSize: 11.5,
+          fontWeight: 650,
+          color: tone === 'urgent' ? 'var(--urgent-text)' : tone === 'warn' ? 'var(--warn-text)' : 'var(--text-3)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: 4,
+        }}>
+          {icon && <Icon name={icon} size={12} />}{label}
+        </div>
+        {sub && <div style={{ marginTop: 2, fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>}
       </div>
-      <div className="tnum" style={{ fontSize: 23, fontWeight: 800, marginTop: 3, color: attention ? 'var(--warn-text)' : 'var(--text)', letterSpacing: '-.02em' }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 1 }}>{sub}</div>}
+      <div className="tnum" style={{
+        fontSize: 20,
+        fontWeight: 800,
+        color: tone === 'urgent' ? 'var(--urgent-text)' : tone === 'warn' ? 'var(--warn-text)' : 'var(--text)',
+        flex: 'none',
+      }}>{value}</div>
     </div>
   );
 
   return (
-    <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 16 }}>
-      <Stat label="응모완료" value={entered} sub="건" />
-      <Stat label="오늘 발표" value={today + overdue} sub={overdue ? `지남 ${overdue} 포함` : '확인 필요'} attention={today + overdue > 0} />
-      <Stat label="미수령" value={unreceived} sub="당첨 경품" attention={unreceived > 0} />
-      <Stat label="당첨률" value={rate + '%'} sub={`${wins.length}/${decided} 결과확정`} />
-      <Stat label="당첨금 합계" value={wonShort(prize).replace('원', '')} sub="원" />
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 14 }}>
+      <Stat
+        label="오늘 발표"
+        value={needsAnnouncement}
+        sub={overdue ? `발표일 지남 ${overdue}건 포함` : '결과 확인 필요'}
+        tone={needsAnnouncement > 0 ? 'warn' : 'muted'}
+        icon={needsAnnouncement > 0 ? 'alert' : 'clock'}
+      />
+      <Stat
+        label="미수령"
+        value={unreceived}
+        sub="아직 받은 표시가 없는 당첨 경품"
+        tone={unreceived > 0 ? 'urgent' : 'muted'}
+        icon={unreceived > 0 ? 'alert' : 'gift'}
+      />
     </div>
   );
 }
