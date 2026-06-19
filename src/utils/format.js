@@ -2,21 +2,44 @@ export function parsePrizeAmount(value) {
   return Number.parseInt(normalizePrizeAmountInput(value), 10) || 0;
 }
 
+// 자연어 금액 입력을 정규화한다. "억/만/천/나머지"를 각각 추출해 합산하므로
+// "1만 5000"의 5000이나 "1억 2만 3000"의 2만·3000을 누락하지 않는다.
+// 반환값은 저장/표시에 쓰는 숫자 문자열(빈 입력은 '').
 export function normalizePrizeAmountInput(value) {
-  const text = String(value ?? '').replace(/,/g, '').trim();
+  let text = String(value ?? '').replace(/[,\s원]/g, '');
   if (!text) return '';
 
-  const manMatch = text.match(/(\d+(?:\.\d+)?)\s*만/);
+  let total = 0;
+  let matchedUnit = false;
+
+  const eokMatch = text.match(/(\d+(?:\.\d+)?)억/);
+  if (eokMatch) {
+    total += Math.round(Number(eokMatch[1]) * 1e8);
+    text = text.replace(eokMatch[0], '');
+    matchedUnit = true;
+  }
+
+  const manMatch = text.match(/(\d+(?:\.\d+)?)만/);
   if (manMatch) {
-    return String(Math.round(Number(manMatch[1]) * 10000));
+    total += Math.round(Number(manMatch[1]) * 1e4);
+    text = text.replace(manMatch[0], '');
+    matchedUnit = true;
   }
 
-  const cheonMatch = text.match(/(\d+(?:\.\d+)?)\s*천/);
+  const cheonMatch = text.match(/(\d+(?:\.\d+)?)천/);
   if (cheonMatch) {
-    return String(Math.round(Number(cheonMatch[1]) * 1000));
+    total += Math.round(Number(cheonMatch[1]) * 1e3);
+    text = text.replace(cheonMatch[0], '');
+    matchedUnit = true;
   }
 
-  return text.replace(/[^\d]/g, '');
+  const restMatch = text.match(/\d+/);
+  if (restMatch) {
+    total += Number.parseInt(restMatch[0], 10);
+    return String(total);
+  }
+
+  return matchedUnit ? String(total) : '';
 }
 
 export function formatWon(value) {

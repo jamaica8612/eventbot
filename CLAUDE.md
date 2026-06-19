@@ -22,7 +22,7 @@ UI를 수정·추가할 때는 **작업 전에 `docs/DESIGN_RULES.md`를 읽고 
 
 - **데이터/인증 레이어는 신중히 다룬다**: `src/storage/**`, `src/hooks/**`, `src/utils/**`는 검증된 도메인/동기화 로직이다. UI 작업 중에는 건드리지 않는다(읽기·재사용만). 변경이 필요하면 의도를 명확히 하고 별도로 다룬다.
 - **어댑터 경유**: v2 화면은 `update*` 핸들러를 직접 호출하지 않는다. `src/v2/lib/adapter.js`의 `toEv`/`actList`/`actInbox`/`dispatchUpdate`만 쓴다.
-- **도메인 표시값**은 `src/v2/lib/domain.js`(deadlineMeta/announceMeta/won/wonShort/parseAmount/platformMeta). 계산·정렬·판정은 현재 모델(eventModel/deadlineModel/format) 재사용.
+- **도메인 표시값**은 `src/v2/lib/domain.js`(deadlineMeta/announceMeta/won/wonShort/platformMeta). 계산·정렬·판정은 현재 모델(eventModel/deadlineModel/format) 재사용. 자연어 금액 파싱은 `src/utils/format.js`의 `parsePrizeAmount`/`normalizePrizeAmountInput`로 통일.
 - **백엔드 접근은 Edge Function 경유**. 클라이언트는 Supabase 테이블 직접 접근 금지(anon 차단). `supabase/functions/`(eventbot-data, youtube-transcript, verify-passcode, eventbot-crawl-trigger). Edge Function 수정 시 `supabase functions deploy <name>` 필요.
 - **시크릿은 Edge Function Secret**으로만(Gemini 키, 텔레그램 토큰 등). 브라우저에 노출 금지.
 

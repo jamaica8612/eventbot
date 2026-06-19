@@ -83,21 +83,6 @@ export function wonShort(n) {
   }
   return n.toLocaleString() + '원';
 }
-// 자연어 금액 파서: "1만 5000" / "15000" / "3만" → number
-// (현재 format.parsePrizeAmount는 "1만 5000"의 5000을 누락하므로 정확한 합산 버전을 이식)
-export function parseAmount(str) {
-  if (!str) return 0;
-  let s = String(str).replace(/[,\s원]/g, '');
-  let total = 0;
-  const eok = s.match(/(\d+)억/);
-  if (eok) { total += parseInt(eok[1], 10) * 1e8; s = s.replace(eok[0], ''); }
-  const man = s.match(/(\d+)만/);
-  if (man) { total += parseInt(man[1], 10) * 1e4; s = s.replace(man[0], ''); }
-  const rest = s.match(/(\d+)/);
-  if (rest) total += parseInt(rest[1], 10);
-  return total;
-}
-
 /* ---- ISO ↔ 로컬 YYYY-MM-DD ---- */
 export function toYMD(iso) {
   const d = iso ? new Date(iso) : null;
