@@ -1,4 +1,5 @@
 import { useCallback, useEffect } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import {
   saveEventAnnouncement,
   saveEventResult,
@@ -25,15 +26,30 @@ import {
   getPrizeDisplay,
 } from '../utils/eventModel.js';
 import { normalizePrizeAmountInput } from '../utils/format.js';
+import type { EventModel, EventStatus, ResultStatus } from '../v2/lib/types.ts';
+
+export interface SyncNotice {
+  type: 'success' | 'info' | 'warning';
+  message: string;
+}
+
+type EventPatch = Record<string, unknown>;
+type SetSyncNotice = (notice: SyncNotice | null) => void;
+
+interface UseEventActionsArgs {
+  events: EventModel[];
+  setEvents: Dispatch<SetStateAction<EventModel[]>>;
+  setSyncNotice: SetSyncNotice;
+}
 
 const SYNC_FAILED_MESSAGE = 'DB 저장 실패. 로컬에 보관했고 자동 재시도합니다.';
 const SYNC_RECOVERED_MESSAGE = '밀린 저장을 DB에 반영했습니다.';
 
-function persistRemote(eventId, patch, setSyncNotice) {
+function persistRemote(eventId: string, patch: EventPatch, setSyncNotice: SetSyncNotice): void {
   setSyncNotice(null);
   updateSupabaseEventState(eventId, patch)
     .then(() => setSyncNotice(null))
-    .catch((error) => {
+    .catch((error: { message?: string }) => {
       enqueueSyncPatch(eventId, patch);
       setSyncNotice({
         type: 'warning',
@@ -42,7 +58,7 @@ function persistRemote(eventId, patch, setSyncNotice) {
     });
 }
 
-export function useEventActions({ events, setEvents, setSyncNotice }) {
+export function useEventActions({ events, setEvents, setSyncNotice }: UseEventActionsArgs) {
   useEffect(() => {
     let isRetrying = false;
 
@@ -61,11 +77,12 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
       let successCount = 0;
 
       for (const item of queue) {
+        if (!item) continue;
         try {
           await updateSupabaseEventState(item.eventId, item.patch);
           successCount += 1;
         } catch (error) {
-          failedItems.push(markSyncAttempt(item, error.message));
+          failedItems.push(markSyncAttempt(item, (error as { message?: string }).message));
         }
       }
 
@@ -103,7 +120,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   }, [setSyncNotice]);
 
   const updateStatus = useCallback(
-    (eventId, status) => {
+    (eventId: string, status: EventStatus) => {
       const changedAt = new Date().toISOString();
       const currentEvent = events.find((event) => event.id === eventId);
       if (!hasSupabaseConfig) {
@@ -114,7 +131,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
       }
       persistRemote(eventId, buildStatusPatch(currentEvent, status, changedAt), setSyncNotice);
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId ? applyStatusChange(event, status, changedAt) : event,
         ),
       );
@@ -123,13 +140,13 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   );
 
   const updateResult = useCallback(
-    (eventId, resultStatus) => {
+    (eventId: string, resultStatus: ResultStatus) => {
       const changedAt = new Date().toISOString();
       const currentEvent = events.find((event) => event.id === eventId);
       const participatedAt = currentEvent?.participatedAt ?? changedAt;
       const prizeTitle =
-        resultStatus === 'won'
-          ? currentEvent?.prizeTitle || getPrizeDisplay(currentEvent)
+        resultStatus === 'won' && currentEvent
+          ? currentEvent.prizeTitle || getPrizeDisplay(currentEvent)
           : undefined;
 
       if (!hasSupabaseConfig) {
@@ -149,7 +166,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
       );
 
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId
             ? {
                 ...event,
@@ -168,7 +185,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   );
 
   const updateAnnouncement = useCallback(
-    (eventId, meta) => {
+    (eventId: string, meta: EventPatch) => {
       const currentEvent = events.find((event) => event.id === eventId);
       const participatedAt = currentEvent?.participatedAt ?? new Date().toISOString();
       if (!hasSupabaseConfig) {
@@ -185,7 +202,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
         setSyncNotice,
       );
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId
             ? {
                 ...event,
@@ -202,20 +219,21 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   );
 
   const updateDeadline = useCallback(
-    (eventId, meta) => {
-      const deadlineText =
+    (eventId: string, meta: EventPatch) => {
+      const deadlineText: string =
         typeof meta.deadlineText === 'string'
           ? meta.deadlineText.trim()
-          : meta.deadlineDate || '상세 확인 필요';
+          : (typeof meta.deadlineDate === 'string' && meta.deadlineDate) || '상세 확인 필요';
+      const deadlineDate = typeof meta.deadlineDate === 'string' ? meta.deadlineDate : '';
       const patch = {
-        deadlineDate: meta.deadlineDate || '',
+        deadlineDate,
         deadlineText,
       };
 
       setSyncNotice(null);
       updateSupabaseEventDetails(eventId, patch)
         .then(() => setSyncNotice({ type: 'success', message: '마감일을 저장했습니다.' }))
-        .catch((error) =>
+        .catch((error: { message?: string }) =>
           setSyncNotice({
             type: 'warning',
             message: `마감일 저장 실패. (${error.message})`,
@@ -223,7 +241,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
         );
 
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId
             ? {
                 ...event,
@@ -245,13 +263,13 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   );
 
   const updateWinningMeta = useCallback(
-    (eventId, meta) => {
+    (eventId: string, meta: EventPatch) => {
       if (!hasSupabaseConfig) {
         saveWinningMeta(eventId, meta);
       }
       persistRemote(eventId, { status: 'done', resultStatus: 'won', ...meta }, setSyncNotice);
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId
             ? {
                 ...event,
@@ -275,7 +293,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
   );
 
   const deleteInboxEvent = useCallback(
-    (eventId) => {
+    (eventId: string) => {
       const patch = {
         status: 'ready',
         resultStatus: 'unknown',
@@ -294,7 +312,7 @@ export function useEventActions({ events, setEvents, setSyncNotice }) {
       }
       persistRemote(eventId, patch, setSyncNotice);
       setEvents((currentEvents) =>
-        currentEvents.map((event) =>
+        currentEvents.map((event): EventModel =>
           event.id === eventId
             ? {
                 ...event,

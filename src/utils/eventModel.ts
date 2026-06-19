@@ -2,7 +2,7 @@ import { analyzeAnnouncementByRules } from '../../crawler/eventDecision/announce
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
 import { getLocalToday, parseLocalDate, formatDate } from './format.js';
 import { getUpcomingDeadlineMatch } from './deadlineModel.js';
-import type { EventModel, EventRaw, FilterSettings } from '../v2/lib/types.ts';
+import type { EventModel, EventRaw, EventStatus, FilterSettings } from '../v2/lib/types.ts';
 export { getTodayDeadlineMatch, getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from './deadlineModel.js';
 
 interface AnnouncementStatus {
@@ -318,7 +318,7 @@ export function buildStatusPatch(event: EventModel | undefined, status: string, 
   return { status, resultStatus: 'unknown', resultCheckedAt: null };
 }
 
-export function applyStatusChange(event: EventModel, status: string, changedAt: string) {
+export function applyStatusChange(event: EventModel, status: EventStatus, changedAt: string): EventModel {
   if (status === 'done') {
     return {
       ...event,
