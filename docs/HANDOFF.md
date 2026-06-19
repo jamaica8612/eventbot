@@ -131,11 +131,17 @@ npm.cmd run crawl:suto
 npm run build
 ```
 
+## 현재 구조 메모 (2026-06 기준)
+
+- 실제 배포 UI는 `src/v2/`("당첨노트" 디자인 시스템)이고 진입점은 `src/main.jsx` → `src/v2/AppV2.jsx`다. 과거 루트 레벨 UI(`src/App.jsx`, `src/components/`)는 v2로 대체됐고, `src/hooks`/`src/utils`/`src/storage`의 도메인·동기화·저장 레이어는 v2가 어댑터(`src/v2/lib/adapter.js`)로 재사용한다.
+- 로그인은 Supabase Auth + Google OAuth로 구현됐고, 승인(approved)·관리자(is_admin) 게이트가 있다.
+- 크롤러는 슈퍼투데이 외에 핫딜 커뮤니티(클리앙·뽐뿌·에펨코리아)까지 확장됐다(`crawler/hotdealCrawler.js`, `crawler/hotdeal/`).
+- AI 댓글 후보 생성이 구현돼 있다(`api/youtubeCommentGenerator.js`, `prompts/comment_generator.md`, `youtube-transcript` Edge Function).
+
 ## 아직 구현하지 않은 기능
 
-- 로그인
-- 이벤트 삭제/수정
-- 관리자 기능
+- 이벤트 삭제/수정 등 일반 사용자용 편집 기능
+- 운영 최소 수준을 넘는 관리자 기능
 
 ## 주의해야 할 설계 결정
 
