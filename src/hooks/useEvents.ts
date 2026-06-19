@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react';
+import type { Dispatch, SetStateAction } from 'react';
 import { initialEvents } from '../data/events.js';
 import { loadCrawledEvents } from '../storage/crawledEventStorage.js';
 import { applyStoredStatuses } from '../storage/eventStatusStorage.js';
 import { applyExcludedStatus } from '../storage/excludedEventStorage.js';
 import { hasSupabaseConfig, loadSupabaseEvents } from '../storage/supabaseEventStorage.js';
 import { enrichEvent } from '../utils/eventModel.js';
+import type { EventModel } from '../v2/lib/types.ts';
 
-async function loadRemoteEvents() {
+export type Theme = 'light' | 'dark';
+
+async function loadRemoteEvents(): Promise<EventModel[]> {
   if (hasSupabaseConfig) {
     const supabaseEvents = await loadSupabaseEvents();
     if (supabaseEvents.length > 0) {
@@ -17,11 +21,15 @@ async function loadRemoteEvents() {
   return applyStoredStatuses(crawledEvents);
 }
 
-export function useEvents(initialRemoteEvents = null) {
-  const [events, setEvents] = useState(() => (
+export function useEvents(initialRemoteEvents: EventModel[] | null = null): {
+  events: EventModel[];
+  setEvents: Dispatch<SetStateAction<EventModel[]>>;
+  isLoading: boolean;
+} {
+  const [events, setEvents] = useState<EventModel[]>(() => (
     Array.isArray(initialRemoteEvents) ? initialRemoteEvents.map(enrichEvent) : []
   ));
-  const [isLoading, setIsLoading] = useState(() => !Array.isArray(initialRemoteEvents));
+  const [isLoading, setIsLoading] = useState<boolean>(() => !Array.isArray(initialRemoteEvents));
 
   useEffect(() => {
     if (Array.isArray(initialRemoteEvents)) {
@@ -48,8 +56,8 @@ export function useEvents(initialRemoteEvents = null) {
   return { events, setEvents, isLoading };
 }
 
-export function useTheme() {
-  const [theme, setTheme] = useState(() => {
+export function useTheme(): [Theme, Dispatch<SetStateAction<Theme>>] {
+  const [theme, setTheme] = useState<Theme>(() => {
     if (typeof window === 'undefined') return 'light';
     if (window.localStorage.getItem('eventbotDesignRefresh') !== '2026-light') {
       window.localStorage.setItem('eventbotDesignRefresh', '2026-light');

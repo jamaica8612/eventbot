@@ -1,6 +1,22 @@
 import { getLocalToday, parseLocalDate, formatDate } from './format.js';
+import type { EventModel } from '../v2/lib/types.ts';
 
-export function getTodayDeadlineMatch(event) {
+export type DeadlineBucket = 'today' | 'tomorrow' | 'week' | 'later' | 'unknown';
+
+interface TodayDeadlineMatch {
+  isMatch: boolean;
+  isExact: boolean;
+}
+
+interface UpcomingDeadlineMatch {
+  isMatch: boolean;
+  isExact: boolean;
+  diffDays: number;
+  bucket: DeadlineBucket;
+  label: string;
+}
+
+export function getTodayDeadlineMatch(event: EventModel): TodayDeadlineMatch {
   if (event.status === 'done' || event.status === 'skipped') {
     return { isMatch: false, isExact: false };
   }
@@ -21,7 +37,7 @@ export function getTodayDeadlineMatch(event) {
     event.memo,
     event.originalText,
     ...(Array.isArray(event.originalLines) ? event.originalLines : []),
-    ...(Array.isArray(event.raw?.originalLines) ? event.raw.originalLines : []),
+    ...(Array.isArray(event.raw?.originalLines) ? event.raw!.originalLines! : []),
   ]
     .filter(Boolean)
     .join(' ');
@@ -32,7 +48,7 @@ export function getTodayDeadlineMatch(event) {
   return { isMatch: hasTodayText, isExact: false };
 }
 
-export function getUpcomingDeadlineMatch(event) {
+export function getUpcomingDeadlineMatch(event: EventModel): UpcomingDeadlineMatch {
   if (event.status === 'done' || event.status === 'skipped') {
     return {
       isMatch: false,
@@ -73,7 +89,7 @@ export function getUpcomingDeadlineMatch(event) {
     event.memo,
     event.originalText,
     ...(Array.isArray(event.originalLines) ? event.originalLines : []),
-    ...(Array.isArray(event.raw?.originalLines) ? event.raw.originalLines : []),
+    ...(Array.isArray(event.raw?.originalLines) ? event.raw!.originalLines! : []),
   ]
     .filter(Boolean)
     .join(' ');
@@ -97,21 +113,21 @@ export function getUpcomingDeadlineMatch(event) {
   };
 }
 
-function getDeadlineBucket(diffDays) {
+function getDeadlineBucket(diffDays: number): DeadlineBucket {
   if (diffDays === 0) return 'today';
   if (diffDays === 1) return 'tomorrow';
   if (diffDays <= 7) return 'week';
   return 'later';
 }
 
-function formatDeadlineLabel(diffDays, deadline) {
+function formatDeadlineLabel(diffDays: number, deadline: Date): string {
   if (diffDays === 0) return '오늘 마감';
   if (diffDays === 1) return '내일 마감';
   if (diffDays < 0) return `${Math.abs(diffDays)}일 지남`;
   return `${formatDate(deadline.toISOString())} 마감`;
 }
 
-function buildTodayTextHints(today) {
+function buildTodayTextHints(today: Date): string[] {
   const month = today.getMonth() + 1;
   const day = today.getDate();
   return [
@@ -124,7 +140,7 @@ function buildTodayTextHints(today) {
   ];
 }
 
-export function sortTodayDeadlineEvents(events) {
+export function sortTodayDeadlineEvents(events: EventModel[]): EventModel[] {
   return [...events].sort((first, second) => {
     const firstMatch = getUpcomingDeadlineMatch(first);
     const secondMatch = getUpcomingDeadlineMatch(second);
@@ -141,6 +157,6 @@ export function sortTodayDeadlineEvents(events) {
   });
 }
 
-function getNumber(value) {
-  return Number.isFinite(value) ? value : 0;
+function getNumber(value: unknown): number {
+  return Number.isFinite(value as number) ? (value as number) : 0;
 }

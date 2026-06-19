@@ -7,7 +7,8 @@
 import { useMemo, useState } from 'react';
 import { Icon } from '../../lib/icons.jsx';
 import { Badge, Chip, IconBtn, SegToggle, Empty, PlatformBadge } from '../../components/primitives.jsx';
-import { announceMeta, won, parseAmount } from '../../lib/domain.js';
+import { announceMeta, won, wonShort } from '../../lib/domain.js';
+import { parsePrizeAmount } from '../../../utils/format.js';
 
 const RESULT_META = {
   pending: { label: '결과 미확인', tone: 'muted', icon: 'clock' },
@@ -197,7 +198,7 @@ function InboxRow({ ev, onUpdate, onAction }) {
               </label>
               <label style={lbl}>당첨 금액 <span style={{ fontWeight: 400, color: 'var(--text-3)' }}>(자연어 입력 OK)</span>
                 <input type="text" defaultValue={ev.prizeAmount ? wonShort(ev.prizeAmount).replace('원', '') : ''} placeholder="예: 1만 5000"
-                  onBlur={(e) => onUpdate(ev.id, { prizeAmount: parseAmount(e.target.value) })} style={inputStyle} />
+                  onBlur={(e) => onUpdate(ev.id, { prizeAmount: parsePrizeAmount(e.target.value) })} style={inputStyle} />
               </label>
             </div>
           )}
