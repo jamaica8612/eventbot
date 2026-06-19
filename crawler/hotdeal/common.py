@@ -1,8 +1,13 @@
 from __future__ import annotations
 
 import re
+import os
+import subprocess
 import sys
 import time
+import tempfile
+from http.cookies import SimpleCookie
+from pathlib import Path
 from datetime import datetime, timedelta, timezone
 from urllib.parse import parse_qs, urljoin, urlparse
 
@@ -17,7 +22,11 @@ IMPERSONATE = "chrome124"
 TIMEOUT = 20
 BACKOFF_SECONDS = [0, 3, 7, 13]
 DEFAULT_HEADERS = {
+    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8",
     "Accept-Language": "ko-KR,ko;q=0.9,en;q=0.8",
+    "Cache-Control": "no-cache",
+    "Pragma": "no-cache",
+    "Upgrade-Insecure-Requests": "1",
 }
 
 
@@ -37,6 +46,10 @@ def fetch_html(s, url: str) -> str:
             time.sleep(backoff)
         try:
             response = s.get(url)
+            if response.status_code == 430 and "fmkorea.com" in urlparse(url).netloc:
+                solved = solve_fmkorea_security_challenge(s, response, url)
+                if solved:
+                    return solved
             if response.status_code == 429:
                 last_error = RuntimeError(f"{url} returned HTTP 429")
                 continue
@@ -45,6 +58,108 @@ def fetch_html(s, url: str) -> str:
         except Exception as exc:
             last_error = exc
     raise RuntimeError(f"failed to fetch {url}: {last_error}")
+
+
+def solve_fmkorea_security_challenge(s, response, url: str) -> str:
+    html = response.text or ""
+    if "에펨코리아 보안 시스템" not in html or "fm5(" not in html:
+        return ""
+
+    token_match = re.search(r"fm5\('([^']+)'\s*,\s*'([^']+)'\)", html)
+    lite_match = re.search(r"var _cookie = '([^']+)'\s*\+\s*\"=\"\s*\+\s*escape\('([^']+)'\)", html)
+    if not token_match:
+        return ""
+
+    if lite_match:
+        for domain in ("www.fmkorea.com", ".fmkorea.com"):
+            s.cookies.set(lite_match.group(1), lite_match.group(2), domain=domain, path="/")
+            s.cookies.set(f"g_{lite_match.group(1)}", lite_match.group(2), domain=domain, path="/")
+
+    module_response = s.get("https://www.fmkorea.com/mc/mc.php")
+    module_response.raise_for_status()
+    module_source = module_response.text
+    if not is_expected_fmkorea_challenge_module(module_source):
+        raise RuntimeError("fmkorea challenge module changed unexpectedly")
+
+    cookie_lines = run_fmkorea_challenge_module(module_source, token_match.group(1), token_match.group(2))
+    for line in cookie_lines:
+        cookie = SimpleCookie()
+        cookie.load(line)
+        for key, morsel in cookie.items():
+            domain = morsel["domain"] or ".fmkorea.com"
+            path = morsel["path"] or "/"
+            s.cookies.set(key, morsel.value, domain=domain, path=path)
+
+    challenge_url = url + ("&" if "?" in url else "?") + "ddosCheckOnly=1"
+    retry = s.get(challenge_url)
+    if retry.status_code == 430:
+        return ""
+    retry.raise_for_status()
+    return retry.text
+
+
+def is_expected_fmkorea_challenge_module(source: str) -> bool:
+    required = ["export function fm5", "function __wbg_get_imports", "/mc/mcw.php"]
+    blocked = ["process", "require", "child_process", "node:", "XMLHttpRequest", "localStorage"]
+    return all(value in source for value in required) and not any(value in source for value in blocked)
+
+
+def run_fmkorea_challenge_module(module_source: str, token: str, digest: str) -> list[str]:
+    sanitized_source = module_source.replace(
+        "new URL('/mc/mcw.php', import.meta.url)",
+        "'https://www.fmkorea.com/mc/mcw.php'",
+    )
+    with tempfile.TemporaryDirectory() as tmpdir:
+        module_path = Path(tmpdir) / "mc.mjs"
+        runner_path = Path(tmpdir) / "run.mjs"
+        module_path.write_text(sanitized_source, encoding="utf-8")
+        runner_path.write_text(
+            f"""
+class WindowMock {{}}
+globalThis.Window = WindowMock;
+const doc = {{
+  _cookies: [],
+  set cookie(value) {{ this._cookies.push(value); }},
+  get cookie() {{ return this._cookies.join('\\n'); }}
+}};
+const win = new WindowMock();
+win.document = doc;
+win.window = win;
+win.self = win;
+globalThis.document = doc;
+globalThis.window = win;
+globalThis.self = win;
+globalThis.global = globalThis;
+globalThis.process = undefined;
+const mod = await import('./mc.mjs');
+await mod.default();
+mod.fm5('{token}', '{digest}');
+console.log(doc.cookie);
+""",
+            encoding="utf-8",
+        )
+        completed = subprocess.run(
+            ["node", str(runner_path)],
+            cwd=tmpdir,
+            env=node_safe_env(tmpdir),
+            text=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=30,
+            check=True,
+        )
+    return [line.strip() for line in completed.stdout.splitlines() if line.strip()]
+
+
+def node_safe_env(tmpdir: str) -> dict[str, str]:
+    safe = {}
+    for key in ("PATH", "Path", "SYSTEMROOT", "SystemRoot", "WINDIR", "windir"):
+        if os.environ.get(key):
+            safe[key] = os.environ[key]
+    safe["HOME"] = tmpdir
+    safe["TEMP"] = tmpdir
+    safe["TMP"] = tmpdir
+    return safe
 
 
 def clean_text(value) -> str:
