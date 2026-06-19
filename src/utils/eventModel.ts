@@ -2,21 +2,27 @@ import { analyzeAnnouncementByRules } from '../../crawler/eventDecision/announce
 import { getFallbackDecision } from '../../crawler/eventDecision/ruleDecision.js';
 import { getLocalToday, parseLocalDate, formatDate } from './format.js';
 import { getUpcomingDeadlineMatch } from './deadlineModel.js';
+import type { EventModel, EventRaw, FilterSettings } from '../v2/lib/types.ts';
 export { getTodayDeadlineMatch, getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from './deadlineModel.js';
+
+interface AnnouncementStatus {
+  state: 'unknown' | 'overdue' | 'today' | 'future';
+  label: string;
+}
 
 export const FALLBACK_BODY_LINE =
   '아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.';
 
 export const PRIZE_FALLBACK = '경품 정보 미수집';
-const YOUTUBE_PLATFORM = '\uC720\uD29C\uBE0C \uC774\uBCA4\uD2B8';
+const YOUTUBE_PLATFORM = '유튜브 이벤트';
 
-export function hasCrawledBody(event) {
+export function hasCrawledBody(event: EventModel): boolean {
   // EventBodyToggle/카드가 "원문에서 확인" 단순 안내로 분기할 때 사용한다.
   const lines = buildUserContentLines(event);
   return !(lines.length === 1 && lines[0] === FALLBACK_BODY_LINE);
 }
 
-export function enrichEvent(event) {
+export function enrichEvent(event: EventModel) {
   const announcement = getFallbackAnnouncement(event);
   const platform = getCorrectedPlatform(event);
   return {
@@ -29,19 +35,19 @@ export function enrichEvent(event) {
   };
 }
 
-function getCorrectedPlatform(event) {
+function getCorrectedPlatform(event: EventModel): string {
   if (hasYoutubeApplyUrl(event)) return YOUTUBE_PLATFORM;
-  return event.platform || '\uAE30\uD0C0 \uC774\uBCA4\uD2B8';
+  return event.platform || '기타 이벤트';
 }
 
-function replaceSourcePlatform(source = '', platform) {
+function replaceSourcePlatform(source = '', platform: string): string {
   if (!source) return platform;
-  if (!source.includes('\u00B7')) return source;
-  return source.replace(/\u00B7\s*.+$/, `\u00B7 ${platform}`);
+  if (!source.includes('·')) return source;
+  return source.replace(/·\s*.+$/, `· ${platform}`);
 }
 
-function hasYoutubeApplyUrl(event = {}) {
-  const raw = event.raw ?? {};
+function hasYoutubeApplyUrl(event: Partial<EventModel> = {}): boolean {
+  const raw: EventRaw = event.raw ?? {};
   const applyUrl = [
     event.applyTargetUrl,
     raw.applyTargetUrl,
@@ -51,8 +57,8 @@ function hasYoutubeApplyUrl(event = {}) {
   return /youtube\.com|youtu\.be/i.test(applyUrl);
 }
 
-function getFallbackAnnouncement(event) {
-  const raw = event.raw ?? {};
+function getFallbackAnnouncement(event: EventModel) {
+  const raw: EventRaw = event.raw ?? {};
   const announcement = analyzeAnnouncementByRules({
     ...event,
     originalText:
@@ -66,7 +72,7 @@ function getFallbackAnnouncement(event) {
   };
 }
 
-export function matchesFilter(event, filter, filterSettings) {
+export function matchesFilter(event: EventModel, filter: string, filterSettings?: FilterSettings): boolean {
   if (isInstagramEvent(event)) return false;
   if (isHiddenByFilterSettings(event, filterSettings)) return false;
   if (shouldHideExpiredReadyEvent(event, filter, filterSettings)) return false;
@@ -84,8 +90,8 @@ export function matchesFilter(event, filter, filterSettings) {
   return event.status === filter;
 }
 
-export function isInstagramEvent(event) {
-  const raw = event?.raw ?? {};
+export function isInstagramEvent(event?: EventModel): boolean {
+  const raw: EventRaw = event?.raw ?? {};
   const text = normalizeSearchText(
     [
       event?.title,
@@ -104,26 +110,26 @@ export function isInstagramEvent(event) {
       raw.url,
       raw.originalUrl,
       raw.applyUrl,
-      ...(Array.isArray(event?.originalLines) ? event.originalLines : []),
-      ...(Array.isArray(raw.originalLines) ? raw.originalLines : []),
-      ...(Array.isArray(raw.externalLinks) ? raw.externalLinks : []),
+      ...(Array.isArray(event?.originalLines) ? event!.originalLines! : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines! : []),
+      ...(Array.isArray(raw.externalLinks) ? raw.externalLinks! : []),
     ].filter(Boolean).join(' '),
   );
 
   return /instagram|insta|인스타|인스타그램/.test(text);
 }
 
-export function isExpiredEvent(event) {
+export function isExpiredEvent(event: EventModel): boolean {
   const deadline = parseLocalDate(event.deadlineDate);
   if (!deadline) return false;
   return deadline.getTime() < getLocalToday().getTime();
 }
 
-export function isExpiredReadyEvent(event) {
+export function isExpiredReadyEvent(event: EventModel): boolean {
   return event.status === 'ready' && isExpiredEvent(event);
 }
 
-export function isOldSkippedEvent(event) {
+export function isOldSkippedEvent(event: EventModel): boolean {
   if (event.status !== 'skipped') return false;
   const deadline = parseLocalDate(event.deadlineDate);
   if (deadline) {
@@ -135,17 +141,17 @@ export function isOldSkippedEvent(event) {
   return lastSeenAt.getTime() < thirtyDaysAgo.getTime();
 }
 
-function shouldHideExpiredReadyEvent(event, filter, filterSettings) {
+function shouldHideExpiredReadyEvent(event: EventModel, filter: string, filterSettings?: FilterSettings): boolean {
   if (filter !== 'ready') return false;
   if (filterSettings?.hideExpiredReadyEvents === false) return false;
   return isExpiredReadyEvent(event);
 }
 
-export function isHiddenByFilterSettings(event, filterSettings) {
+export function isHiddenByFilterSettings(event: EventModel, filterSettings?: FilterSettings): boolean {
   if (!filterSettings) return false;
 
   const hiddenPlatforms = new Set(filterSettings.hiddenPlatforms ?? []);
-  if (hiddenPlatforms.has(event.platform)) return true;
+  if (event.platform && hiddenPlatforms.has(event.platform)) return true;
 
   const text = normalizeSearchText(
     [
@@ -166,10 +172,11 @@ export function isHiddenByFilterSettings(event, filterSettings) {
   );
 }
 
-export function matchesSearchQuery(event, query) {
+export function matchesSearchQuery(event: EventModel, query?: string): boolean {
   const normalizedQuery = normalizeSearchText(query);
   if (!normalizedQuery) return true;
 
+  const raw: EventRaw = event.raw ?? {};
   const haystack = normalizeSearchText(
     [
       event.title,
@@ -184,8 +191,8 @@ export function matchesSearchQuery(event, query) {
       event.decisionReason,
       event.originalText,
       ...(Array.isArray(event.originalLines) ? event.originalLines : []),
-      ...(Array.isArray(event.raw?.originalLines) ? event.raw.originalLines : []),
-      ...(Array.isArray(event.raw?.detailMetaLines) ? event.raw.detailMetaLines : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines! : []),
+      ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines! : []),
     ].filter(Boolean).join(' '),
   );
 
@@ -195,7 +202,7 @@ export function matchesSearchQuery(event, query) {
     .every((token) => haystack.includes(token));
 }
 
-export function sortSearchEvents(events) {
+export function sortSearchEvents(events: EventModel[]): EventModel[] {
   return [...events].sort(
     (first, second) =>
       getSearchStatusPriority(first) - getSearchStatusPriority(second) ||
@@ -204,25 +211,25 @@ export function sortSearchEvents(events) {
   );
 }
 
-function normalizeSearchText(value) {
+function normalizeSearchText(value: unknown): string {
   return String(value ?? '').toLocaleLowerCase('ko-KR').replace(/\s+/g, ' ').trim();
 }
 
-function getSearchStatusPriority(event) {
+function getSearchStatusPriority(event: EventModel): number {
   if (event.status === 'ready') return 0;
   if (event.status === 'later') return 1;
   if (event.status === 'done') return 2;
   return 3;
 }
 
-export function matchesTodayAnnouncement(event) {
+export function matchesTodayAnnouncement(event: EventModel): boolean {
   if (event.status !== 'done' || event.resultStatus !== 'unknown') {
     return false;
   }
   return Boolean(event.resultAnnouncementDate || event.resultAnnouncementText);
 }
 
-export function getAnnouncementStatus(event) {
+export function getAnnouncementStatus(event: EventModel): AnnouncementStatus {
   const date = parseLocalDate(event.resultAnnouncementDate);
   if (!date) {
     return { state: 'unknown', label: event.resultAnnouncementText || '발표일 미정' };
@@ -235,13 +242,13 @@ export function getAnnouncementStatus(event) {
   return { state: 'future', label: `${formatDate(date.toISOString())} 발표` };
 }
 
-export function getAnnouncementTime(event) {
+export function getAnnouncementTime(event: EventModel): number {
   const date = parseLocalDate(event.resultAnnouncementDate);
   return date ? date.getTime() : Number.MAX_SAFE_INTEGER;
 }
 
-export function sortTodayAnnouncements(events) {
-  const priority = { overdue: 0, today: 1, future: 2, unknown: 3 };
+export function sortTodayAnnouncements(events: EventModel[]): EventModel[] {
+  const priority: Record<string, number> = { overdue: 0, today: 1, future: 2, unknown: 3 };
   return [...events].sort((first, second) => {
     const firstStatus = getAnnouncementStatus(first);
     const secondStatus = getAnnouncementStatus(second);
@@ -251,7 +258,7 @@ export function sortTodayAnnouncements(events) {
   });
 }
 
-export function sortInboxEvents(events) {
+export function sortInboxEvents(events: EventModel[]): EventModel[] {
   return [...events].sort((first, second) => {
     const firstScore = getInboxPriority(first);
     const secondScore = getInboxPriority(second);
@@ -262,7 +269,7 @@ export function sortInboxEvents(events) {
   });
 }
 
-function getInboxPriority(event) {
+function getInboxPriority(event: EventModel): number {
   const announcement = getAnnouncementStatus(event);
   if (event.resultStatus === 'unknown' && announcement.state === 'overdue') return 0;
   if (event.resultStatus === 'unknown' && announcement.state === 'today') return 1;
@@ -274,22 +281,22 @@ function getInboxPriority(event) {
   return 7;
 }
 
-function getInboxTime(event) {
+function getInboxTime(event: EventModel): number {
   const value = event.participatedAt ?? event.resultCheckedAt ?? event.lastSeenAt ?? '';
   const date = new Date(value);
   return Number.isNaN(date.getTime()) ? 0 : date.getTime();
 }
 
-function getNumber(value) {
-  return Number.isFinite(value) ? value : 0;
+function getNumber(value: unknown): number {
+  return Number.isFinite(value as number) ? (value as number) : 0;
 }
 
-export function buildPlatformOptions(events) {
+export function buildPlatformOptions(events: EventModel[]): Array<{ platform: string; count: number }> {
   const counts = events.reduce((acc, event) => {
     const platform = event.platform || '기타 이벤트';
     acc.set(platform, (acc.get(platform) ?? 0) + 1);
     return acc;
-  }, new Map());
+  }, new Map<string, number>());
 
   return [...counts.entries()]
     .map(([platform, count]) => ({ platform, count }))
@@ -300,7 +307,7 @@ export function buildPlatformOptions(events) {
     );
 }
 
-export function buildStatusPatch(event, status, changedAt) {
+export function buildStatusPatch(event: EventModel | undefined, status: string, changedAt: string) {
   if (status === 'done') {
     return {
       status,
@@ -311,7 +318,7 @@ export function buildStatusPatch(event, status, changedAt) {
   return { status, resultStatus: 'unknown', resultCheckedAt: null };
 }
 
-export function applyStatusChange(event, status, changedAt) {
+export function applyStatusChange(event: EventModel, status: string, changedAt: string) {
   if (status === 'done') {
     return {
       ...event,
@@ -324,16 +331,16 @@ export function applyStatusChange(event, status, changedAt) {
 }
 
 // --- Content helpers ---
-export function buildSourceFacts(event) {
+export function buildSourceFacts(event: EventModel): string[] {
   return [
     event.platform,
     Number.isFinite(event.bookmarkCount) ? `저장 ${event.bookmarkCount}` : null,
     Number.isFinite(event.rank) ? `목록 ${event.rank}위` : null,
-  ].filter(Boolean);
+  ].filter(Boolean) as string[];
 }
 
-export function getPrizeDisplay(event) {
-  const raw = event.raw ?? {};
+export function getPrizeDisplay(event: EventModel): string {
+  const raw: EventRaw = event.raw ?? {};
   const announcementPrize = analyzeAnnouncementByRules({
     ...event,
     prizeText: event.prizeText ?? raw.prizeText,
@@ -351,7 +358,7 @@ export function getPrizeDisplay(event) {
   );
 }
 
-export function buildPreviewLines(event, facts) {
+export function buildPreviewLines(event: EventModel, facts: unknown[]): Array<string | undefined> {
   if (Array.isArray(event.originalLines) && event.originalLines.length > 0) {
     return event.originalLines;
   }
@@ -368,8 +375,8 @@ export function buildPreviewLines(event, facts) {
   ];
 }
 
-export function buildUserContentLines(event) {
-  const raw = event.raw ?? {};
+export function buildUserContentLines(event: EventModel): string[] {
+  const raw: EventRaw = event.raw ?? {};
   const possibleLineSets = [
     event.originalLines,
     raw.originalLines,
@@ -398,10 +405,10 @@ export function buildUserContentLines(event) {
   return [FALLBACK_BODY_LINE];
 }
 
-function normalizeContentLines(lines, event) {
+function normalizeContentLines(lines: unknown[], event: EventModel): string[] {
   const title = String(event.originalTitle ?? event.title ?? '').trim();
-  const seen = new Set();
-  const normalized = [];
+  const seen = new Set<string>();
+  const normalized: string[] = [];
 
   for (const rawLine of lines) {
     const line = String(rawLine).replace(/\s+/g, ' ').trim();
