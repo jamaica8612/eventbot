@@ -81,7 +81,6 @@
 - `crawler/supabaseEventRepository.js`: Supabase upsert 저장소
 - `public/crawled-events.json`: 크롤링 결과 JSON (Supabase 미설정 시 폴백)
 - `src/App.jsx`: 라우팅·상태 오케스트레이터 (~250줄로 축소)
-- `src/constants.js`: 상태 라벨, 필터 정의
 - `src/utils/format.js`: 날짜·금액·시간 포매터
 - `src/utils/eventModel.js`: enrich/filter/announcement/winning/content 순수 함수
 - `src/components/EventCards.jsx`: 4종 카드 + EventBodyToggle + AnnouncementPanel + ApplyLink
