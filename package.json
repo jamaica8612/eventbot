@@ -16,7 +16,8 @@
     "crawl:hotdeal": "node crawler/hotdealCrawler.js",
     "crawl:full": "node scripts/crawlFull.js",
     "backfill:announcement": "node scripts/backfillAnnouncementDates.js",
-    "verify:supabase": "node scripts/verifySupabase.js"
+    "verify:supabase": "node scripts/verifySupabase.js",
+    "telegram:test": "node scripts/sendTestTelegram.js"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.105.1",
