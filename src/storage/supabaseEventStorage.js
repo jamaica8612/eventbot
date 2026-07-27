@@ -1,8 +1,6 @@
 import { getFallbackDecision } from '../utils/eventFallbacks.js';
 import { getAuthToken, requireUnlock } from './supabaseAuthStorage.js';
-
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
+import { supabaseAnonKey, supabaseUrl } from './supabaseConfig.js';
 
 export const hasSupabaseConfig = Boolean(supabaseUrl && supabaseAnonKey);
 

@@ -5,14 +5,15 @@
    ============================================================ */
 import { buildUserContentLines } from '../../utils/eventModel.js';
 import { getAuthToken, requireUnlock } from '../../storage/supabaseAuthStorage.js';
+import { supabaseAnonKey, supabaseUrl } from '../../storage/supabaseConfig.js';
 import { updateSupabaseEventState } from '../../storage/supabaseEventStorage.js';
 
 export const YT_CONTEXT_TIMEOUT_MS = 35000;
 export const YT_INFO_TIMEOUT_MS = 45000;
 
 const API_BASE_URL = String(import.meta.env.VITE_API_BASE_URL ?? '').replace(/\/$/, '');
-const SUPABASE_URL = String(import.meta.env.VITE_SUPABASE_URL ?? '').replace(/\/$/, '');
-const SUPABASE_ANON_KEY = String(import.meta.env.VITE_SUPABASE_ANON_KEY ?? '');
+const SUPABASE_URL = supabaseUrl.replace(/\/$/, '');
+const SUPABASE_ANON_KEY = supabaseAnonKey;
 
 export async function copyTextToClipboard(text) {
   if (navigator.clipboard?.writeText) {

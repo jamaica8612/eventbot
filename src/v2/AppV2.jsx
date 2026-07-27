@@ -72,20 +72,24 @@ export default function AppV2() {
   const toggleTheme = () => setTheme((t) => (t === 'dark' ? 'light' : 'dark'));
   const [authState, setAuthState] = useState({ isLoading: true, session: null, profile: null, bootstrap: null, error: '' });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const authRequestIdRef = useRef(0);
 
   useEffect(() => {
     let isMounted = true;
     let unsubscribeAuth = () => {};
     async function loadAuth(sessionOverride) {
+      const requestId = ++authRequestIdRef.current;
       try {
         const session = sessionOverride === undefined
           ? await getCurrentSession()
           : sessionOverride;
         const bootstrap = session ? await loadEventBootstrap(session.access_token) : null;
         const profile = bootstrap?.profile ?? null;
-        if (isMounted) setAuthState({ isLoading: false, session, profile, bootstrap, error: '' });
+        if (isMounted && requestId === authRequestIdRef.current) {
+          setAuthState({ isLoading: false, session, profile, bootstrap, error: '' });
+        }
       } catch (error) {
-        if (isMounted) {
+        if (isMounted && requestId === authRequestIdRef.current) {
           setAuthState({
             isLoading: false,
             session: null,
@@ -99,17 +103,25 @@ export default function AppV2() {
     loadAuth().finally(() => {
       if (isMounted) unsubscribeAuth = onAuthStateChange((session) => loadAuth(session));
     });
-    const unsubscribeRequired = onAuthRequired(() =>
-      setAuthState((current) => ({ ...current, session: null, profile: null, bootstrap: null })),
-    );
+    const unsubscribeRequired = onAuthRequired(() => {
+      authRequestIdRef.current += 1;
+      setAuthState((current) => ({
+        ...current,
+        session: null,
+        profile: null,
+        bootstrap: null,
+      }));
+    });
     return () => {
       isMounted = false;
+      authRequestIdRef.current += 1;
       unsubscribeAuth();
       unsubscribeRequired();
     };
   }, []);
 
   async function lockApp() {
+    authRequestIdRef.current += 1;
     await signOut();
     setAuthState({ isLoading: false, session: null, profile: null, bootstrap: null, error: '' });
   }
