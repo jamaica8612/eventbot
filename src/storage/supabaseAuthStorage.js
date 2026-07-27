@@ -5,6 +5,7 @@ const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AUTH_REQUIRED_EVENT = 'eventbot-auth-required';
 const AUTH_TIMEOUT_MS = 12000;
 const PROFILE_TIMEOUT_MS = 15000;
+const PUBLIC_PAGES_ORIGIN = 'https://jamaica8612.github.io';
 
 export const hasAuthConfig = Boolean(supabaseUrl && supabaseAnonKey);
 
@@ -51,10 +52,21 @@ export async function signInWithGoogle() {
   const { error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: new URL(import.meta.env.BASE_URL, window.location.origin).href,
+      redirectTo: buildGoogleOAuthRedirectUrl(
+        typeof window === 'undefined' ? '' : window.location.origin,
+        import.meta.env.BASE_URL,
+      ),
     },
   });
   if (error) throw error;
+}
+
+export function buildGoogleOAuthRedirectUrl(origin, baseUrl) {
+  const safeOrigin =
+    typeof origin === 'string' && /^https?:\/\/[^/]+$/i.test(origin)
+      ? origin
+      : PUBLIC_PAGES_ORIGIN;
+  return new URL(baseUrl || '/', `${safeOrigin}/`).href;
 }
 
 export async function signOut() {
