@@ -1,0 +1,421 @@
+import { analyzeAnnouncementByRules, getFallbackDecision } from './eventFallbacks.js';
+import { getLocalToday, parseLocalDate, formatDate } from './format.js';
+import { getUpcomingDeadlineMatch } from './deadlineModel.js';
+import type { EventModel, EventRaw, EventStatus, FilterSettings } from '../v2/lib/types.ts';
+export { getTodayDeadlineMatch, getUpcomingDeadlineMatch, sortTodayDeadlineEvents } from './deadlineModel.js';
+
+interface AnnouncementStatus {
+  state: 'unknown' | 'overdue' | 'today' | 'future';
+  label: string;
+}
+
+export const FALLBACK_BODY_LINE =
+  '아직 상세 본문이 수집되지 않았습니다. 참여하기를 누르면 원문에서 확인할 수 있어요.';
+
+export const PRIZE_FALLBACK = '경품 정보 미수집';
+const YOUTUBE_PLATFORM = '유튜브 이벤트';
+
+export function hasCrawledBody(event: EventModel): boolean {
+  // EventBodyToggle/카드가 "원문에서 확인" 단순 안내로 분기할 때 사용한다.
+  const lines = buildUserContentLines(event);
+  return !(lines.length === 1 && lines[0] === FALLBACK_BODY_LINE);
+}
+
+export function enrichEvent(event: EventModel) {
+  const announcement = getFallbackAnnouncement(event);
+  const platform = getCorrectedPlatform(event);
+  return {
+    ...event,
+    ...getFallbackDecision(event),
+    platform,
+    source: platform !== event.platform ? replaceSourcePlatform(event.source, platform) : event.source,
+    resultAnnouncementDate: event.resultAnnouncementDate || announcement.date,
+    resultAnnouncementText: event.resultAnnouncementText || announcement.text,
+  };
+}
+
+function getCorrectedPlatform(event: EventModel): string {
+  if (hasYoutubeApplyUrl(event)) return YOUTUBE_PLATFORM;
+  return event.platform || '기타 이벤트';
+}
+
+function replaceSourcePlatform(source = '', platform: string): string {
+  if (!source) return platform;
+  if (!source.includes('·')) return source;
+  return source.replace(/·\s*.+$/, `· ${platform}`);
+}
+
+function hasYoutubeApplyUrl(event: Partial<EventModel> = {}): boolean {
+  const raw: EventRaw = event.raw ?? {};
+  const applyUrl = [
+    event.applyTargetUrl,
+    raw.applyTargetUrl,
+    ...(Array.isArray(event.externalLinks) ? event.externalLinks : []),
+    ...(Array.isArray(raw.externalLinks) ? raw.externalLinks : []),
+  ].filter(Boolean).join(' ');
+  return /youtube\.com|youtu\.be/i.test(applyUrl);
+}
+
+function getFallbackAnnouncement(event: EventModel) {
+  const raw: EventRaw = event.raw ?? {};
+  const announcement = analyzeAnnouncementByRules({
+    ...event,
+    originalText:
+      event.originalText ?? raw.originalText ?? raw.contentText ?? raw.bodyText,
+    originalLines: event.originalLines ?? raw.originalLines,
+    bodyLines: raw.bodyLines,
+  });
+  return {
+    date: announcement.resultAnnouncementDate,
+    text: announcement.resultAnnouncementText,
+  };
+}
+
+export function matchesFilter(event: EventModel, filter: string, filterSettings?: FilterSettings): boolean {
+  if (isInstagramEvent(event)) return false;
+  if (isHiddenByFilterSettings(event, filterSettings)) return false;
+  if (shouldHideExpiredReadyEvent(event, filter, filterSettings)) return false;
+
+  if (filter === 'ready') return event.status === 'ready';
+  if (filter === 'later') return event.status === 'later';
+  if (filter === 'todayDeadline') {
+    return ['ready', 'later'].includes(event.status) && getUpcomingDeadlineMatch(event).isMatch;
+  }
+  if (filter === 'search') return event.status !== 'skipped';
+  if (filter === 'inbox') return event.status === 'done';
+  if (filter === 'done') return event.status === 'done';
+  if (filter === 'todayAnnouncement') return matchesTodayAnnouncement(event);
+  if (filter === 'won') return event.resultStatus === 'won';
+  return event.status === filter;
+}
+
+export function isInstagramEvent(event?: EventModel): boolean {
+  const raw: EventRaw = event?.raw ?? {};
+  const text = normalizeSearchText(
+    [
+      event?.title,
+      event?.originalTitle,
+      event?.platform,
+      event?.source,
+      event?.originalText,
+      event?.url,
+      event?.originalUrl,
+      event?.applyUrl,
+      raw.title,
+      raw.originalTitle,
+      raw.platform,
+      raw.source,
+      raw.originalText,
+      raw.url,
+      raw.originalUrl,
+      raw.applyUrl,
+      ...(Array.isArray(event?.originalLines) ? event!.originalLines! : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines! : []),
+      ...(Array.isArray(raw.externalLinks) ? raw.externalLinks! : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return /instagram|insta|인스타|인스타그램/.test(text);
+}
+
+export function isExpiredEvent(event: EventModel): boolean {
+  const deadline = parseLocalDate(event.deadlineDate);
+  if (!deadline) return false;
+  return deadline.getTime() < getLocalToday().getTime();
+}
+
+export function isExpiredReadyEvent(event: EventModel): boolean {
+  return event.status === 'ready' && isExpiredEvent(event);
+}
+
+export function isOldSkippedEvent(event: EventModel): boolean {
+  if (event.status !== 'skipped') return false;
+  const deadline = parseLocalDate(event.deadlineDate);
+  if (deadline) {
+    return deadline.getTime() < getLocalToday().getTime();
+  }
+  const lastSeenAt = parseLocalDate(String(event.lastSeenAt ?? ''));
+  if (!lastSeenAt) return false;
+  const thirtyDaysAgo = new Date(getLocalToday().getTime() - 30 * 86400000);
+  return lastSeenAt.getTime() < thirtyDaysAgo.getTime();
+}
+
+function shouldHideExpiredReadyEvent(event: EventModel, filter: string, filterSettings?: FilterSettings): boolean {
+  if (filter !== 'ready') return false;
+  if (filterSettings?.hideExpiredReadyEvents === false) return false;
+  return isExpiredReadyEvent(event);
+}
+
+export function isHiddenByFilterSettings(event: EventModel, filterSettings?: FilterSettings): boolean {
+  if (!filterSettings) return false;
+
+  const hiddenPlatforms = new Set(filterSettings.hiddenPlatforms ?? []);
+  if (event.platform && hiddenPlatforms.has(event.platform)) return true;
+
+  const text = normalizeSearchText(
+    [
+      event.title,
+      event.originalTitle,
+      event.platform,
+      event.source,
+      event.prizeText,
+      event.deadlineText,
+      event.decisionReason,
+      event.originalText,
+      ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return (filterSettings.excludedKeywords ?? []).some((keyword) =>
+    text.includes(normalizeSearchText(keyword)),
+  );
+}
+
+export function matchesSearchQuery(event: EventModel, query?: string): boolean {
+  const normalizedQuery = normalizeSearchText(query);
+  if (!normalizedQuery) return true;
+
+  const raw: EventRaw = event.raw ?? {};
+  const haystack = normalizeSearchText(
+    [
+      event.title,
+      event.originalTitle,
+      event.platform,
+      event.source,
+      event.prizeText,
+      event.prizeTitle,
+      event.deadlineText,
+      event.resultAnnouncementText,
+      event.memo,
+      event.decisionReason,
+      event.originalText,
+      ...(Array.isArray(event.originalLines) ? event.originalLines : []),
+      ...(Array.isArray(raw.originalLines) ? raw.originalLines! : []),
+      ...(Array.isArray(raw.detailMetaLines) ? raw.detailMetaLines! : []),
+    ].filter(Boolean).join(' '),
+  );
+
+  return normalizedQuery
+    .split(/\s+/)
+    .filter(Boolean)
+    .every((token) => haystack.includes(token));
+}
+
+export function sortSearchEvents(events: EventModel[]): EventModel[] {
+  return [...events].sort(
+    (first, second) =>
+      getSearchStatusPriority(first) - getSearchStatusPriority(second) ||
+      getNumber(second.bookmarkCount) - getNumber(first.bookmarkCount) ||
+      getNumber(first.rank) - getNumber(second.rank),
+  );
+}
+
+function normalizeSearchText(value: unknown): string {
+  return String(value ?? '').toLocaleLowerCase('ko-KR').replace(/\s+/g, ' ').trim();
+}
+
+function getSearchStatusPriority(event: EventModel): number {
+  if (event.status === 'ready') return 0;
+  if (event.status === 'later') return 1;
+  if (event.status === 'done') return 2;
+  return 3;
+}
+
+export function matchesTodayAnnouncement(event: EventModel): boolean {
+  if (event.status !== 'done' || event.resultStatus !== 'unknown') {
+    return false;
+  }
+  return Boolean(event.resultAnnouncementDate || event.resultAnnouncementText);
+}
+
+export function getAnnouncementStatus(event: EventModel): AnnouncementStatus {
+  const date = parseLocalDate(event.resultAnnouncementDate);
+  if (!date) {
+    return { state: 'unknown', label: event.resultAnnouncementText || '발표일 미정' };
+  }
+  const today = getLocalToday();
+  const diffDays = Math.round((date.getTime() - today.getTime()) / 86400000);
+
+  if (diffDays < 0) return { state: 'overdue', label: `${Math.abs(diffDays)}일 지남` };
+  if (diffDays === 0) return { state: 'today', label: '오늘 발표' };
+  return { state: 'future', label: `${formatDate(date.toISOString())} 발표` };
+}
+
+export function getAnnouncementTime(event: EventModel): number {
+  const date = parseLocalDate(event.resultAnnouncementDate);
+  return date ? date.getTime() : Number.MAX_SAFE_INTEGER;
+}
+
+export function sortTodayAnnouncements(events: EventModel[]): EventModel[] {
+  const priority: Record<string, number> = { overdue: 0, today: 1, future: 2, unknown: 3 };
+  return [...events].sort((first, second) => {
+    const firstStatus = getAnnouncementStatus(first);
+    const secondStatus = getAnnouncementStatus(second);
+    const statusDiff = priority[firstStatus.state] - priority[secondStatus.state];
+    if (statusDiff !== 0) return statusDiff;
+    return getAnnouncementTime(first) - getAnnouncementTime(second);
+  });
+}
+
+export function sortInboxEvents(events: EventModel[]): EventModel[] {
+  return [...events].sort((first, second) => {
+    const firstScore = getInboxPriority(first);
+    const secondScore = getInboxPriority(second);
+    if (firstScore !== secondScore) return firstScore - secondScore;
+    const announcementDiff = getAnnouncementTime(first) - getAnnouncementTime(second);
+    if (announcementDiff !== 0) return announcementDiff;
+    return getInboxTime(second) - getInboxTime(first);
+  });
+}
+
+function getInboxPriority(event: EventModel): number {
+  const announcement = getAnnouncementStatus(event);
+  if (event.resultStatus === 'unknown' && announcement.state === 'overdue') return 0;
+  if (event.resultStatus === 'unknown' && announcement.state === 'today') return 1;
+  if (event.resultStatus === 'unknown' && announcement.state === 'future') return 2;
+  if (event.resultStatus === 'unknown') return 3;
+  if (event.resultStatus === 'won' && event.receiptStatus !== 'received') return 4;
+  if (event.resultStatus === 'won') return 5;
+  if (event.resultStatus === 'lost') return 6;
+  return 7;
+}
+
+function getInboxTime(event: EventModel): number {
+  const value = event.participatedAt ?? event.resultCheckedAt ?? event.lastSeenAt ?? '';
+  const date = new Date(value);
+  return Number.isNaN(date.getTime()) ? 0 : date.getTime();
+}
+
+function getNumber(value: unknown): number {
+  return Number.isFinite(value as number) ? (value as number) : 0;
+}
+
+export function buildPlatformOptions(events: EventModel[]): Array<{ platform: string; count: number }> {
+  const counts = events.reduce((acc, event) => {
+    const platform = event.platform || '기타 이벤트';
+    acc.set(platform, (acc.get(platform) ?? 0) + 1);
+    return acc;
+  }, new Map<string, number>());
+
+  return [...counts.entries()]
+    .map(([platform, count]) => ({ platform, count }))
+    .sort(
+      (first, second) =>
+        second.count - first.count ||
+        first.platform.localeCompare(second.platform, 'ko-KR'),
+    );
+}
+
+export function buildStatusPatch(event: EventModel | undefined, status: string, changedAt: string) {
+  if (status === 'done') {
+    return {
+      status,
+      resultStatus: 'unknown',
+      participatedAt: event?.participatedAt ?? changedAt,
+    };
+  }
+  return { status, resultStatus: 'unknown', resultCheckedAt: null };
+}
+
+export function applyStatusChange(event: EventModel, status: EventStatus, changedAt: string): EventModel {
+  if (status === 'done') {
+    return {
+      ...event,
+      status,
+      resultStatus: event.resultStatus ?? 'unknown',
+      participatedAt: event.participatedAt ?? changedAt,
+    };
+  }
+  return { ...event, status, resultStatus: 'unknown', resultCheckedAt: null };
+}
+
+// --- Content helpers ---
+export function buildSourceFacts(event: EventModel): string[] {
+  return [
+    event.platform,
+    Number.isFinite(event.bookmarkCount) ? `저장 ${event.bookmarkCount}` : null,
+    Number.isFinite(event.rank) ? `목록 ${event.rank}위` : null,
+  ].filter(Boolean) as string[];
+}
+
+export function getPrizeDisplay(event: EventModel): string {
+  const raw: EventRaw = event.raw ?? {};
+  const announcementPrize = analyzeAnnouncementByRules({
+    ...event,
+    prizeText: event.prizeText ?? raw.prizeText,
+    originalText: event.originalText ?? raw.originalText ?? raw.contentText ?? raw.bodyText,
+    originalLines: event.originalLines ?? raw.originalLines,
+    bodyLines: raw.bodyLines,
+  }).prizeText;
+
+  return (
+    event.prizeTitle ||
+    event.prizeText ||
+    raw.prizeText ||
+    announcementPrize ||
+    PRIZE_FALLBACK
+  );
+}
+
+export function buildPreviewLines(event: EventModel, facts: unknown[]): Array<string | undefined> {
+  if (Array.isArray(event.originalLines) && event.originalLines.length > 0) {
+    return event.originalLines;
+  }
+  if (event.originalText) {
+    return event.originalText
+      .split(/\n+/)
+      .map((line) => line.trim())
+      .filter(Boolean);
+  }
+  return [
+    event.originalTitle ?? event.title,
+    facts.length > 0 ? facts.join(' · ') : event.memo,
+    '상세 조건은 참여하기에서 확인합니다.',
+  ];
+}
+
+export function buildUserContentLines(event: EventModel): string[] {
+  const raw: EventRaw = event.raw ?? {};
+  const possibleLineSets = [
+    event.originalLines,
+    raw.originalLines,
+    raw.contentLines,
+    raw.bodyLines,
+  ];
+
+  for (const lines of possibleLineSets) {
+    if (Array.isArray(lines) && lines.length > 0) {
+      return normalizeContentLines(lines, event);
+    }
+  }
+
+  const possibleText = [
+    event.originalText,
+    raw.originalText,
+    raw.contentText,
+    raw.bodyText,
+    raw.detailText,
+  ].find((value) => typeof value === 'string' && value.trim());
+
+  if (possibleText) {
+    return normalizeContentLines(possibleText.split(/\n+/), event);
+  }
+
+  return [FALLBACK_BODY_LINE];
+}
+
+function normalizeContentLines(lines: unknown[], event: EventModel): string[] {
+  const title = String(event.originalTitle ?? event.title ?? '').trim();
+  const seen = new Set<string>();
+  const normalized: string[] = [];
+
+  for (const rawLine of lines) {
+    const line = String(rawLine).replace(/\s+/g, ' ').trim();
+    if (!line || line === title || seen.has(line)) continue;
+    seen.add(line);
+    normalized.push(line);
+    if (normalized.length >= 24) break;
+  }
+
+  return normalized.length > 0 ? normalized : [FALLBACK_BODY_LINE];
+}
