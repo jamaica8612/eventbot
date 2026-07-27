@@ -1,7 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
+import { supabaseAnonKey, supabaseUrl } from './supabaseConfig.js';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 const AUTH_REQUIRED_EVENT = 'eventbot-auth-required';
 const AUTH_TIMEOUT_MS = 12000;
 const PROFILE_TIMEOUT_MS = 15000;
@@ -40,8 +39,31 @@ export async function getCurrentSession() {
 export function onAuthStateChange(handler) {
   const supabase = getSupabaseClient();
   if (!supabase) return () => {};
-  const { data } = supabase.auth.onAuthStateChange((_event, session) => handler(session));
-  return () => data.subscription.unsubscribe();
+  const deferredHandler = createDeferredAuthStateListener(handler, window);
+  const { data } = supabase.auth.onAuthStateChange(deferredHandler.listener);
+  return () => {
+    data.subscription.unsubscribe();
+    deferredHandler.cancel();
+  };
+}
+
+export function createDeferredAuthStateListener(handler, timers = globalThis) {
+  const pendingHandlers = new Set();
+  return {
+    listener(_event, session) {
+      const timeoutId = timers.setTimeout(() => {
+        pendingHandlers.delete(timeoutId);
+        Promise.resolve()
+          .then(() => handler(session))
+          .catch(() => {});
+      }, 0);
+      pendingHandlers.add(timeoutId);
+    },
+    cancel() {
+      pendingHandlers.forEach((timeoutId) => timers.clearTimeout(timeoutId));
+      pendingHandlers.clear();
+    },
+  };
 }
 
 export async function signInWithGoogle() {
