@@ -2,9 +2,9 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import './v2/styles/tokens.css';
 import AppV2 from './v2/AppV2.jsx';
-import { registerServiceWorker } from './pwa.js';
+import { unregisterEventbotServiceWorkers } from './pwa.js';
 
-registerServiceWorker();
+unregisterEventbotServiceWorkers();
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
